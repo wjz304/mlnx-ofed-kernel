@@ -162,8 +162,8 @@ struct rdma_restrack_entry *rdma_restrack_get_byid(struct ib_device *dev,
  * rdma_restrack_no_track() - don't add resource to the DB
  * @res: resource entry
  *
- * Every user of thie API should be cross examined.
- * Probaby you don't need to use this function.
+ * Every user of this API should be cross examined.
+ * Probably you don't need to use this function.
  */
 static inline void rdma_restrack_no_track(struct rdma_restrack_entry *res)
 {
@@ -172,15 +172,5 @@ static inline void rdma_restrack_no_track(struct rdma_restrack_entry *res)
 static inline bool rdma_restrack_is_tracked(struct rdma_restrack_entry *res)
 {
 	return !res->no_track;
-}
-
-/**
- * rdma_restrack_dontrack() - mark resource as not valid
- * @res:  resource entry
- */
-static inline void rdma_restrack_dontrack(struct rdma_restrack_entry *res)
-{
-	res->valid = false;
-	res->task = NULL;
 }
 #endif /* _RDMA_RESTRACK_H_ */

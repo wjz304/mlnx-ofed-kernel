@@ -1,7 +1,7 @@
 From: Valentine Fatiev <valentinef@nvidia.com>
 Subject: [PATCH] BACKPORT: drivers/infiniband/core/roce_gid_mgmt.c
 
-Change-Id: I198576d997dd95931f9811cabfefaf2dbe102eae
+Change-Id: I045753cc87379e36e63aeac6f2519a720d09c6a7
 ---
  drivers/infiniband/core/roce_gid_mgmt.c | 188 ++++++++++++++++++++----
  1 file changed, 156 insertions(+), 32 deletions(-)

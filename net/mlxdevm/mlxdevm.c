@@ -136,6 +136,13 @@ void mlxdevm_rate_nodes_destroy(struct mlxdevm *dev)
 {
 	const struct mlxdevm_ops *ops = dev->ops;
 	struct mlxdevm_rate_group *cur, *tmp;
+	struct mlxdevm_port *port;
+
+	list_for_each_entry(port, &dev->port_list, list) {
+		ops->rate_leaf_group_set(port, "", NULL);
+		ops->rate_leaf_tx_max_set(port, 0, NULL);
+		ops->rate_leaf_tx_share_set(port, 0, NULL);
+	}
 
 	list_for_each_entry_safe(cur, tmp, &dev->rate_group_list, list) {
 		ops->rate_node_del(dev, cur->name, NULL);
@@ -2366,29 +2373,34 @@ static const struct genl_ops mlxdevm_nl_ops[] = {
 	{
 		.cmd = MLXDEVM_CMD_DEV_GET,
 		.validate = GENL_DONT_VALIDATE_STRICT | GENL_DONT_VALIDATE_DUMP,
+		.policy = mlxdevm_nl_policy,
 		.doit = mlxdevm_nl_cmd_dev_get_doit,
 		.dumpit = mlxdevm_nl_cmd_dev_get_dumpit,
 	},
 	{
 		.cmd = MLXDEVM_CMD_PORT_SET,
 		.validate = GENL_DONT_VALIDATE_STRICT | GENL_DONT_VALIDATE_DUMP,
+		.policy = mlxdevm_nl_policy,
 		.doit = mlxdevm_nl_cmd_port_set_doit,
 		.flags = GENL_ADMIN_PERM,
 	},
 	{
 		.cmd = MLXDEVM_CMD_PORT_GET,
 		.validate = GENL_DONT_VALIDATE_STRICT | GENL_DONT_VALIDATE_DUMP,
+		.policy = mlxdevm_nl_policy,
 		.doit = mlxdevm_nl_cmd_port_get_doit,
 		.dumpit = mlxdevm_nl_cmd_port_get_dumpit,
 		/* can be retrieved by unprivileged users */
 	},
 	{
 		.cmd = MLXDEVM_CMD_PORT_NEW,
+		.policy = mlxdevm_nl_policy,
 		.doit = mlxdevm_nl_cmd_port_new_doit,
 		.flags = GENL_ADMIN_PERM,
 	},
 	{
 		.cmd = MLXDEVM_CMD_PORT_DEL,
+		.policy = mlxdevm_nl_policy,
 		.doit = mlxdevm_nl_cmd_port_del_doit,
 		.flags = GENL_ADMIN_PERM,
 	},
@@ -2414,12 +2426,14 @@ static const struct genl_ops mlxdevm_nl_ops[] = {
 	{
 		.cmd = MLXDEVM_CMD_EXT_RATE_SET,
 		.validate = GENL_DONT_VALIDATE_STRICT | GENL_DONT_VALIDATE_DUMP,
+		.policy = mlxdevm_nl_policy,
 		.doit = mlxdevm_nl_cmd_rate_set_doit,
 		.flags = GENL_ADMIN_PERM,
 	},
 	{
 		.cmd = MLXDEVM_CMD_EXT_RATE_GET,
 		.validate = GENL_DONT_VALIDATE_STRICT | GENL_DONT_VALIDATE_DUMP,
+		.policy = mlxdevm_nl_policy,
 		.doit = mlxdevm_nl_cmd_rate_get_doit,
 		.dumpit = mlxdevm_nl_cmd_rate_get_dumpit,
 		/* can be retrieved by unprivileged users */
@@ -2427,12 +2441,14 @@ static const struct genl_ops mlxdevm_nl_ops[] = {
 	{
 		.cmd = MLXDEVM_CMD_EXT_RATE_NEW,
 		.validate = GENL_DONT_VALIDATE_STRICT | GENL_DONT_VALIDATE_DUMP,
+		.policy = mlxdevm_nl_policy,
 		.doit = mlxdevm_nl_cmd_rate_new_doit,
 		.flags = GENL_ADMIN_PERM,
 	},
 	{
 		.cmd = MLXDEVM_CMD_EXT_RATE_DEL,
 		.validate = GENL_DONT_VALIDATE_STRICT | GENL_DONT_VALIDATE_DUMP,
+		.policy = mlxdevm_nl_policy,
 		.doit = mlxdevm_nl_cmd_rate_del_doit,
 		.flags = GENL_ADMIN_PERM,
 	},
@@ -2447,6 +2463,7 @@ static struct genl_family mlxdevm_nl_family __ro_after_init = {
 	.module = THIS_MODULE,
 	.ops = mlxdevm_nl_ops,
 	.n_ops = ARRAY_SIZE(mlxdevm_nl_ops),
+	.resv_start_op = MLXDEVM_CMD_MAX + 1,
 };
 
 static int __init mlxdevm_init(void)

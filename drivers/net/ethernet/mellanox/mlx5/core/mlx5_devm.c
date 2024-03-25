@@ -102,25 +102,68 @@ static struct devlink *mlxdevm_to_devlink(struct mlxdevm *devm)
 	return priv_to_devlink(container_of(devm, struct mlx5_devm_device, device)->dev);
 }
 
+void mlx5_devm_sfs_clean(struct mlx5_core_dev *dev)
+{
+	struct mlx5_devm_device *mdevm = mlx5_devm_device_get(dev);
+	unsigned long index;
+	void *entry;
+
+	if (!mdevm)
+		return;
+
+	xa_for_each(&mdevm->devm_sfs, index, entry)
+		xa_erase(&mdevm->devm_sfs, index);
+}
+
+bool mlx5_devm_is_devm_sf(struct mlx5_core_dev *dev, u32 sfnum)
+{
+	struct mlx5_devm_device *mdevm;
+	unsigned long index;
+	void *entry;
+
+	mdevm = mlx5_devm_device_get(dev);
+	if (!mdevm)
+		return false;
+
+	xa_for_each(&mdevm->devm_sfs, index, entry) {
+		if (xa_to_value(entry) == sfnum) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 int mlx5_devm_sf_port_new(struct mlxdevm *devm_dev,
 			  const struct mlxdevm_port_new_attrs *attrs,
 			  struct netlink_ext_ack *extack,
 			  unsigned int *new_port_index)
 {
 	struct devlink_port_new_attrs devl_attrs;
+	struct mlx5_devm_device *mdevm_dev;
 	struct devlink *devlink;
+	int ret;
 
 	devlink = mlxdevm_to_devlink(devm_dev);
 	dm_new_attrs2devl_new_attrs(attrs, &devl_attrs);
-	return mlx5_devlink_sf_port_new(devlink, &devl_attrs, extack, new_port_index);
+	ret = mlx5_devlink_sf_port_new(devlink, &devl_attrs, extack, new_port_index);
+	if (ret)
+		return ret;
+
+	mdevm_dev = container_of(devm_dev, struct mlx5_devm_device, device);
+	return xa_insert(&mdevm_dev->devm_sfs, *new_port_index,
+			 xa_mk_value(attrs->sfnum), GFP_KERNEL);
 }
 
 int mlx5_devm_sf_port_del(struct mlxdevm *devm_dev,
 			  unsigned int port_index,
 			  struct netlink_ext_ack *extack)
 {
+	struct mlx5_devm_device *mdevm_dev;
 	struct devlink *devlink;
 
+	mdevm_dev = container_of(devm_dev, struct mlx5_devm_device, device);
+	xa_erase(&mdevm_dev->devm_sfs, port_index);
 	devlink = mlxdevm_to_devlink(devm_dev);
 	return mlx5_devlink_sf_port_del(devlink, port_index, extack);
 }
@@ -261,7 +304,7 @@ int mlx5_devm_sf_port_fn_cap_get(struct mlxdevm_port *port,
 	if (ret)
 		goto out_free;
 
-	ret = mlx5_core_other_function_get_caps(parent_dev, hw_fn_id, query_ctx);
+	ret = mlx5_vport_get_other_func_general_cap(parent_dev, hw_fn_id, query_ctx);
 	if (ret)
 		goto out_free;
 
@@ -309,7 +352,8 @@ int mlx5_devm_sf_port_fn_cap_set(struct mlxdevm_port *port,
 	if (ret)
 		goto out_free;
 
-	ret = mlx5_core_other_function_get_caps(parent_dev, hw_fn_id, query_ctx);
+	ret = mlx5_vport_get_other_func_cap(parent_dev, hw_fn_id, query_ctx,
+					    MLX5_CAP_GENERAL);
 	if (ret)
 		goto out_free;
 
@@ -343,7 +387,8 @@ int mlx5_devm_sf_port_fn_cap_set(struct mlxdevm_port *port,
 		}
 		MLX5_SET(cmd_hca_cap, hca_caps, log_max_current_uc_list, cap_ilog2_val);
 	}
-	ret = mlx5_core_other_function_set_caps(parent_dev, hca_caps, hw_fn_id);
+	ret = mlx5_vport_set_other_func_cap(parent_dev, hca_caps, hw_fn_id,
+					    MLX5_SET_HCA_CAP_OP_MOD_GENERAL_DEVICE);
 
 out_free:
 	kfree(query_ctx);
@@ -430,6 +475,9 @@ int mlx5_devlink_rate_leaf_tx_max_set(struct devlink *devlink,
 		return -EPERM;
 
 	mutex_lock(&esw->state_lock);
+	if (!vport->qos.enabled && !tx_max)
+		goto unlock;
+
 	err = esw_qos_vport_enable(esw, vport, 0, 0, extack);
 	if (err)
 		goto unlock;
@@ -470,6 +518,9 @@ int mlx5_devlink_rate_leaf_tx_share_set(struct devlink *devlink,
 		return -EPERM;
 
 	mutex_lock(&esw->state_lock);
+	if (!vport->qos.enabled && !tx_share)
+		goto unlock;
+
 	err = esw_qos_vport_enable(esw, vport, 0, 0, extack);
 	if (err)
 		goto unlock;
@@ -616,6 +667,13 @@ int mlx5_devm_rate_node_new(struct mlxdevm *devm_dev, const char *group_name,
 		NL_SET_ERR_MSG_MOD(extack,
 				   "Rate node creation supported only in switchdev mode");
 		err = -EOPNOTSUPP;
+		goto unlock;
+	}
+
+	group = esw_qos_find_devm_group(esw, group_name);
+	if (group) {
+		NL_SET_ERR_MSG_MOD(extack, "Node already exists");
+		err = -EEXIST;
 		goto unlock;
 	}
 
@@ -817,6 +875,7 @@ int mlx5_devm_register(struct mlx5_core_dev *dev)
 	if (err)
 		goto params_reg_err;
 
+	xa_init(&mdevm_dev->devm_sfs);
 	return 0;
 
 params_reg_err:
@@ -837,6 +896,7 @@ void mlx5_devm_unregister(struct mlx5_core_dev *dev)
 	if (!mdevm)
 		return;
 
+	xa_destroy(&mdevm->devm_sfs);
 	if (mlx5_core_is_sf(dev))
 		mlxdevm_params_unregister(&mdevm->device, mlx5_devm_params,
 					  ARRAY_SIZE(mlx5_devm_params));

@@ -11,20 +11,6 @@ tc_act_can_offload_ct(struct mlx5e_tc_act_parse_state *parse_state,
 		      int act_index,
 		      struct mlx5_flow_attr *attr)
 {
-	bool clear_action = act->ct.action & TCA_CT_ACT_CLEAR;
-	struct netlink_ext_ack *extack = parse_state->extack;
-
-	if (flow_flag_test(parse_state->flow, SAMPLE)) {
-		NL_SET_ERR_MSG_MOD(extack,
-				   "Sample action with connection tracking is not supported");
-		return false;
-	}
-
-	if (parse_state->ct && !clear_action) {
-		NL_SET_ERR_MSG_MOD(extack, "Multiple CT actions are not supoported");
-		return false;
-	}
-
 	return true;
 }
 
@@ -34,29 +20,18 @@ tc_act_parse_ct(struct mlx5e_tc_act_parse_state *parse_state,
 		struct mlx5e_priv *priv,
 		struct mlx5_flow_attr *attr)
 {
-	bool clear_action = act->ct.action & TCA_CT_ACT_CLEAR;
 	int err;
 
-	/* It's redundant to do ct clear more than once. */
-	if (clear_action && parse_state->ct_clear)
-		return 0;
-
-	err = mlx5_tc_ct_parse_action(parse_state->ct_priv, attr,
-				      &attr->parse_attr->mod_hdr_acts,
-				      act, parse_state->extack);
+	err = mlx5_tc_ct_parse_action(parse_state->ct_priv, attr, act, parse_state->extack);
 	if (err)
 		return err;
 
-	if (mlx5e_is_eswitch_flow(parse_state->flow))
+	if (mlx5e_is_eswitch_flow(parse_state->flow)) {
 		attr->esw_attr->split_count = attr->esw_attr->out_count;
-
-	if (clear_action) {
-		parse_state->ct_clear = true;
-	} else {
-		attr->flags |= MLX5_ATTR_FLAG_CT;
-		flow_flag_set(parse_state->flow, CT);
- 		parse_state->ct = true;
+		parse_state->if_count = 0;
 	}
+
+	attr->flags |= MLX5_ATTR_FLAG_CT;
 
 	return 0;
 }
@@ -66,26 +41,10 @@ tc_act_post_parse_ct(struct mlx5e_tc_act_parse_state *parse_state,
 		     struct mlx5e_priv *priv,
 		     struct mlx5_flow_attr *attr)
 {
-	struct mlx5e_tc_mod_hdr_acts *mod_acts = &attr->parse_attr->mod_hdr_acts;
-	int err;
-
-	/* If ct action exist, we can ignore previous ct_clear actions */
-	if (parse_state->ct)
+	if (!(attr->flags & MLX5_ATTR_FLAG_CT))
 		return 0;
 
-	if (parse_state->ct_clear) {
-		err = mlx5_tc_ct_set_ct_clear_regs(parse_state->ct_priv, mod_acts);
-		if (err) {
-			NL_SET_ERR_MSG_MOD(parse_state->extack,
-					   "Failed to set registers for ct clear");
-			return err;
-		}
-		attr->action |= MLX5_FLOW_CONTEXT_ACTION_MOD_HDR;
-
-		/* Prevent handling of additional, redundant clear actions */
-		parse_state->ct_clear = false;
-	}
-	return 0;
+	return mlx5_tc_ct_flow_offload(parse_state->ct_priv, attr);
 }
 
 static bool
@@ -99,10 +58,20 @@ tc_act_is_multi_table_act_ct(struct mlx5e_priv *priv,
 	return true;
 }
 
+static bool
+tc_act_is_missable_ct(const struct flow_action_entry *act)
+{
+	if (act->ct.action & TCA_CT_ACT_CLEAR)
+		return false;
+
+	return true;
+}
+
 struct mlx5e_tc_act mlx5e_tc_act_ct = {
 	.can_offload = tc_act_can_offload_ct,
 	.parse_action = tc_act_parse_ct,
-	.is_multi_table_act = tc_act_is_multi_table_act_ct,
 	.post_parse = tc_act_post_parse_ct,
+	.is_multi_table_act = tc_act_is_multi_table_act_ct,
+	.is_missable = tc_act_is_missable_ct,
 };
 

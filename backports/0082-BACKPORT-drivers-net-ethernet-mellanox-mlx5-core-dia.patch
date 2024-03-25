@@ -2,7 +2,7 @@ From: Valentine Fatiev <valentinef@nvidia.com>
 Subject: [PATCH] BACKPORT:
  drivers/net/ethernet/mellanox/mlx5/core/diag/fs_tracepoint.c
 
-Change-Id: Ibf737275631c442d2dead5302f3484b16b157710
+Change-Id: If8c71d0b41fa939b9d6ac9dbb52cc85a6c04c3a2
 ---
  drivers/net/ethernet/mellanox/mlx5/core/diag/fs_tracepoint.c | 3 +++
  1 file changed, 3 insertions(+)
@@ -18,7 +18,7 @@ Change-Id: Ibf737275631c442d2dead5302f3484b16b157710
  #define CREATE_TRACE_POINTS
  
  #include "fs_tracepoint.h"
-@@ -278,3 +280,4 @@ EXPORT_TRACEPOINT_SYMBOL(mlx5_fs_del_fte
+@@ -297,3 +299,4 @@ EXPORT_TRACEPOINT_SYMBOL(mlx5_fs_del_fte
  EXPORT_TRACEPOINT_SYMBOL(mlx5_fs_add_rule);
  EXPORT_TRACEPOINT_SYMBOL(mlx5_fs_del_rule);
  

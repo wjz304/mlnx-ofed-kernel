@@ -1,90 +1,81 @@
 From: Valentine Fatiev <valentinef@nvidia.com>
-Subject: [PATCH] BACKPORT: drivers/net/ethernet/mellanox/mlx5/core/en/xsk/rx.h
+Subject: [PATCH] BACKPORT:
+ drivers/net/ethernet/mellanox/mlx5/core/en/tc/act_stats.c
 
-Change-Id: I2c30893cb783fc2d5a5b001afa702be9171770d2
+Change-Id: Ibd2b5eef70320ac5be64f4fbfa1e0e4f06fd3ea4
 ---
- .../ethernet/mellanox/mlx5/core/en/xsk/rx.h   | 41 +++++++++++++++++--
- 1 file changed, 38 insertions(+), 3 deletions(-)
+ .../mellanox/mlx5/core/en/tc/act_stats.c      | 40 +++++++++++++++++++
+ 1 file changed, 40 insertions(+)
 
---- a/drivers/net/ethernet/mellanox/mlx5/core/en/xsk/rx.h
-+++ b/drivers/net/ethernet/mellanox/mlx5/core/en/xsk/rx.h
-@@ -4,11 +4,25 @@
- #ifndef __MLX5_EN_XSK_RX_H__
- #define __MLX5_EN_XSK_RX_H__
+--- a/drivers/net/ethernet/mellanox/mlx5/core/en/tc/act_stats.c
++++ b/drivers/net/ethernet/mellanox/mlx5/core/en/tc/act_stats.c
+@@ -3,6 +3,7 @@
  
-+#ifdef HAVE_XSK_ZERO_COPY_SUPPORT
-+
- #include "en.h"
-+#ifdef HAVE_NDO_XSK_WAKEUP
-+#ifdef HAVE_XDP_SOCK_DRV_H
- #include <net/xdp_sock_drv.h>
+ #include <linux/rhashtable.h>
+ #include <net/flow_offload.h>
++#include <net/act_api.h>
+ #include "en/tc_priv.h"
+ #include "act_stats.h"
+ #include "en/fs.h"
+@@ -173,7 +174,13 @@ mlx5e_tc_act_stats_fill_stats(struct mlx
+ 	u64 pkts, bytes, lastused;
+ 	int err = 0;
+ 
++#if defined(HAVE_FLOW_ACTION_ENTRY_COOKIE) || defined(HAVE_FLOW_ACTION_ENTRY_ACT_COOKIE)
+ 	key.tc_act_cookie = fl_act->cookie;
++#elif defined(HAVE_FLOW_ACTION_ENTRY_ACT_POINTER)
++	key.tc_act_cookie = (unsigned long) ((void *) fl_act);
 +#else
-+#include <net/xdp_sock.h>
-+#endif
++	return -EOPNOTSUPP;
 +#endif
  
- /* RX data path */
+ 	rcu_read_lock();
+ 	item = rhashtable_lookup(ht, &key, act_counters_ht_params);
+@@ -186,10 +193,30 @@ mlx5e_tc_act_stats_fill_stats(struct mlx
+ 	mlx5_fc_query_cached_raw(item->counter,
+ 				 &bytes, &pkts, &lastused);
  
-+#ifndef HAVE_XSK_BUFF_ALLOC
-+bool mlx5e_xsk_pages_enough_umem(struct mlx5e_rq *rq, int count);
-+void mlx5e_xsk_page_release(struct mlx5e_rq *rq,
-+			    struct mlx5e_dma_info *dma_info);
-+void mlx5e_xsk_zca_free(struct zero_copy_allocator *zca, unsigned long handle);
-+#endif
- struct sk_buff *mlx5e_xsk_skb_from_cqe_mpwrq_linear(struct mlx5e_rq *rq,
- 						    struct mlx5e_mpw_info *wi,
- 						    u16 cqe_bcnt,
-@@ -19,10 +33,16 @@ struct sk_buff *mlx5e_xsk_skb_from_cqe_l
- 					      struct mlx5e_wqe_frag_info *wi,
- 					      u32 cqe_bcnt);
- 
-+#ifdef HAVE_XSK_BUFF_ALLOC
- static inline int mlx5e_xsk_page_alloc_pool(struct mlx5e_rq *rq,
- 					    struct mlx5e_dma_info *dma_info)
- {
-+#ifdef HAVE_NETDEV_BPF_XSK_BUFF_POOL
- 	dma_info->xsk = xsk_buff_alloc(rq->xsk_pool);
++#if defined(HAVE_FLOW_OFFLOAD_ACTION)
+ 	flow_stats_update(&fl_act->stats,
+ 			  bytes - item->lastbytes,
+ 			  pkts - item->lastpackets,
+ 			  0, lastused, FLOW_ACTION_HW_STATS_DELAYED);
++#elif defined(HAVE_TCF_ACTION_STATS_UPDATE_5_PARAMS)
++	tcf_action_stats_update((struct tc_action *) fl_act,
++			  bytes - item->lastbytes,
++			  pkts - item->lastpackets,
++			  lastused, true);
++#elif defined(HAVE_TCF_ACTION_STATS_UPDATE)
++	tcf_action_stats_update((struct tc_action *) fl_act,
++			  bytes - item->lastbytes,
++			  pkts - item->lastpackets,
++			  lastused);
 +#else
-+	dma_info->xsk = xsk_buff_alloc(rq->umem);
-+#endif
++	{
++		struct tc_action *a = (struct tc_action *) fl_act;
 +
- 	if (!dma_info->xsk)
- 		return -ENOMEM;
++		tcf_action_update_stats(a, bytes - item->lastbytes, pkts - item->lastpackets,
++				        0, true);
++		a->tcfa_tm.lastuse = max_t(u64, a->tcfa_tm.lastuse, lastused);
++	}
++#endif
  
-@@ -35,18 +55,33 @@ static inline int mlx5e_xsk_page_alloc_p
- 
- 	return 0;
+ 	item->lastpackets = pkts;
+ 	item->lastbytes = bytes;
+@@ -200,3 +227,16 @@ mlx5e_tc_act_stats_fill_stats(struct mlx
+ err_out:
+ 	return err;
  }
-+#else
-+int mlx5e_xsk_page_alloc_pool(struct mlx5e_rq *rq,
-+			      struct mlx5e_dma_info *dma_info);
-+#endif /* HAVE_XSK_BUFF_ALLOC */
- 
-+#ifdef HAVE_NDO_XSK_WAKEUP
- static inline bool mlx5e_xsk_update_rx_wakeup(struct mlx5e_rq *rq, bool alloc_err)
- {
--	if (!xsk_uses_need_wakeup(rq->xsk_pool))
-+#ifdef HAVE_NETDEV_BPF_XSK_BUFF_POOL
-+	struct xsk_buff_pool *xsk_pool = rq->xsk_pool;
 +
-+	if (!xsk_uses_need_wakeup(xsk_pool))
-+#else
-+	struct xdp_umem *xsk_pool = rq->umem;
++void
++mlx5e_tc_act_stats_fill_stats_flow(struct mlx5e_tc_act_stats_handle *handle,
++				   struct mlx5e_tc_flow *flow)
++{
++	struct mlx5_flow_attr *attr;
++	int i;
 +
-+	if (!xsk_umem_uses_need_wakeup(xsk_pool))
-+#endif
- 		return alloc_err;
- 
- 	if (unlikely(alloc_err))
--		xsk_set_rx_need_wakeup(rq->xsk_pool);
-+		xsk_set_rx_need_wakeup(xsk_pool);
- 	else
--		xsk_clear_rx_need_wakeup(rq->xsk_pool);
-+		xsk_clear_rx_need_wakeup(xsk_pool);
- 
- 	return false;
- }
-+#endif
- 
-+#endif /* HAVE_XSK_ZERO_COPY_SUPPORT */
- #endif /* __MLX5_EN_XSK_RX_H__ */
++	list_for_each_entry(attr, &flow->attrs, list)
++		for (i = 0; i < attr->tc_act_cookies_count; i++)
++			mlx5e_tc_act_stats_fill_stats(handle,
++						      (struct flow_offload_action *) ((void *) attr->tc_act_cookies[i]));
++}

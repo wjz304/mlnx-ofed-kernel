@@ -5,7 +5,6 @@
 
 #include <linux/interrupt.h>
 #include <linux/notifier.h>
-#include <linux/module.h>
 #include <linux/mlx5/driver.h>
 #include <linux/mlx5/vport.h>
 #include <linux/mlx5/eq.h>
@@ -21,6 +20,7 @@
 #include "mlx5_irq.h"
 #include "devlink.h"
 #include "mlx5_devm.h"
+#include "en_accel/ipsec.h"
 
 enum {
 	MLX5_EQE_OWNER_INIT_VAL	= 0x1,
@@ -398,20 +398,16 @@ void mlx5_eq_disable(struct mlx5_core_dev *dev, struct mlx5_eq *eq,
 }
 EXPORT_SYMBOL(mlx5_eq_disable);
 
-static int destroy_unmap_eq(struct mlx5_core_dev *dev, struct mlx5_eq *eq,
-			    bool reentry)
+static int destroy_unmap_eq(struct mlx5_core_dev *dev, struct mlx5_eq *eq)
 {
 	int err;
 
 	mlx5_debug_eq_remove(dev, eq);
 
 	err = mlx5_cmd_destroy_eq(dev, eq->eqn);
-	if (err) {
+	if (err)
 		mlx5_core_warn(dev, "failed to destroy a previously created eq: eqn %d\n",
 			       eq->eqn);
-		if (!reentry)
-			return err;
-	}
 
 	mlx5_frag_buf_free(dev, &eq->frag_buf);
 	return err;
@@ -454,7 +450,8 @@ int mlx5_eq_table_init(struct mlx5_core_dev *dev)
 	struct mlx5_eq_table *eq_table;
 	int i;
 
-	eq_table = kvzalloc(sizeof(*eq_table), GFP_KERNEL);
+	eq_table = kvzalloc_node(sizeof(*eq_table), GFP_KERNEL,
+				 dev->priv.numa_node);
 	if (!eq_table)
 		return -ENOMEM;
 
@@ -510,38 +507,13 @@ int mlx5_vector2eq(struct mlx5_core_dev *dev, int vector, struct mlx5_eq_comp *e
 	return err;
 }
 
-void mlx5_rename_comp_eq(struct mlx5_core_dev *dev, unsigned int eq_ix,
-			 char *name)
-{
-	struct mlx5_eq_table *table = dev->priv.eq_table;
-	struct mlx5_eq_comp *eq, *n;
-	int err = -ENOENT;
-	int i = 0;
-
- 	if (mlx5_core_is_sf(dev))
- 		return;
- 
-	mutex_lock(&table->lock);
-	if (eq_ix >= table->num_comp_eqs) {
-		dev_err(&dev->pdev->dev, "%s: failed: %d\n",
-			__func__, err);
-		goto unlock;
-	}
-	list_for_each_entry_safe(eq, n, &table->comp_eqs_list, list)
-		if (i++ == eq_ix)
-			break;
-	mlx5_irq_rename(dev, eq->core.irq, name);
-unlock:
-	mutex_unlock(&table->lock);
-}
-
 static int destroy_async_eq(struct mlx5_core_dev *dev, struct mlx5_eq *eq)
 {
 	struct mlx5_eq_table *eq_table = dev->priv.eq_table;
 	int err;
 
 	mutex_lock(&eq_table->lock);
-	err = destroy_unmap_eq(dev, eq, true);
+	err = destroy_unmap_eq(dev, eq);
 	mutex_unlock(&eq_table->lock);
 	return err;
 }
@@ -639,9 +611,12 @@ static void gather_async_events_mask(struct mlx5_core_dev *dev, u64 mask[4])
 	if (MLX5_CAP_GEN_MAX(dev, vhca_state))
 		async_event_mask |= (1ull << MLX5_EVENT_TYPE_VHCA_STATE_CHANGE);
 
-	if (MLX5_CAP_IPSEC(dev, ipsec_full_offload))
+	if (MLX5_CAP_MACSEC(dev, log_max_macsec_offload))
+		async_event_mask |= (1ull << MLX5_EVENT_TYPE_OBJECT_CHANGE);
+
+	if (mlx5_ipsec_device_caps(dev) & MLX5_IPSEC_CAP_PACKET_OFFLOAD)
 		async_event_mask |=
-			(1ull << MLX5_EVENT_TYPE_OBJECT_CHANGE_EVENT);
+			(1ull << MLX5_EVENT_TYPE_OBJECT_CHANGE);
 
 	mask[0] = async_event_mask;
 
@@ -689,9 +664,9 @@ static u16 async_eq_depth_devlink_param_get(struct mlx5_core_dev *dev)
 	union devlink_param_value val;
 	int err;
 
-	err = devlink_param_driverinit_value_get(devlink,
-						 DEVLINK_PARAM_GENERIC_ID_EVENT_EQ_SIZE,
-						 &val);
+	err = devl_param_driverinit_value_get(devlink,
+					      DEVLINK_PARAM_GENERIC_ID_EVENT_EQ_SIZE,
+					      &val);
 	if (!err)
 		return val.vu32;
 	mlx5_core_dbg(dev, "Failed to get param. using default. err = %d\n", err);
@@ -799,7 +774,8 @@ struct mlx5_eq *
 mlx5_eq_create_generic(struct mlx5_core_dev *dev,
 		       struct mlx5_eq_param *param)
 {
-	struct mlx5_eq *eq = kvzalloc(sizeof(*eq), GFP_KERNEL);
+	struct mlx5_eq *eq = kvzalloc_node(sizeof(*eq), GFP_KERNEL,
+					   dev->priv.numa_node);
 	int err;
 
 	if (!eq)
@@ -818,15 +794,12 @@ EXPORT_SYMBOL(mlx5_eq_create_generic);
 
 int mlx5_eq_destroy_generic(struct mlx5_core_dev *dev, struct mlx5_eq *eq)
 {
-	struct mlx5_eq_table *eq_table = dev->priv.eq_table;
 	int err;
 
 	if (IS_ERR(eq))
 		return -EINVAL;
 
-	mutex_lock(&eq_table->lock);
-	err = destroy_unmap_eq(dev, eq, false);
-	mutex_unlock(&eq_table->lock);
+	err = destroy_async_eq(dev, eq);
 	if (err)
 		goto out;
 
@@ -901,9 +874,12 @@ static void comp_irqs_release(struct mlx5_core_dev *dev)
 static int comp_irqs_request(struct mlx5_core_dev *dev)
 {
 	struct mlx5_eq_table *table = dev->priv.eq_table;
+	const struct cpumask *prev = cpu_none_mask;
+	const struct cpumask *mask;
 	int ncomp_eqs = table->num_comp_eqs;
 	u16 *cpus;
 	int ret;
+	int cpu;
 	int i;
 
 	ncomp_eqs = table->num_comp_eqs;
@@ -927,8 +903,19 @@ static int comp_irqs_request(struct mlx5_core_dev *dev)
 		ret = -ENOMEM;
 		goto free_irqs;
 	}
-	for (i = 0; i < ncomp_eqs; i++)
-		cpus[i] = cpumask_local_spread(i, dev->priv.numa_node);
+
+	i = 0;
+	rcu_read_lock();
+	for_each_numa_hop_mask(mask, dev->priv.numa_node) {
+		for_each_cpu_andnot(cpu, mask, prev) {
+			cpus[i] = cpu;
+			if (++i == ncomp_eqs)
+				goto spread_done;
+		}
+		prev = mask;
+	}
+spread_done:
+	rcu_read_unlock();
 	ret = mlx5_irqs_request_vectors(dev, cpus, ncomp_eqs, table->comp_irqs);
 	kfree(cpus);
 	if (ret < 0)
@@ -948,7 +935,7 @@ static void destroy_comp_eqs(struct mlx5_core_dev *dev)
 	list_for_each_entry_safe(eq, n, &table->comp_eqs_list, list) {
 		list_del(&eq->list);
 		mlx5_eq_disable(dev, &eq->core, &eq->irq_nb);
-		if (destroy_unmap_eq(dev, &eq->core, true))
+		if (destroy_unmap_eq(dev, &eq->core))
 			mlx5_core_warn(dev, "failed to destroy comp EQ 0x%x\n",
 				       eq->core.eqn);
 		tasklet_disable(&eq->tasklet_ctx.task);
@@ -963,9 +950,9 @@ static u16 comp_eq_depth_devlink_param_get(struct mlx5_core_dev *dev)
 	union devlink_param_value val;
 	int err;
 
-	err = devlink_param_driverinit_value_get(devlink,
-						 DEVLINK_PARAM_GENERIC_ID_IO_EQ_SIZE,
-						 &val);
+	err = devl_param_driverinit_value_get(devlink,
+					      DEVLINK_PARAM_GENERIC_ID_IO_EQ_SIZE,
+					      &val);
 	if (!err)
 		return val.vu32;
 	mlx5_core_dbg(dev, "Failed to get param. using default. err = %d\n", err);
@@ -994,7 +981,7 @@ static int create_comp_eqs(struct mlx5_core_dev *dev)
 	for (i = 0; i < ncomp_eqs; i++) {
 		struct mlx5_eq_param param = {};
 
-		eq = kzalloc(sizeof(*eq), GFP_KERNEL);
+		eq = kzalloc_node(sizeof(*eq), GFP_KERNEL, dev->priv.numa_node);
 		if (!eq) {
 			err = -ENOMEM;
 			goto clean;
@@ -1016,7 +1003,7 @@ static int create_comp_eqs(struct mlx5_core_dev *dev)
 			goto clean_eq;
 		err = mlx5_eq_enable(dev, &eq->core, &eq->irq_nb);
 		if (err) {
-			destroy_unmap_eq(dev, &eq->core, true);
+			destroy_unmap_eq(dev, &eq->core);
 			goto clean_eq;
 		}
 
@@ -1042,11 +1029,11 @@ static int vector2eqnirqn(struct mlx5_core_dev *dev, int vector, int *eqn,
 			  unsigned int *irqn)
 {
 	struct mlx5_eq_table *table = dev->priv.eq_table;
-	struct mlx5_eq_comp *eq, *n;
+	struct mlx5_eq_comp *eq;
 	int err = -ENOENT;
 	int i = 0;
 
-	list_for_each_entry_safe(eq, n, &table->comp_eqs_list, list) {
+	list_for_each_entry(eq, &table->comp_eqs_list, list) {
 		if (i++ == vector) {
 			if (irqn)
 				*irqn = eq->core.irqn;
@@ -1081,10 +1068,10 @@ struct cpumask *
 mlx5_comp_irq_get_affinity_mask(struct mlx5_core_dev *dev, int vector)
 {
 	struct mlx5_eq_table *table = dev->priv.eq_table;
-	struct mlx5_eq_comp *eq, *n;
+	struct mlx5_eq_comp *eq;
 	int i = 0;
 
-	list_for_each_entry_safe(eq, n, &table->comp_eqs_list, list) {
+	list_for_each_entry(eq, &table->comp_eqs_list, list) {
 		if (i++ == vector)
 			break;
 	}

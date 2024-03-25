@@ -97,9 +97,11 @@ static const struct sysfs_ops ttl_sysfs_ops = {
 	.store = ttl_attr_store
 };
 
+ATTRIBUTE_GROUPS(ttl);
+
 static struct kobj_type ttl_type = {
 	.sysfs_ops     = &ttl_sysfs_ops,
-	.default_attrs = ttl_attrs
+	.default_groups = ttl_groups
 };
 
 int init_ttl_sysfs(struct mlx5_ib_dev *dev)
@@ -697,9 +699,11 @@ static const struct sysfs_ops tc_sysfs_ops = {
 	.store = tc_attr_store
 };
 
+ATTRIBUTE_GROUPS(tc);
+
 static struct kobj_type tc_type = {
 	.sysfs_ops     = &tc_sysfs_ops,
-	.default_attrs = tc_attrs
+	.default_groups = tc_groups
 };
 
 int init_tc_sysfs(struct mlx5_ib_dev *dev)
@@ -1397,9 +1401,11 @@ static const struct sysfs_ops dc_sysfs_ops = {
 	.store = dc_attr_store
 };
 
+ATTRIBUTE_GROUPS(dc);
+
 static struct kobj_type dc_type = {
         .sysfs_ops     = &dc_sysfs_ops,
-        .default_attrs = dc_attrs
+	.default_groups = dc_groups
 };
 
 static int init_sysfs(struct mlx5_ib_dev *dev)

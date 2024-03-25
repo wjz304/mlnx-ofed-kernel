@@ -3,8 +3,9 @@
 SWID=$2
 # might be pf0vf1 so only get vf number
 PORT=${1##*f}
-PORT_NAME=$1
+PORT_NAME=`echo ${1} | sed -e "s/c[[:digit:]]\+//"`
 IFINDEX=$3
+ECVF=0
 
 # need the PATH for BF ARM lspci to work
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
@@ -18,7 +19,7 @@ function get_mh_bf_rep_name() {
         IFIDX=$2
         for rep_ndev in `ls /sys/class/net/`; do
                 _ifindex=`cat /sys/class/net/$rep_ndev/ifindex | head -1 2>/dev/null`
-                if [ "$_ifindex" = "$IFIDX" ]
+                if [ "$_ifindex" == "$IFIDX" ]
                 then
                         devpath=`udevadm info /sys/class/net/$rep_ndev | grep "DEVPATH="`
                         pcipath=`echo $devpath | awk -F "/net/$rep_ndev" '{print $1}'`
@@ -48,22 +49,28 @@ function get_mh_bf_rep_name() {
 
 is_bf=`lspci -s 00:00.0 2> /dev/null | grep -wq "PCI bridge: Mellanox Technologies" && echo 1 || echo 0`
 if [ $is_bf -eq 1 ]; then
-        num_of_pf=`lspci 2> /dev/null | grep -w "Ethernet controller: Mellanox Technologies MT42822 BlueField-2" | wc -l`
+        num_of_pf=`lspci 2> /dev/null | grep -w "network" | wc -l`
         if [ $num_of_pf -gt 2 ]; then
                 echo "NAME=`get_mh_bf_rep_name $PORT_NAME $IFINDEX`"
                 exit 0
         fi
+	if [ $ID_MODEL_ID != "0x101e" ]; then
 
-        echo NAME=`echo ${1} | sed -e "s/\(pf[[:digit:]]\+\)$/\1hpf/;s/c[[:digit:]]\+//"`
-        exit 0
+		echo NAME=`echo ${1} | sed -e "s/\(pf[[:digit:]]\+\)$/\1hpf/;s/c[[:digit:]]\+//"`
+		exit 0
+	else
+		ECVF=1
+	fi
 fi
 
-# Ditch stdout, use stderr as new stdout:
-if udevadm test-builtin path_id "/sys$DEVPATH" 2>&1 1>/dev/null \
-	| grep -q 'Network interface NamePolicy= disabled'
-then
-	echo "NAME=$INTERFACE"
-	exit 0
+if [ $ECVF -ne 1]; then
+	# Ditch use stderr as new stdout:
+	if udevadm test-builtin path_id "/sys$DEVPATH" 2>&1 1>/dev/null \
+		| grep -q 'Network interface NamePolicy= disabled'
+	then
+		echo "NAME=$INTERFACE"
+		exit 0
+	fi
 fi
 
 # for pf and uplink rep fall to slot or path.
@@ -74,6 +81,16 @@ if [ "$ID_NET_DRIVER" == "mlx5e_rep" ]; then
         skip=1
     fi
 fi
+
+function test_if_pf() {
+    MODEL_ID=$1
+
+    case "$MODEL_ID" in
+        "0x1011" | "0x1013" | "0x1015" | "0x1017" | "0x1019" | "0x1021" | "0x1023" ) IS_PF="TRUE";;
+        *) IS_PF="FALSE";;
+    esac
+    return 0
+}
 
 if [ "$skip" == "0" ]; then
 	if [ -n "$ID_NET_NAME_SLOT" ]; then
@@ -87,6 +104,31 @@ if [ "$skip" == "0" ]; then
 	    NAME=`echo $NAME | sed 's/np.v/v/'`
 	    echo NAME=$NAME
 	    exit
+	else
+	    IS_PF="UNKNOWN"
+	    if [[ -n "$ID_PATH" && "$ID_NET_DRIVER" == "mlx5_core" ]]; then
+		test_if_pf "$ID_MODEL_ID"
+		if [ "$IS_PF" == "TRUE" ]; then
+		    xpci=`echo $ID_PATH | cut -d "-" -f 2`
+		    HXDM=`echo $xpci | cut -d ":" -f 1`
+		    HXBS=`echo $xpci | cut -d ":" -f 2`
+		    HXSL=`echo $xpci | cut -d ":" -f 3 | cut -d "." -f 1`
+		    HXFN=`echo $xpci | cut -d ":" -f 3 | cut -d "." -f 2`
+		    DCDM=$((16#$HXDM))
+		    DCBS=$((16#$HXBS))
+		    DCSL=$((16#$HXSL))
+		    DCFN=$((16#$HXFN))
+		    if [ "$DCDM" == "0" ]; then
+			NM='enp'"$DCBS"'s'"$DCSL"'f'"$DCFN"
+		    else
+			NM='enP'"$DCDM"'p'"$DCBS"'s'"$DCSL"'f'"$DCFN"
+		    fi
+		    if (( ${#NM} <= 15 )); then
+			echo "NAME=$NM"
+			exit
+		    fi
+		fi
+	    fi
 	fi
 fi
 
@@ -187,6 +229,9 @@ for cnt in {1..2}; do
         parent_path=`get_pci_name $pci ID_NET_NAME_SLOT`
         if [ -z "$parent_path" ]; then
             parent_path=`get_pci_name $pci ID_NET_NAME_PATH`
+            if [ -z "$parent_path" ]; then
+                continue
+            fi
         fi
         echo "NAME=${parent_path}_$PORT"
         exit

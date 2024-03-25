@@ -36,7 +36,7 @@
 #include <linux/mlx5/device.h>
 #include <linux/mlx5/driver.h>
 
-#define MLX5_INVALID_LKEY	0x100
+#define MLX5_TERMINATE_SCATTER_LIST_LKEY cpu_to_be32(0x100)
 /* UMR (3 WQE_BB's) + SIG (3 WQE_BB's) + PSV (mem) + PSV (wire) */
 #define MLX5_SIG_WQE_SIZE	(MLX5_SEND_WQE_BB * 8)
 #define MLX5_DIF_SIZE		8
@@ -123,6 +123,10 @@ enum {
 };
 
 enum {
+	MLX5_QP_RM_GO_BACK_N			= 0x1,
+};
+
+enum {
 	MLX5_NON_ZERO_RQ	= 0x0,
 	MLX5_SRQ_RQ		= 0x1,
 	MLX5_CRQ_RQ		= 0x2,
@@ -161,6 +165,8 @@ enum {
 enum {
 	MLX5_SEND_WQE_MAX_WQEBBS	= 16,
 };
+
+#define MLX5_SEND_WQE_MAX_SIZE (MLX5_SEND_WQE_MAX_WQEBBS * MLX5_SEND_WQE_BB)
 
 enum {
 	MLX5_WQE_FMR_PERM_LOCAL_READ	= 1 << 27,
@@ -202,6 +208,9 @@ struct mlx5_wqe_fmr_seg {
 struct mlx5_wqe_ctrl_seg {
 	__be32			opmod_idx_opcode;
 	__be32			qpn_ds;
+
+	struct_group(trailer,
+
 	u8			signature;
 	u8			rsvd[2];
 	u8			fm_ce_se;
@@ -211,6 +220,8 @@ struct mlx5_wqe_ctrl_seg {
 		__be32		umr_mkey;
 		__be32		tis_tir_num;
 	};
+
+	); /* end of trailer group */
 };
 
 enum {
@@ -235,7 +246,6 @@ struct mlx5_mlx_seg {
 #define MLX5_WQE_CTRL_OPCODE_MASK 0xff
 #define MLX5_WQE_CTRL_WQE_INDEX_MASK 0x00ffff00
 #define MLX5_WQE_CTRL_WQE_INDEX_SHIFT 8
-#define MLX5_WQE_CTRL_WQE_OPC_MOD_SHIFT 24
 
 enum {
 	MLX5_ETH_WQE_L3_INNER_CSUM      = 1 << 4,
@@ -483,6 +493,12 @@ struct mlx5_mtt {
 
 struct mlx5_klm {
 	__be32		bcount;
+	__be32		key;
+	__be64		va;
+};
+
+struct mlx5_ksm {
+	__be32		reserved;
 	__be32		key;
 	__be64		va;
 };

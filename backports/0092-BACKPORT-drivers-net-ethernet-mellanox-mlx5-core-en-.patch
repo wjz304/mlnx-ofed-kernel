@@ -1,39 +1,45 @@
 From: Valentine Fatiev <valentinef@nvidia.com>
-Subject: [PATCH] BACKPORT:
- drivers/net/ethernet/mellanox/mlx5/core/en/port_buffer.c
+Subject: [PATCH] BACKPORT: drivers/net/ethernet/mellanox/mlx5/core/en/health.h
 
-Change-Id: I68792188369355fce76ff40844e600b15cd734e4
+Change-Id: I04db2c83115a9da772a6c37678a8e54b970510fc
 ---
- drivers/net/ethernet/mellanox/mlx5/core/en/port_buffer.c | 9 +++++++++
- 1 file changed, 9 insertions(+)
+ drivers/net/ethernet/mellanox/mlx5/core/en/health.h | 6 ++++++
+ 1 file changed, 6 insertions(+)
 
---- a/drivers/net/ethernet/mellanox/mlx5/core/en/port_buffer.c
-+++ b/drivers/net/ethernet/mellanox/mlx5/core/en/port_buffer.c
-@@ -31,6 +31,7 @@
-  */
- #include "port_buffer.h"
+--- a/drivers/net/ethernet/mellanox/mlx5/core/en/health.h
++++ b/drivers/net/ethernet/mellanox/mlx5/core/en/health.h
+@@ -19,11 +19,13 @@ void mlx5e_reporter_tx_destroy(struct ml
+ void mlx5e_reporter_tx_err_cqe(struct mlx5e_txqsq *sq);
+ int mlx5e_reporter_tx_timeout(struct mlx5e_txqsq *sq);
  
-+#ifdef CONFIG_MLX5_CORE_EN_DCB
- int mlx5e_port_query_buffer(struct mlx5e_priv *priv,
- 			    struct mlx5e_port_buffer *port_buffer)
- {
-@@ -279,7 +280,14 @@ int mlx5e_port_manual_buffer_config(stru
- 	int i;
- 
- 	mlx5e_dbg(HW, priv, "%s: change=%x\n", __func__, change);
-+#if defined(HAVE_NET_DEVICE_MIN_MAX_MTU)
- 	max_mtu = max_t(unsigned int, priv->netdev->max_mtu, MINIMUM_MAX_MTU);
-+#elif defined(HAVE_NET_DEVICE_MIN_MAX_MTU_EXTENDED)
-+	max_mtu = max_t(unsigned int, priv->netdev->extended->min_mtu, MINIMUM_MAX_MTU);
-+#else
-+	max_mtu = mtu;
++#ifdef HAVE_DEVLINK_HEALTH_REPORT_SUPPORT
+ int mlx5e_health_cq_diag_fmsg(struct mlx5e_cq *cq, struct devlink_fmsg *fmsg);
+ int mlx5e_health_cq_common_diag_fmsg(struct mlx5e_cq *cq, struct devlink_fmsg *fmsg);
+ int mlx5e_health_eq_diag_fmsg(struct mlx5_eq_comp *eq, struct devlink_fmsg *fmsg);
+ int mlx5e_health_fmsg_named_obj_nest_start(struct devlink_fmsg *fmsg, char *name);
+ int mlx5e_health_fmsg_named_obj_nest_end(struct devlink_fmsg *fmsg);
 +#endif
-+
  
- 	err = mlx5e_port_query_buffer(priv, &port_buffer);
- 	if (err)
-@@ -360,3 +368,4 @@ int mlx5e_port_manual_buffer_config(stru
+ void mlx5e_reporter_rx_create(struct mlx5e_priv *priv);
+ void mlx5e_reporter_rx_destroy(struct mlx5e_priv *priv);
+@@ -37,7 +39,9 @@ void mlx5e_reporter_icosq_resume_recover
  
- 	return err;
- }
+ struct mlx5e_err_ctx {
+ 	int (*recover)(void *ctx);
++#ifdef HAVE_DEVLINK_HEALTH_REPORT_SUPPORT
+ 	int (*dump)(struct mlx5e_priv *priv, struct devlink_fmsg *fmsg, void *ctx);
++#endif /* HAVE_DEVLINK_HEALTH_REPORT_SUPPORT */
+ 	void *ctx;
+ };
+ 
+@@ -51,8 +55,10 @@ int mlx5e_health_report(struct mlx5e_pri
+ void mlx5e_health_create_reporters(struct mlx5e_priv *priv);
+ void mlx5e_health_destroy_reporters(struct mlx5e_priv *priv);
+ void mlx5e_health_channels_update(struct mlx5e_priv *priv);
++#ifdef HAVE_DEVLINK_HEALTH_REPORT_SUPPORT
+ int mlx5e_health_rsc_fmsg_dump(struct mlx5e_priv *priv, struct mlx5_rsc_key *key,
+ 			       struct devlink_fmsg *fmsg);
+ int mlx5e_health_queue_dump(struct mlx5e_priv *priv, struct devlink_fmsg *fmsg,
+ 			    int queue_idx, char *lbl);
+ #endif
 +#endif

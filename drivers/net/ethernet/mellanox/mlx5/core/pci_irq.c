@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0 OR Linux-OpenIB
 /* Copyright (c) 2019 Mellanox Technologies. */
 
+#include <linux/pci.h>
 #include <linux/interrupt.h>
 #include <linux/notifier.h>
-#include <linux/module.h>
 #include <linux/mlx5/driver.h>
+#include <linux/mlx5/vport.h>
 #include "mlx5_core.h"
 #include "mlx5_irq.h"
 #include "pci_irq.h"
@@ -12,8 +13,6 @@
 #ifdef CONFIG_RFS_ACCEL
 #include <linux/cpu_rmap.h>
 #endif
-
-#define MLX5_PF_IRQ_CTRL_NUM (1)
 
 #define MLX5_SFS_PER_CTRL_IRQ 64
 #define MLX5_IRQ_CTRL_SF_MAX 8
@@ -40,6 +39,15 @@ struct mlx5_irq_table {
 	struct mlx5_irq_pool *sf_ctrl_pool;
 	struct mlx5_irq_pool *sf_comp_pool;
 };
+
+static int mlx5_core_func_to_vport(const struct mlx5_core_dev *dev,
+				   int func,
+				   bool ec_vf_func)
+{
+	if (!ec_vf_func)
+		return func;
+	return mlx5_core_ec_vf_vport_base(dev) + func - 1;
+}
 
 /**
  * mlx5_get_default_msix_vec_count - Get the default number of MSI-X vectors
@@ -79,6 +87,8 @@ int mlx5_set_msix_vec_count(struct mlx5_core_dev *dev, int function_id,
 	int set_sz = MLX5_ST_SZ_BYTES(set_hca_cap_in);
 	void *hca_cap = NULL, *query_cap = NULL, *cap;
 	int num_vf_msix, min_msix, max_msix;
+	bool ec_vf_function;
+	int vport;
 	int ret;
 
 	num_vf_msix = MLX5_CAP_GEN_MAX(dev, num_total_dynamic_vf_msix);
@@ -97,14 +107,16 @@ int mlx5_set_msix_vec_count(struct mlx5_core_dev *dev, int function_id,
 	if (msix_vec_count > max_msix)
 		return -EOVERFLOW;
 
-	query_cap = kzalloc(query_sz, GFP_KERNEL);
-	hca_cap = kzalloc(set_sz, GFP_KERNEL);
+	query_cap = kvzalloc(query_sz, GFP_KERNEL);
+	hca_cap = kvzalloc(set_sz, GFP_KERNEL);
 	if (!hca_cap || !query_cap) {
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	ret = mlx5_vport_get_other_func_cap(dev, function_id, query_cap);
+	ec_vf_function = mlx5_core_ec_sriov_enabled(dev);
+	vport = mlx5_core_func_to_vport(dev, function_id, ec_vf_function);
+	ret = mlx5_vport_get_other_func_general_cap(dev, vport, query_cap);
 	if (ret)
 		goto out;
 
@@ -115,14 +127,15 @@ int mlx5_set_msix_vec_count(struct mlx5_core_dev *dev, int function_id,
 
 	MLX5_SET(set_hca_cap_in, hca_cap, opcode, MLX5_CMD_OP_SET_HCA_CAP);
 	MLX5_SET(set_hca_cap_in, hca_cap, other_function, 1);
+	MLX5_SET(set_hca_cap_in, hca_cap, ec_vf_function, ec_vf_function);
 	MLX5_SET(set_hca_cap_in, hca_cap, function_id, function_id);
 
 	MLX5_SET(set_hca_cap_in, hca_cap, op_mod,
 		 MLX5_SET_HCA_CAP_OP_MOD_GENERAL_DEVICE << 1);
 	ret = mlx5_cmd_exec_in(dev, set_hca_cap, hca_cap);
 out:
-	kfree(hca_cap);
-	kfree(query_cap);
+	kvfree(hca_cap);
+	kvfree(query_cap);
 	return ret;
 }
 
@@ -137,7 +150,6 @@ out:
  */
 static void mlx5_system_free_irq(struct mlx5_irq *irq)
 {
-
 	/* free_irq requires that affinity_hint and rmap will be cleared
 	 * before calling it. This is why there is asymmetry with set_rmap
 	 * which should be called after alloc_irq but before request_irq.
@@ -313,11 +325,6 @@ int mlx5_irq_get_index(struct mlx5_irq *irq)
 }
 
 /* irq_pool API */
-
-static int irq_pool_size_get(struct mlx5_irq_pool *pool)
-{
-	return pool->xa_num_irqs.max - pool->xa_num_irqs.min + 1;
-}
 
 /* requesting an irq from a given pool according to given index */
 static struct mlx5_irq *
@@ -660,7 +667,7 @@ static int irq_pools_init(struct mlx5_core_dev *dev, int sf_vec, int pf_vec)
 	}
 	/* init sf_comp_pool */
 	table->sf_comp_pool = irq_pool_alloc(dev, pf_vec + num_sf_ctrl,
-					     sf_vec - num_sf_ctrl - 1, "mlx5_sf_comp",
+					     sf_vec - num_sf_ctrl, "mlx5_sf_comp",
 					     MLX5_EQ_SHARE_IRQ_MIN_COMP,
 					     MLX5_EQ_SHARE_IRQ_MAX_COMP);
 	if (IS_ERR(table->sf_comp_pool)) {
@@ -722,7 +729,8 @@ int mlx5_irq_table_init(struct mlx5_core_dev *dev)
 	if (mlx5_core_is_sf(dev))
 		return 0;
 
-	irq_table = kvzalloc(sizeof(*irq_table), GFP_KERNEL);
+	irq_table = kvzalloc_node(sizeof(*irq_table), GFP_KERNEL,
+				  dev->priv.numa_node);
 	if (!irq_table)
 		return -ENOMEM;
 
@@ -742,7 +750,7 @@ int mlx5_irq_table_get_num_comp(struct mlx5_irq_table *table)
 {
 	if (!table->pf_pool->xa_num_irqs.max)
 		return 1;
-	return irq_pool_size_get(table->pf_pool) - MLX5_PF_IRQ_CTRL_NUM;
+	return table->pf_pool->xa_num_irqs.max - table->pf_pool->xa_num_irqs.min;
 }
 
 int mlx5_irq_table_create(struct mlx5_core_dev *dev)
@@ -833,21 +841,3 @@ struct mlx5_irq_table *mlx5_irq_table_get(struct mlx5_core_dev *dev)
 #endif
 	return dev->priv.irq_table;
 }
-
-void mlx5_irq_rename(struct mlx5_core_dev *dev, struct mlx5_irq *irq,
-		const char *name)
-{
-	char *dst_name = irq->name;
-
-	if (!name) {
-		char default_name[MLX5_MAX_IRQ_NAME];
-
-		irq_set_name(irq->pool, default_name, irq->index);
-		snprintf(dst_name, MLX5_MAX_IRQ_NAME,
-				"%s@pci:%s", default_name, pci_name(dev->pdev));
-	} else {
-		snprintf(dst_name, MLX5_MAX_IRQ_NAME, "%s-%d", name,
-				irq->index - MLX5_PF_IRQ_CTRL_NUM + 1);
-	}
-}
-

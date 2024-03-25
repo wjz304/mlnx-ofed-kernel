@@ -9,6 +9,8 @@ obj-$(CONFIG_INFINIBAND_USER_ACCESS) += ib_uverbs.o $(user_access-y)
 obj-$(CONFIG_INFINIBAND_USER_ACCESS_UCM) += ib_ucm.o
 
 obj-$(CONFIG_INFINIBAND_CORE_DUMMY) += ib_sa.o ib_mad.o ib_addr.o
+obj-$(CONFIG_INFINIBAND_RDMAIP_NOTIFY) += rdmaip_notify.o
+obj-$(CONFIG_INFINIBAND_RESILIENT_RDMAIP) += resilient_rdmaip.o
 
 ib_sa-y :=			ib_sa_dummy.o
 ib_mad-y :=			ib_mad_dummy.o
@@ -24,7 +26,7 @@ ib_core-y :=			packer.o ud_header.o verbs.o cq.o rw.o sysfs.o verbs_nvmf.o \
 ib_core-$(CONFIG_SECURITY_INFINIBAND) += security.o
 ib_core-$(CONFIG_CGROUP_RDMA) += cgroup.o
 
-ib_cm-y :=                  	cm.o cm_trace.o
+ib_cm-y :=			cm.o cm_trace.o
 
 iw_cm-y :=			iwcm.o iwpm_util.o iwpm_msg.o
 

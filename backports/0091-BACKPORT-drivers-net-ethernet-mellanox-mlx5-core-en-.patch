@@ -1,196 +1,98 @@
-From: Avihai Horon <avihaih@nvidia.com>
-Subject: [PATCH] BACKPORT: drivers/net/ethernet/mellanox/mlx5/core/en/params.c
+From: Valentine Fatiev <valentinef@nvidia.com>
+Subject: [PATCH] BACKPORT: drivers/net/ethernet/mellanox/mlx5/core/en/health.c
 
-Change-Id: Ib7844117a626f0b92cb7d0513ea929df9b482450
+Change-Id: Ic29f171cc933618b3d5f46a672d7199e4f39e2fe
 ---
- .../ethernet/mellanox/mlx5/core/en/params.c   | 55 ++++++++++++++++---
- 1 file changed, 48 insertions(+), 7 deletions(-)
+ .../ethernet/mellanox/mlx5/core/en/health.c   | 32 ++++++++++++++++++-
+ 1 file changed, 31 insertions(+), 1 deletion(-)
 
---- a/drivers/net/ethernet/mellanox/mlx5/core/en/params.c
-+++ b/drivers/net/ethernet/mellanox/mlx5/core/en/params.c
-@@ -7,26 +7,40 @@
- #include "en_accel/en_accel.h"
- #include "accel/ipsec.h"
- #include "fpga/ipsec.h"
-+#include "en_accel/tls.h"
+--- a/drivers/net/ethernet/mellanox/mlx5/core/en/health.c
++++ b/drivers/net/ethernet/mellanox/mlx5/core/en/health.c
+@@ -5,6 +5,7 @@
+ #include "lib/eq.h"
+ #include "lib/mlx5.h"
  
-+#ifdef HAVE_XDP_SUPPORT
- static bool mlx5e_rx_is_xdp(struct mlx5e_params *params,
- 			    struct mlx5e_xsk_param *xsk)
++#ifdef HAVE_DEVLINK_HEALTH_REPORT_SUPPORT
+ int mlx5e_health_fmsg_named_obj_nest_start(struct devlink_fmsg *fmsg, char *name)
  {
- 	return params->xdp_prog || xsk;
+ 	int err;
+@@ -134,6 +135,7 @@ int mlx5e_health_eq_diag_fmsg(struct mlx
+ 
+ 	return mlx5e_health_fmsg_named_obj_nest_end(fmsg);
  }
-+#endif
++#endif /* HAVE_DEVLINK_HEALTH_REPORT_SUPPORT */
  
- u16 mlx5e_get_linear_rq_headroom(struct mlx5e_params *params,
- 				 struct mlx5e_xsk_param *xsk)
+ void mlx5e_health_create_reporters(struct mlx5e_priv *priv)
  {
--	u16 headroom;
-+	u16 headroom = 0;
+@@ -149,12 +151,14 @@ void mlx5e_health_destroy_reporters(stru
  
-+#ifdef HAVE_XSK_BUFF_ALLOC
- 	if (xsk)
- 		return xsk->headroom;
--
+ void mlx5e_health_channels_update(struct mlx5e_priv *priv)
+ {
++#ifdef HAVE_DEVLINK_HEALTH_REPORTER_STATE_UPDATE
+ 	if (priv->tx_reporter)
+ 		devlink_health_reporter_state_update(priv->tx_reporter,
+ 						     DEVLINK_HEALTH_REPORTER_STATE_HEALTHY);
+ 	if (priv->rx_reporter)
+ 		devlink_health_reporter_state_update(priv->rx_reporter,
+ 						     DEVLINK_HEALTH_REPORTER_STATE_HEALTHY);
++#endif /* HAVE_DEVLINK_HEALTH_REPORTER_STATE_UPDATE */
+ }
+ 
+ int mlx5e_health_sq_to_ready(struct mlx5_core_dev *mdev, struct net_device *dev, u32 sqn)
+@@ -231,9 +235,24 @@ int mlx5e_health_report(struct mlx5e_pri
+ 	if (!reporter)
+ 		return err_ctx->recover(err_ctx->ctx);
+ 
+-	return devlink_health_report(reporter, err_str, err_ctx);
++#ifdef HAVE_DEVLINK_HEALTH_REPORT_SUPPORT
++       return devlink_health_report(reporter, err_str, err_ctx);
++#else
++	return 0;
++#endif /* HAVE_DEVLINK_HEALTH_REPORT_SUPPORT */
+ }
+ 
++#ifndef HAVE_DEVLINK_FMSG_BINARY_PUT
++#ifdef HAVE_DEVLINK_HEALTH_REPORT_SUPPORT
++ static int devlink_fmsg_binary_put(struct devlink_fmsg *fmsg, const void *value,
++ 				   u16 value_len)
++ {
++ 	return -EOPNOTSUPP;
++ }
++#endif /* HAVE_DEVLINK_HEALTH_REPORT_SUPPORT */
 +#endif
- 	headroom = NET_IP_ALIGN;
--	if (mlx5e_rx_is_xdp(params, xsk))
 +
-+#ifdef HAVE_XDP_SUPPORT
-+	if (mlx5e_rx_is_xdp(params, xsk)) {
- 		headroom += XDP_PACKET_HEADROOM;
--	else
-+#ifndef HAVE_XSK_BUFF_ALLOC
-+		if (xsk)
-+			headroom += xsk->headroom;
-+#endif
-+	} else {
-+#endif /* HAVE_XDP_SUPPORT */
- 		headroom += MLX5_RX_HEADROOM;
-+#ifdef HAVE_XDP_SUPPORT
-+	}
-+#endif
++#ifdef HAVE_DEVLINK_HEALTH_REPORT_SUPPORT
+ #define MLX5_HEALTH_DEVLINK_MAX_SIZE 1024
+ static int mlx5e_health_rsc_fmsg_binary(struct devlink_fmsg *fmsg,
+ 					const void *value, u32 value_len)
+@@ -271,7 +290,11 @@ int mlx5e_health_rsc_fmsg_dump(struct ml
+ 	if (!page)
+ 		return -ENOMEM;
  
- 	return headroom;
- }
-@@ -58,8 +72,10 @@ static u32 mlx5e_rx_get_linear_frag_sz(s
- 	 * The latter is important, because frames may come in a random order,
- 	 * and we will have trouble assemblying a real page of multiple frames.
- 	 */
-+#ifdef HAVE_XDP_SUPPORT
- 	if (mlx5e_rx_is_xdp(params, xsk))
- 		frag_sz = max_t(u32, frag_sz, PAGE_SIZE);
-+#endif
- 
- 	/* Even if we can go with a smaller fragment size, we must not put
- 	 * multiple packets into a single frame.
-@@ -87,8 +103,12 @@ bool mlx5e_rx_is_linear_skb(struct mlx5e
- 	u32 linear_frag_sz = max(mlx5e_rx_get_linear_frag_sz(params, xsk),
- 				 mlx5e_rx_get_linear_frag_sz(params, NULL));
- 
-+#ifdef CONFIG_COMPAT_LRO_ENABLED_IPOIB
-+	return !IS_HW_LRO(params) && linear_frag_sz <= PAGE_SIZE;
++#ifdef HAVE_DEVLINK_FMSG_BINARY_PAIR_NEST_START
+ 	err = devlink_fmsg_binary_pair_nest_start(fmsg, "data");
 +#else
- 	return params->packet_merge.type == MLX5E_PACKET_MERGE_NONE &&
- 		linear_frag_sz <= PAGE_SIZE;
++	err = devlink_fmsg_arr_pair_nest_start(fmsg, "data");
 +#endif
- }
+ 	if (err)
+ 		goto free_page;
  
- static bool mlx5e_verify_rx_mpwqe_strides(struct mlx5_core_dev *mdev,
-@@ -320,12 +340,14 @@ int mlx5e_mpwrq_validate_regular(struct
- 	if (mlx5_fpga_is_ipsec_device(mdev))
- 		return -EOPNOTSUPP;
+@@ -296,7 +319,12 @@ int mlx5e_health_rsc_fmsg_dump(struct ml
  
-+#ifdef HAVE_XDP_SUPPORT
- 	if (params->xdp_prog && !mlx5e_rx_mpwqe_is_linear_skb(mdev, params, NULL))
- 		return -EINVAL;
-+#endif
- 
- 	return 0;
- }
--
-+#ifdef HAVE_XSK_ZERO_COPY_SUPPORT
- int mlx5e_mpwrq_validate_xsk(struct mlx5_core_dev *mdev, struct mlx5e_params *params,
- 			     struct mlx5e_xsk_param *xsk)
- {
-@@ -340,6 +362,7 @@ int mlx5e_mpwrq_validate_xsk(struct mlx5
- 
- 	return 0;
- }
-+#endif
- 
- void mlx5e_init_rq_type_params(struct mlx5_core_dev *mdev,
- 			       struct mlx5e_params *params)
-@@ -392,6 +415,9 @@ void mlx5e_build_create_cq_param(struct
- 		.ch_stats = c->stats,
- 		.node = cpu_to_node(c->cpu),
- 		.ix = c->ix,
-+#ifndef HAVE_NAPI_STATE_MISSED
-+		.ch_flags = &c->flags,
-+#endif
- 	};
- }
- 
-@@ -537,10 +563,13 @@ void mlx5e_build_aso_cq_param(struct mlx
- 
- static u8 rq_end_pad_mode(struct mlx5_core_dev *mdev, struct mlx5e_params *params)
- {
--	bool lro_en = params->packet_merge.type == MLX5E_PACKET_MERGE_LRO;
- 	bool ro = MLX5_CAP_GEN(mdev, relaxed_ordering_write);
- 
--	return ro && lro_en ?
-+#ifdef CONFIG_COMPAT_LRO_ENABLED_IPOIB
-+	return ro && IS_HW_LRO(params)?
+ destroy_cmd:
+ 	mlx5_rsc_dump_cmd_destroy(cmd);
++#ifdef HAVE_DEVLINK_FMSG_BINARY_PAIR_NEST_START
+ 	end_err = devlink_fmsg_binary_pair_nest_end(fmsg);
 +#else
-+	return ro && (params->packet_merge.type == MLX5E_PACKET_MERGE_LRO) ?
++	end_err = devlink_fmsg_arr_pair_nest_end(fmsg);
 +#endif
- 		MLX5_WQ_END_PAD_MODE_NONE : MLX5_WQ_END_PAD_MODE_ALIGN;
++
+ 	if (end_err)
+ 		err = end_err;
+ free_page:
+@@ -337,3 +365,5 @@ int mlx5e_health_queue_dump(struct mlx5e
+ 
+ 	return devlink_fmsg_obj_nest_end(fmsg);
  }
- 
-@@ -636,6 +665,8 @@ void mlx5e_build_tx_cq_param(struct mlx5
- 	void *cqc = param->cqc;
- 
- 	MLX5_SET(cqc, cqc, log_cq_size, params->log_sq_size);
-+	if (MLX5E_GET_PFLAG(params, MLX5E_PFLAG_TX_CQE_COMPRESS))
-+		MLX5_SET(cqc, cqc, cqe_comp_en, 1);
- 
- 	mlx5e_build_common_cq_param(mdev, param);
- 	param->cq_period_mode = params->tx_cq_moderation.cq_period_mode;
-@@ -771,8 +802,10 @@ static u8 mlx5e_build_icosq_log_wq_sz(st
- 	 * doesn't affect its return value, as long as params->xdp_prog != NULL,
- 	 * so we can just multiply by 2.
- 	 */
-+#ifdef HAVE_XDP_SUPPORT
- 	if (params->xdp_prog)
- 		wqebbs *= 2;
-+#endif
- 
- 	if (params->packet_merge.type == MLX5E_PACKET_MERGE_SHAMPO)
- 		wqebbs += mlx5e_shampo_icosq_sz(mdev, params, rqp);
-@@ -782,8 +815,10 @@ static u8 mlx5e_build_icosq_log_wq_sz(st
- 
- static u8 mlx5e_build_async_icosq_log_wq_sz(struct mlx5_core_dev *mdev)
- {
-+#ifdef HAVE_UAPI_LINUX_TLS_H
- 	if (mlx5e_accel_is_ktls_rx(mdev))
- 		return MLX5E_PARAMS_DEFAULT_LOG_SQ_SIZE;
-+#endif
- 
- 	return MLX5E_PARAMS_MINIMUM_LOG_SQ_SIZE;
- }
-@@ -811,14 +846,17 @@ static void mlx5e_build_async_icosq_para
- 
- 	mlx5e_build_sq_param_common(mdev, param);
- 	param->stop_room = mlx5e_stop_room_for_wqe(mdev, 1); /* for XSK NOP */
-+#ifdef HAVE_UAPI_LINUX_TLS_H
- 	param->is_tls = mlx5e_accel_is_ktls_rx(mdev);
- 	if (param->is_tls)
- 		param->stop_room += mlx5e_stop_room_for_wqe(mdev, 1); /* for TLS RX resync NOP */
-+#endif
- 	MLX5_SET(sqc, sqc, reg_umr, MLX5_CAP_ETH(mdev, reg_umr_sq));
- 	MLX5_SET(wq, wq, log_wq_sz, log_wq_size);
- 	mlx5e_build_ico_cq_param(mdev, log_wq_size, &param->cqp);
- }
- 
-+#ifdef HAVE_XDP_SUPPORT
- void mlx5e_build_xdpsq_param(struct mlx5_core_dev *mdev,
- 			     struct mlx5e_params *params,
- 			     struct mlx5e_sq_param *param)
-@@ -831,6 +869,7 @@ void mlx5e_build_xdpsq_param(struct mlx5
- 	param->is_mpw = MLX5E_GET_PFLAG(params, MLX5E_PFLAG_XDP_TX_MPWQE);
- 	mlx5e_build_tx_cq_param(mdev, params, &param->cqp);
- }
-+#endif
- 
- int mlx5e_build_channel_param(struct mlx5_core_dev *mdev,
- 			      struct mlx5e_params *params,
-@@ -848,7 +887,9 @@ int mlx5e_build_channel_param(struct mlx
- 	async_icosq_log_wq_sz = mlx5e_build_async_icosq_log_wq_sz(mdev);
- 
- 	mlx5e_build_sq_param(mdev, params, &cparam->txq_sq);
-+#ifdef HAVE_XDP_SUPPORT
- 	mlx5e_build_xdpsq_param(mdev, params, &cparam->xdp_sq);
-+#endif
- 	mlx5e_build_icosq_param(mdev, icosq_log_wq_sz, &cparam->icosq);
- 	mlx5e_build_async_icosq_param(mdev, async_icosq_log_wq_sz, &cparam->async_icosq);
- 
++
++#endif /* HAVE_DEVLINK_HEALTH_REPORT_SUPPORT */

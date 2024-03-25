@@ -2,7 +2,7 @@ From: Valentine Fatiev <valentinef@nvidia.com>
 Subject: [PATCH] BACKPORT:
  drivers/net/ethernet/mellanox/mlx5/core/diag/fs_tracepoint.h
 
-Change-Id: I1b4b8b1165753c8bd4e04b2724ad75a440107204
+Change-Id: Ib282f25cba14e730b71770978e5555f80fd525cb
 ---
  .../mellanox/mlx5/core/diag/fs_tracepoint.h   | 38 ++++++++++++++-----
  1 file changed, 28 insertions(+), 10 deletions(-)

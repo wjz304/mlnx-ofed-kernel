@@ -40,6 +40,20 @@
 
 #define MLX5_SET_CFG(p, f, v) MLX5_SET(create_flow_group_in, p, f, v)
 
+enum mlx5_flow_destination_type {
+	MLX5_FLOW_DESTINATION_TYPE_NONE,
+	MLX5_FLOW_DESTINATION_TYPE_VPORT,
+	MLX5_FLOW_DESTINATION_TYPE_FLOW_TABLE,
+	MLX5_FLOW_DESTINATION_TYPE_TIR,
+	MLX5_FLOW_DESTINATION_TYPE_FLOW_SAMPLER,
+	MLX5_FLOW_DESTINATION_TYPE_UPLINK,
+	MLX5_FLOW_DESTINATION_TYPE_PORT,
+	MLX5_FLOW_DESTINATION_TYPE_COUNTER,
+	MLX5_FLOW_DESTINATION_TYPE_FLOW_TABLE_NUM,
+	MLX5_FLOW_DESTINATION_TYPE_RANGE,
+	MLX5_FLOW_DESTINATION_TYPE_TABLE_TYPE,
+};
+
 enum {
 	MLX5_FLOW_CONTEXT_ACTION_FWD_NEXT_PRIO	= 1 << 16,
 	MLX5_FLOW_CONTEXT_ACTION_ENCRYPT	= 1 << 17,
@@ -53,6 +67,12 @@ enum {
 	MLX5_FLOW_TABLE_TERMINATION = BIT(2),
 	MLX5_FLOW_TABLE_UNMANAGED = BIT(3),
 	MLX5_FLOW_TABLE_OTHER_VPORT = BIT(4),
+	MLX5_FLOW_TABLE_FW_ONLY = BIT(5),
+};
+
+/* bits[1-8] are reserved for number of actions, so we use bits[9-32] for flags values */
+enum mlx5_modify_header_flags {
+	MLX5_MODIFY_HEADER_FLAG_FW_CREATED = BIT(9),
 };
 
 #define LEFTOVERS_RULE_NUM	 2
@@ -90,8 +110,8 @@ enum mlx5_flow_namespace_type {
 	MLX5_FLOW_NAMESPACE_PORT_SEL,
 	MLX5_FLOW_NAMESPACE_RDMA_RX_COUNTERS,
 	MLX5_FLOW_NAMESPACE_RDMA_TX_COUNTERS,
-	MLX5_FLOW_NAMESPACE_RDMA_RX_MACSEC,
-	MLX5_FLOW_NAMESPACE_RDMA_TX_MACSEC,
+	MLX5_FLOW_NAMESPACE_RDMA_RX_IPSEC,
+	MLX5_FLOW_NAMESPACE_RDMA_TX_IPSEC,
 };
 
 enum {
@@ -137,6 +157,10 @@ enum {
 	MLX5_FLOW_DEST_VPORT_REFORMAT_ID  = BIT(1),
 };
 
+enum mlx5_flow_dest_range_field {
+	MLX5_FLOW_DEST_RANGE_FIELD_PKT_LEN = 0,
+};
+
 struct mlx5_flow_destination {
 	enum mlx5_flow_destination_type	type;
 	union {
@@ -150,6 +174,13 @@ struct mlx5_flow_destination {
 			struct mlx5_pkt_reformat *pkt_reformat;
 			u8		flags;
 		} vport;
+		struct {
+			struct mlx5_flow_table         *hit_ft;
+			struct mlx5_flow_table         *miss_ft;
+			enum mlx5_flow_dest_range_field field;
+			u32                             min;
+			u32                             max;
+		} range;
 		u32			sampler_id;
 	};
 };
@@ -239,18 +270,15 @@ struct mlx5_flow_act {
 	u32 action;
 	struct mlx5_modify_hdr  *modify_hdr;
 	struct mlx5_pkt_reformat *pkt_reformat;
-	union {
-		struct mlx5_flow_act_crypto_params {
-			u8 type;
-			u32 obj_id;
-		} crypto;
-		uintptr_t esp_id;
-	};
+	struct mlx5_flow_act_crypto_params {
+		u8 type;
+		u32 obj_id;
+	} crypto;
 	u32 flags;
 	struct mlx5_fs_vlan vlan[MLX5_FS_VLAN_DEPTH];
 	struct ib_counters *counters;
-	struct mlx5_exe_aso exe_aso;
 	struct mlx5_flow_group *fg;
+	struct mlx5_exe_aso exe_aso;
 };
 
 #define MLX5_DECLARE_FLOW_ACT(name) \
@@ -281,6 +309,8 @@ void mlx5_fc_destroy(struct mlx5_core_dev *dev, struct mlx5_fc *counter);
 u64 mlx5_fc_query_lastuse(struct mlx5_fc *counter);
 void mlx5_fc_query_cached(struct mlx5_fc *counter,
 			  u64 *bytes, u64 *packets, u64 *lastuse);
+void mlx5_fc_query_cached_raw(struct mlx5_fc *counter,
+			      u64 *bytes, u64 *packets, u64 *lastuse);
 int mlx5_fc_query(struct mlx5_core_dev *dev, struct mlx5_fc *counter,
 		  u64 *packets, u64 *bytes);
 int mlx5_fc_query_and_clear(struct mlx5_core_dev *dev, struct mlx5_fc *counter,
@@ -291,7 +321,7 @@ int mlx5_fs_add_rx_underlay_qpn(struct mlx5_core_dev *dev, u32 underlay_qpn);
 int mlx5_fs_remove_rx_underlay_qpn(struct mlx5_core_dev *dev, u32 underlay_qpn);
 
 struct mlx5_modify_hdr *mlx5_modify_header_alloc(struct mlx5_core_dev *dev,
-						 u8 ns_type, u8 num_actions,
+						 u8 ns_type, u32 num_actions_and_flags,
 						 void *modify_actions);
 void mlx5_modify_header_dealloc(struct mlx5_core_dev *dev,
 				struct mlx5_modify_hdr *modify_hdr);
@@ -303,12 +333,19 @@ void mlx5_destroy_match_definer(struct mlx5_core_dev *dev,
 				struct mlx5_flow_definer *definer);
 int mlx5_get_match_definer_id(struct mlx5_flow_definer *definer);
 
+enum fs_packet_reformat_owner {
+	FS_PACKET_REFORMAT_NONE,
+	FS_PACKET_REFORMAT_SW,
+	FS_PACKET_REFORMAT_FW,
+};
+
 struct mlx5_pkt_reformat_params {
 	int type;
 	u8 param_0;
 	u8 param_1;
 	size_t size;
 	void *data;
+	enum fs_packet_reformat_owner owner;
 };
 
 struct mlx5_pkt_reformat *mlx5_packet_reformat_alloc(struct mlx5_core_dev *dev,

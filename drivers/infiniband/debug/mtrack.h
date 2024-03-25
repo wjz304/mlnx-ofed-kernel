@@ -321,14 +321,52 @@ static inline void iounmap(void *addr)
  * Removed __kvfree_rcu macro upstream v5.12
  * commit 5ea5d1ed572c ("rcu: Eliminate the __kvfree_rcu() macro")
  */
+
+#ifdef HAVE_KFREE_RCU_MIGHTSLEEP
+/* 
+ * Due to v6.3 changes
+ * commit 04a522b7da3dbc083f8ae0aa1a6184b959a8f81c
+ * rcu: Refactor kvfree_call_rcu() and high-level helpers
+ */
+#define __kvfree_rcu(ptr, rhf) \
+do {									\
+	typeof (ptr) ___p = (ptr);					\
+									\
+	if (___p) {									\
+		BUILD_BUG_ON(!__is_kvfree_rcu_offset(offsetof(typeof(*(ptr)), rhf)));	\
+		kvfree_call_rcu(&((___p)->rhf), (void *) (___p));			\
+	}										\
+} while (0)
+#else /* ifdef kfree_rcu_mightsleep */
 #define __kvfree_rcu(head, offset) \
        do { \
               BUILD_BUG_ON(!__is_kvfree_rcu_offset(offset)); \
               kvfree_call_rcu(head, (rcu_callback_t)(unsigned long)(offset)); \
        } while (0)
+#endif /* ifdef kfree_rcu_mightsleep */
 #endif /* !defined(__kvfree_rcu) && !defined(kfree_rcu) */
 
 #ifdef __kvfree_rcu
+
+#ifdef HAVE_KFREE_RCU_MIGHTSLEEP
+#define kfree_rcu_2(ptr, rhf) ({						\
+	void *__memtrack_addr = (void *)ptr;					\
+										\
+	if (IS_VALID_ADDR(__memtrack_addr) &&					\
+	    !is_non_trackable_free_func(__func__)) {				\
+		memtrack_free(MEMTRACK_KMALLOC, 0UL, (unsigned long)(__memtrack_addr), 0UL, 0, __FILE__, __LINE__); \
+	}									\
+	__kvfree_rcu(ptr, rhf);					\
+})
+
+#define __kvfree_rcu_1(ptr)                                   	\
+do {                                                            \
+        typeof(ptr) ___p = (ptr);                               \
+                                                                \
+        if (___p)                                               \
+		kvfree_call_rcu(NULL, (void *) (___p));         \
+} while (0)
+#else /* ifdef kfree_rcu_mightsleep */
 #define kfree_rcu_2(addr, rcu_head) ({								\
 	void *__memtrack_addr = (void *)addr;					\
 										\
@@ -346,7 +384,10 @@ do {                                                            \
         if (___p)                                               \
                 kvfree_call_rcu(NULL, (rcu_callback_t) (___p)); \
 } while (0)
+#endif /* ifdef kfree_rcu_mightsleep */
+
 #else
+
 #define kfree_rcu_2(addr, rcu_head) ({								\
 	void *__memtrack_addr = (void *)addr;					\
 										\
@@ -364,11 +405,14 @@ do {                                                            \
         if (___p)                                               \
                 kfree_call_rcu(NULL, (rcu_callback_t) (___p)); \
 } while (0)
+
 #endif /* __kvfree_rcu */
 
 /* commit 1835f475e351 ("rcu: Introduce single argument kvfree_rcu() interface") */
+/* commit 7e3f926bf4538 ("rcu/kvfree: Eliminate k[v]free_rcu() single argument macro */
 #undef kvfree_rcu_arg_1
 #undef kvfree_rcu_arg_2
+#undef kvfree_rcu
 
 #define kvfree_rcu_arg_1(ptr) ({ 						\
 	void *__memtrack_addr = (void *)ptr;					\
@@ -380,12 +424,11 @@ do {                                                            \
 	__kvfree_rcu_1(ptr);					\
 })
 
-#define kfree_rcu(ptr, rhf...) kvfree_rcu(ptr, ## rhf)
-#define kvfree_rcu(...) KVFREE_GET_MACRO(__VA_ARGS__,           \
-        kvfree_rcu_arg_2, kvfree_rcu_arg_1)(__VA_ARGS__)
+#define kfree_rcu(ptr, rhf) kvfree_rcu_arg_2(ptr, rhf)
+#define kvfree_rcu(ptr, rhf) kvfree_rcu_arg_2(ptr, rhf)
 
-#define KVFREE_GET_MACRO(_1, _2, NAME, ...) NAME
 #define kvfree_rcu_arg_2(ptr, rhf) kfree_rcu_2(ptr, rhf)
+
 #endif /* CONFIG_COMPAT_RCU */
 
 #define vmalloc(size) ({							\
@@ -598,9 +641,11 @@ do {                                                            \
 })
 
 #ifdef ioremap_wc
+        #define kernel_has_ioremap_wc 1
 	#undef ioremap_wc
 #endif
-#ifdef ARCH_HAS_IOREMAP_WC
+
+#if defined(ARCH_HAS_IOREMAP_WC) || defined(kernel_has_ioremap_wc)
 #define ioremap_wc(phys_addr, size) ({						\
 	void __iomem *__memtrack_addr = NULL;					\
 										\

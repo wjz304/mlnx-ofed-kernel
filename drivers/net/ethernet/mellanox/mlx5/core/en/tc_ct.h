@@ -27,10 +27,12 @@ struct netlink_ext_ack;
 struct mlx5_ct_attr {
 	u16 zone;
 	u16 ct_action;
-	struct mlx5_ct_flow *ct_flow;
 	struct nf_flowtable *nf_ft;
 	u32 ct_labels_id;
-	bool clear_mod_acts_set;
+	u32 act_miss_mapping;
+	u64 act_miss_cookie;
+	bool offloaded;
+	struct mlx5_ct_ft *ft;
 };
 
 #define zone_to_reg_ct {\
@@ -88,8 +90,8 @@ struct mlx5_ct_attr {
 	.mlen = ESW_ZONE_ID_BITS,\
 }
 
-#define MLX5_CT_ZONE_BITS (mlx5e_tc_attr_to_reg_mappings[ZONE_TO_REG].mlen)
-#define MLX5_CT_ZONE_MASK GENMASK(MLX5_CT_ZONE_BITS - 1, 0)
+#define MLX5_CT_ZONE_BITS MLX5_REG_MAPPING_MBITS(ZONE_TO_REG)
+#define MLX5_CT_ZONE_MASK MLX5_REG_MAPPING_MASK(ZONE_TO_REG)
 
 #if IS_ENABLED(CONFIG_MLX5_TC_CT)
 
@@ -114,15 +116,12 @@ int mlx5_tc_ct_add_no_trk_match(struct mlx5_flow_spec *spec);
 int
 mlx5_tc_ct_parse_action(struct mlx5_tc_ct_priv *priv,
 			struct mlx5_flow_attr *attr,
-			struct mlx5e_tc_mod_hdr_acts *mod_acts,
 			const struct flow_action_entry *act,
 			struct netlink_ext_ack *extack);
 
-struct mlx5_flow_handle *
-mlx5_tc_ct_flow_offload(struct mlx5_tc_ct_priv *priv,
-			struct mlx5_flow_spec *spec,
-			struct mlx5_flow_attr *attr,
-			struct mlx5e_tc_mod_hdr_acts *mod_hdr_acts);
+int
+mlx5_tc_ct_flow_offload(struct mlx5_tc_ct_priv *priv, struct mlx5_flow_attr *attr);
+
 void
 mlx5_tc_ct_delete_flow(struct mlx5_tc_ct_priv *priv,
 		       struct mlx5_flow_attr *attr);
@@ -135,15 +134,10 @@ u32
 mlx5_tc_ct_max_offloaded_conns_get(struct mlx5_core_dev *dev);
 void
 mlx5_tc_ct_max_offloaded_conns_set(struct mlx5_core_dev *dev, u32 max);
-
 bool
 mlx5_tc_ct_labels_mapping_get(struct mlx5_core_dev *dev);
 void
 mlx5_tc_ct_lables_mapping_set(struct mlx5_core_dev *dev, bool enable);
-
-int
-mlx5_tc_ct_set_ct_clear_regs(struct mlx5_tc_ct_priv *priv,
-			     struct mlx5e_tc_mod_hdr_acts *mod_acts);
 
 #else /* CONFIG_MLX5_TC_CT */
 
@@ -187,16 +181,8 @@ mlx5_tc_ct_add_no_trk_match(struct mlx5_flow_spec *spec)
 }
 
 static inline int
-mlx5_tc_ct_set_ct_clear_regs(struct mlx5_tc_ct_priv *priv,
-			     struct mlx5e_tc_mod_hdr_acts *mod_acts)
-{
-	return -EOPNOTSUPP;
-}
-
-static inline int
 mlx5_tc_ct_parse_action(struct mlx5_tc_ct_priv *priv,
 			struct mlx5_flow_attr *attr,
-			struct mlx5e_tc_mod_hdr_acts *mod_acts,
 			const struct flow_action_entry *act,
 			struct netlink_ext_ack *extack)
 {
@@ -204,13 +190,11 @@ mlx5_tc_ct_parse_action(struct mlx5_tc_ct_priv *priv,
 	return -EOPNOTSUPP;
 }
 
-static inline struct mlx5_flow_handle *
+static inline int
 mlx5_tc_ct_flow_offload(struct mlx5_tc_ct_priv *priv,
-			struct mlx5_flow_spec *spec,
-			struct mlx5_flow_attr *attr,
-			struct mlx5e_tc_mod_hdr_acts *mod_hdr_acts)
+			struct mlx5_flow_attr *attr)
 {
-	return ERR_PTR(-EOPNOTSUPP);
+	return -EOPNOTSUPP;
 }
 
 static inline void

@@ -6,6 +6,13 @@
 
 #include_next <linux/list.h>
 
+#ifndef HAVE_LIST_IS_FIRST
+static inline int list_is_first(const struct list_head *list, const struct list_head *head)
+{
+         return list->prev == head;
+}
+#endif
+
 #define compat_hlist_for_each_entry_safe(pos, n, head, member)	\
 	hlist_for_each_entry_safe(pos, n, head, member)
 

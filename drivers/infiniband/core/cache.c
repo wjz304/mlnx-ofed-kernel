@@ -34,7 +34,6 @@
  */
 
 #include <linux/if_vlan.h>
-#include <linux/module.h>
 #include <linux/errno.h>
 #include <linux/slab.h>
 #include <linux/workqueue.h>
@@ -401,15 +400,15 @@ static void del_gid(struct ib_device *ib_dev, u32 port,
 		table->data_vec[ix] = NULL;
 	write_unlock_irq(&table->rwlock);
 
+	if (rdma_cap_roce_gid_table(ib_dev, port))
+		ib_dev->ops.del_gid(&entry->attr, &entry->context);
+
 	ndev_storage = entry->ndev_storage;
 	if (ndev_storage) {
 		entry->ndev_storage = NULL;
 		rcu_assign_pointer(entry->attr.ndev, NULL);
 		call_rcu(&ndev_storage->rcu_head, put_gid_ndev);
 	}
-
-	if (rdma_cap_roce_gid_table(ib_dev, port))
-		ib_dev->ops.del_gid(&entry->attr, &entry->context);
 
 	put_gid_entry_locked(entry);
 }
@@ -1449,7 +1448,7 @@ int rdma_read_gid_l2_fields(const struct ib_gid_attr *attr,
 			*vlan_id = vlan_dev_vlan_id(ndev);
 		} else {
 			/* If the netdev is upper device and if it's lower
-			 * device is vlan device, consider vlan id of the
+			 * device is vlan device, consider vlan id of
 			 * the lower vlan device for this gid entry.
 			 */
 			netdev_walk_all_lower_dev_rcu(attr->ndev,

@@ -145,8 +145,8 @@ int ipoib_transport_dev_init(struct net_device *dev, struct ib_device *ca)
 	struct ipoib_dev_priv *priv = ipoib_priv(dev);
 	struct ib_qp_init_attr init_attr = {
 		.cap = {
-			.max_send_wr	 = priv->sendq_size,
-			.max_recv_wr	 = priv->recvq_size,
+			.max_send_wr	 = ipoib_sendq_size,
+			.max_recv_wr	 = ipoib_recvq_size,
 			.max_send_sge	 = min_t(u32, priv->ca->attrs.max_send_sge,
 						 MAX_SKB_FRAGS + 1),
 			.max_recv_sge	 = IPOIB_UD_RX_SG,
@@ -161,14 +161,14 @@ int ipoib_transport_dev_init(struct net_device *dev, struct ib_device *ca)
 	int i;
 	static atomic_t counter;
 
-	size = priv->recvq_size + 1;
+	size = ipoib_recvq_size + 1;
 	ret = ipoib_cm_dev_init(dev);
 	if (!ret) {
-		size += priv->sendq_size;
+		size += ipoib_sendq_size;
 		if (ipoib_cm_has_srq(dev))
-			size += priv->recvq_size + 1; /* 1 extra for rx_drain_qp */
+			size += ipoib_recvq_size + 1; /* 1 extra for rx_drain_qp */
 		else
-			size += priv->recvq_size * ipoib_max_conn_qp;
+			size += ipoib_recvq_size * ipoib_max_conn_qp;
 	} else
 		if (ret != -EOPNOTSUPP)
 			return ret;
@@ -183,7 +183,7 @@ int ipoib_transport_dev_init(struct net_device *dev, struct ib_device *ca)
 		goto out_cm_dev_cleanup;
 	}
 
-	cq_attr.cqe = priv->sendq_size;
+	cq_attr.cqe = ipoib_sendq_size;
 	cq_attr.comp_vector = (req_vec + 1) % priv->ca->num_comp_vectors;
 	priv->send_cq = ib_create_cq(priv->ca, ipoib_ib_tx_completion, NULL,
 				     priv, &cq_attr);
@@ -201,16 +201,16 @@ int ipoib_transport_dev_init(struct net_device *dev, struct ib_device *ca)
 	init_attr.send_cq = priv->send_cq;
 	init_attr.recv_cq = priv->recv_cq;
 
-	if (priv->hca_caps & IB_DEVICE_UD_TSO)
+	if (priv->kernel_caps & IBK_UD_TSO)
 		init_attr.create_flags |= IB_QP_CREATE_IPOIB_UD_LSO;
 
-	if (priv->hca_caps & IB_DEVICE_BLOCK_MULTICAST_LOOPBACK)
+	if (priv->kernel_caps & IBK_BLOCK_MULTICAST_LOOPBACK)
 		init_attr.create_flags |= IB_QP_CREATE_BLOCK_MULTICAST_LOOPBACK;
 
 	if (priv->hca_caps & IB_DEVICE_MANAGED_FLOW_STEERING)
 		init_attr.create_flags |= IB_QP_CREATE_NETIF_QP;
 
-	if (priv->hca_caps & IB_DEVICE_RDMA_NETDEV_OPA)
+	if (priv->kernel_caps & IBK_RDMA_NETDEV_OPA)
 		init_attr.create_flags |= IB_QP_CREATE_NETDEV_USE;
 
 	priv->qp = ib_create_qp(priv->pd, &init_attr);

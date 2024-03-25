@@ -18,6 +18,8 @@ drivers/scsi/scsi_priv.h
 drivers/scsi/scsi_transport_srp.c
 drivers/base/auxiliary.c
 drivers/base/Makefile
+drivers/vfio/pci/mlx5
+drivers/vdpa/mlx5
 net/sunrpc/xprtrdma
 include/linux/mlx5/
 include/rdma/
@@ -35,12 +37,12 @@ include/linux/nospec.h
 include/linux/indirect_call_wrapper.h
 include/trace/events/ib_umad.h
 include/trace/events/ib_mad.h
-include/trace/events/rpcrdma.h
-include/trace/events/rdma.h
 include/trace/events/rdma_core.h
+include/trace/events/rpcrdma.h
+include/trace/misc/rdma.h
+include/trace/misc/sunrpc.h
 include/linux/sunrpc/rpc_rdma_cid.h
 include/linux/auxiliary_bus.h
 include/linux/mod_devicetable.h
 include/linux/bitfield.h
 include/linux/sunrpc/svc_rdma_pcl.h
-include/trace/events/sunrpc_base.h

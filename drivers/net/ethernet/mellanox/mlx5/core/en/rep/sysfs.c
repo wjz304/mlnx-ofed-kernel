@@ -140,6 +140,12 @@ static ssize_t miss_rl_stats_clr_store(struct kobject *kobj,
 	return err ? err : count;
 }
 
+static struct kobj_attribute attr_miss_rl_stats_clr = {
+	.attr = {.name = "miss_rl_stats_clr",
+		 .mode = 0200 },
+	.store = miss_rl_stats_clr_store,
+};
+
 static ssize_t page_limit_show(struct kobject *kobj,
 			       struct kobj_attribute *attr,
 			       char *buf)
@@ -149,11 +155,25 @@ static ssize_t page_limit_show(struct kobject *kobj,
 	struct mlx5_eswitch *esw = tmp->esw;
 	struct mlx5_vport *evport;
 	u32 page_limit;
+	u16 vhca_id;
+	int err;
+
+	if (mlx5_vhca_icm_ctrl_supported(esw->dev)) {
+		err = mlx5_esw_query_vport_vhca_id(esw, tmp->vport, &vhca_id);
+		if (err)
+			return err;
+
+		err = mlx5_get_max_alloc_icm_th(esw->dev, vhca_id, &page_limit);
+		if (err)
+			return err;
+		goto out;
+	}
 
 	evport = mlx5_eswitch_get_vport(esw, tmp->vport);
 	spin_lock(&evport->pg_counters_lock);
 	page_limit = evport->page_limit;
 	spin_unlock(&evport->pg_counters_lock);
+out:
 	return sprintf(buf, "limit: %u\n", page_limit);
 }
 
@@ -166,16 +186,33 @@ static ssize_t page_limit_store(struct kobject *kobj,
 		container_of(kobj, struct mlx5_rep_sysfs, paging_kobj);
 	struct mlx5_eswitch *esw = tmp->esw;
 	struct mlx5_vport *evport;
+	u16 vhca_id;
 	u32 limit;
 	int err;
 
-	evport = mlx5_eswitch_get_vport(esw, tmp->vport);
 	err = sscanf(buf, "%u", &limit);
 	if (err != 1)
 		return -EINVAL;
+
+	if (mlx5_vhca_icm_ctrl_supported(esw->dev)) {
+		err = mlx5_esw_query_vport_vhca_id(esw, tmp->vport, &vhca_id);
+		if (err)
+			return err;
+
+		if (!limit)
+			limit = UINT_MAX;
+
+		err = mlx5_set_max_alloc_icm_th(esw->dev, vhca_id, limit);
+		if (err)
+			return err;
+		goto out;
+	}
+
+	evport = mlx5_eswitch_get_vport(esw, tmp->vport);
 	spin_lock(&evport->pg_counters_lock);
 	evport->page_limit = limit;
 	spin_unlock(&evport->pg_counters_lock);
+out:
 	return count;
 }
 
@@ -215,12 +252,6 @@ static struct kobj_attribute attr_miss_rl_dropped_bytes = {
 	.show = miss_rl_dropped_bytes_show,
 };
 
-static struct kobj_attribute attr_miss_rl_stats_clr = {
-	.attr = {.name = "miss_rl_stats_clr",
-		 .mode = 0200 },
-	.store = miss_rl_stats_clr_store,
-};
-
 static struct kobj_attribute attr_page_limit = {
 	.attr = {.name = "page_limit",
 		 .mode = 0644 },
@@ -247,9 +278,11 @@ static const struct sysfs_ops rep_sysfs_ops = {
 	.store  = rep_attr_store
 };
 
+ATTRIBUTE_GROUPS(rep);
+
 static struct kobj_type rep_type = {
 	.sysfs_ops     = &rep_sysfs_ops,
-	.default_attrs = rep_attrs
+	.default_groups = rep_groups
 };
 
 static struct attribute *rep_paging_attrs[] = {
@@ -257,10 +290,12 @@ static struct attribute *rep_paging_attrs[] = {
 	&attr_num_pages.attr,
 	NULL,
 };
+ATTRIBUTE_GROUPS(rep_paging);
+
 
 static struct kobj_type rep_paging = {
 	.sysfs_ops     = &rep_sysfs_ops,
-	.default_attrs = rep_paging_attrs
+	.default_groups = rep_paging_groups
 };
 
 void mlx5_rep_sysfs_init(struct mlx5e_rep_priv *rpriv)
@@ -288,11 +323,13 @@ void mlx5_rep_sysfs_init(struct mlx5e_rep_priv *rpriv)
 		return;
 	}
 
-	err = kobject_init_and_add(&tmp->paging_kobj, &rep_paging,
-				   &tmp->kobj, "paging_control");
-	if (err) {
-		kobject_put(&tmp->kobj);
-		tmp->esw = NULL;
+	if (mlx5_eswitch_is_vf_vport(esw, tmp->vport)) {
+		err = kobject_init_and_add(&tmp->paging_kobj, &rep_paging,
+					   &tmp->kobj, "paging_control");
+		if (err) {
+			kobject_put(&tmp->kobj);
+			tmp->esw = NULL;
+		}
 	}
 }
 
@@ -304,6 +341,9 @@ void mlx5_rep_sysfs_cleanup(struct mlx5e_rep_priv *rpriv)
 	if (!tmp->esw)
 		return;
 
-	kobject_put(&tmp->paging_kobj);
+	if (mlx5_eswitch_is_vf_vport(tmp->esw, tmp->vport)) {
+		kobject_put(&tmp->paging_kobj);
+	}
+
 	kobject_put(&tmp->kobj);
 }

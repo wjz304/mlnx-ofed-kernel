@@ -79,12 +79,49 @@ void mlx5e_skb_cb_hwtstamp_handler(struct sk_buff *skb, int hwtstamp_type,
 	memset(skb->cb, 0, sizeof(struct mlx5e_skb_cb_hwtstamp));
 }
 
-#define MLX5E_PTP_WQE_CTR_MASK(val) ((val) & ptpsq->ts_cqe_ctr_mask)
+#define PTP_WQE_CTR2IDX(val) ((val) & ptpsq->ts_cqe_ctr_mask)
+
+static bool mlx5e_ptp_ts_cqe_drop(struct mlx5e_ptpsq *ptpsq, u16 skb_cc, u16 skb_id)
+{
+	return (ptpsq->ts_cqe_ctr_mask && (skb_cc != skb_id));
+}
+
+static bool mlx5e_ptp_ts_cqe_ooo(struct mlx5e_ptpsq *ptpsq, u16 skb_id)
+{
+	u16 skb_cc = PTP_WQE_CTR2IDX(ptpsq->skb_fifo_cc);
+	u16 skb_pc = PTP_WQE_CTR2IDX(ptpsq->skb_fifo_pc);
+
+	if (PTP_WQE_CTR2IDX(skb_id - skb_cc) >= PTP_WQE_CTR2IDX(skb_pc - skb_cc))
+		return true;
+
+	return false;
+}
+
+static void mlx5e_ptp_skb_fifo_ts_cqe_resync(struct mlx5e_ptpsq *ptpsq, u16 skb_cc,
+					     u16 skb_id, int budget)
+{
+	struct skb_shared_hwtstamps hwts = {};
+	struct sk_buff *skb;
+
+	ptpsq->cq_stats->resync_event++;
+
+	while (skb_cc != skb_id) {
+		skb = mlx5e_skb_fifo_pop(&ptpsq->skb_fifo);
+		hwts.hwtstamp = mlx5e_skb_cb_get_hwts(skb)->cqe_hwtstamp;
+		skb_tstamp_tx(skb, &hwts);
+		ptpsq->cq_stats->resync_cqe++;
+		napi_consume_skb(skb, budget);
+		skb_cc = PTP_WQE_CTR2IDX(ptpsq->skb_fifo_cc);
+	}
+}
+
 static void mlx5e_ptp_handle_ts_cqe(struct mlx5e_ptpsq *ptpsq,
 				    struct mlx5_cqe64 *cqe,
 				    int budget)
 {
-	struct mlx5e_txqsq *sq;
+	u16 skb_id = PTP_WQE_CTR2IDX(be16_to_cpu(cqe->wqe_counter));
+	u16 skb_cc = PTP_WQE_CTR2IDX(ptpsq->skb_fifo_cc);
+	struct mlx5e_txqsq *sq = &ptpsq->txqsq;
 	struct sk_buff *skb;
 	ktime_t hwtstamp;
 
@@ -94,24 +131,15 @@ static void mlx5e_ptp_handle_ts_cqe(struct mlx5e_ptpsq *ptpsq,
 		goto out;
 	}
 
-	sq = &ptpsq->txqsq;
-	if (MLX5_CAP_GEN_2(sq->mdev, ts_cqe_metadata_size2wqe_counter)) {
-		u16 ts_cqe_counter = MLX5E_PTP_WQE_CTR_MASK(be16_to_cpu(cqe->wqe_counter));
-		u16 skb_fifo_cc_masked = MLX5E_PTP_WQE_CTR_MASK(ptpsq->skb_fifo_cc);
-
-		if (skb_fifo_cc_masked != ts_cqe_counter) {
-			ptpsq->cq_stats->resync_event++;
-			do {
-				struct skb_shared_hwtstamps hwts = {};
-
-				skb = mlx5e_skb_fifo_pop(&ptpsq->skb_fifo);
-				hwts.hwtstamp = mlx5e_skb_cb_get_hwts(skb)->cqe_hwtstamp;
-				skb_tstamp_tx(skb, &hwts);
-				ptpsq->cq_stats->resync_cqe++;
-				skb_fifo_cc_masked = MLX5E_PTP_WQE_CTR_MASK(ptpsq->skb_fifo_cc);
-			} while (skb_fifo_cc_masked != ts_cqe_counter);
+	if (mlx5e_ptp_ts_cqe_drop(ptpsq, skb_cc, skb_id)) {
+		if (mlx5e_ptp_ts_cqe_ooo(ptpsq, skb_id)) {
+			/* already handled by a previous resync */
+			ptpsq->cq_stats->ooo_cqe_drop++;
+			return;
 		}
+		mlx5e_ptp_skb_fifo_ts_cqe_resync(ptpsq, skb_cc, skb_id, budget);
 	}
+
 	skb = mlx5e_skb_fifo_pop(&ptpsq->skb_fifo);
 	hwtstamp = mlx5e_cqe_ts_to_ns(sq->ptp_cyc2time, sq->clock, get_cqe_ts(cqe));
 	mlx5e_skb_cb_hwtstamp_handler(skb, MLX5E_SKB_CB_PORT_HWTSTAMP,
@@ -146,6 +174,8 @@ static bool mlx5e_ptp_poll_ts_cq(struct mlx5e_cq *cq, int budget)
 
 	/* ensure cq space is freed before enabling more cqes */
 	wmb();
+
+	mlx5e_txqsq_wake(&ptpsq->txqsq);
 
 	return work_done == budget;
 }
@@ -234,10 +264,6 @@ static int mlx5e_ptp_alloc_txqsq(struct mlx5e_ptp *c, int txq_ix,
 	sq->stop_room = param->stop_room;
 	sq->ptp_cyc2time = mlx5_sq_ts_translator(mdev);
 
-	if (MLX5_CAP_GEN_2(mdev, ts_cqe_metadata_size2wqe_counter))
-		ptpsq->ts_cqe_ctr_mask =
-			(1 << MLX5_CAP_GEN_2(mdev, ts_cqe_metadata_size2wqe_counter)) - 1;
-
 	node = dev_to_node(mlx5_core_dma_dev(mdev));
 
 	param->wq.db_numa_node = node;
@@ -266,6 +292,7 @@ static void mlx5e_ptp_destroy_sq(struct mlx5_core_dev *mdev, u32 sqn)
 static int mlx5e_ptp_alloc_traffic_db(struct mlx5e_ptpsq *ptpsq, int numa)
 {
 	int wq_sz = mlx5_wq_cyc_get_size(&ptpsq->txqsq.wq);
+	struct mlx5_core_dev *mdev = ptpsq->txqsq.mdev;
 
 	ptpsq->skb_fifo.fifo = kvzalloc_node(array_size(wq_sz, sizeof(*ptpsq->skb_fifo.fifo)),
 					     GFP_KERNEL, numa);
@@ -275,7 +302,9 @@ static int mlx5e_ptp_alloc_traffic_db(struct mlx5e_ptpsq *ptpsq, int numa)
 	ptpsq->skb_fifo.pc   = &ptpsq->skb_fifo_pc;
 	ptpsq->skb_fifo.cc   = &ptpsq->skb_fifo_cc;
 	ptpsq->skb_fifo.mask = wq_sz - 1;
-
+	if (MLX5_CAP_GEN_2(mdev, ts_cqe_metadata_size2wqe_counter))
+		ptpsq->ts_cqe_ctr_mask =
+			(1 << MLX5_CAP_GEN_2(mdev, ts_cqe_metadata_size2wqe_counter)) - 1;
 	return 0;
 }
 
@@ -458,13 +487,11 @@ static int mlx5e_init_ptp_rq(struct mlx5e_ptp *c, struct mlx5e_params *params,
 	return xdp_rxq_info_reg(&rq->xdp_rxq, rq->netdev, rq->ix, 0);
 }
 
-static int mlx5e_ptp_open_rq(struct mlx5e_ptp *c,
-			     struct mlx5e_ptp_params *cparams)
+static int mlx5e_ptp_open_rq(struct mlx5e_ptp *c, struct mlx5e_params *params,
+			     struct mlx5e_rq_param *rq_param)
 {
-	struct mlx5e_rq_param *rq_param = &cparams->rq_param;
-	struct mlx5e_params *params = &cparams->params;
+	int node = dev_to_node(c->mdev->device);
 	struct mlx5e_create_cq_param ccp = {};
-	struct dim_cq_moder moder = {};
 	int err;
 
 	ccp.node     = dev_to_node(mlx5_core_dma_dev(c->mdev));
@@ -476,8 +503,7 @@ static int mlx5e_ptp_open_rq(struct mlx5e_ptp *c,
 	if (err)
 		return err;
 
-	return mlx5e_open_rq(c->priv, params, rq_param, NULL, &ccp, moder, ccp.node, &c->rq);
-
+	return mlx5e_open_rq(params, rq_param, NULL, node, &c->rq, &ccp);
 }
 
 static void mlx5e_ptp_close_tx_cqs(struct mlx5e_ptp *c)
@@ -534,7 +560,10 @@ static void mlx5e_ptp_build_params(struct mlx5e_ptp *c,
 
 	/* SQ */
 	if (test_bit(MLX5E_PTP_STATE_TX, c->state)) {
-		params->log_sq_size = orig->log_sq_size;
+		params->log_sq_size =
+			min(MLX5_CAP_GEN_2(c->mdev, ts_cqe_metadata_size2wqe_counter),
+					MLX5E_PTP_MAX_LOG_SQ_SIZE);
+		params->log_sq_size = min(params->log_sq_size, orig->log_sq_size);
 		mlx5e_ptp_build_sq_param(c->mdev, params, &cparams->txq_sq_param);
 	}
 	/* RQ */
@@ -559,7 +588,7 @@ static int mlx5e_ptp_open_queues(struct mlx5e_ptp *c,
 			goto close_tx_cqs;
 	}
 	if (test_bit(MLX5E_PTP_STATE_RX, c->state)) {
-		err = mlx5e_ptp_open_rq(c, cparams);
+		err = mlx5e_ptp_open_rq(c, &cparams->params, &cparams->rq_param);
 		if (err)
 			goto close_txqsq;
 	}
@@ -597,37 +626,39 @@ static int mlx5e_ptp_set_state(struct mlx5e_ptp *c, struct mlx5e_params *params)
 	return bitmap_empty(c->state, MLX5E_PTP_STATE_NUM_STATES) ? -EINVAL : 0;
 }
 
-static void mlx5e_ptp_rx_unset_fs(struct mlx5e_priv *priv)
+static void mlx5e_ptp_rx_unset_fs(struct mlx5e_flow_steering *fs)
 {
-	struct mlx5e_ptp_fs *ptp_fs = priv->fs.ptp_fs;
+	struct mlx5e_ptp_fs *ptp_fs = mlx5e_fs_get_ptp(fs);
 
 	if (!ptp_fs->valid)
 		return;
 
 	mlx5e_fs_tt_redirect_del_rule(ptp_fs->l2_rule);
-	mlx5e_fs_tt_redirect_any_destroy(priv);
+	mlx5e_fs_tt_redirect_any_destroy(fs);
 
 	mlx5e_fs_tt_redirect_del_rule(ptp_fs->udp_v6_rule);
 	mlx5e_fs_tt_redirect_del_rule(ptp_fs->udp_v4_rule);
-	mlx5e_fs_tt_redirect_udp_destroy(priv);
+	mlx5e_fs_tt_redirect_udp_destroy(fs);
 	ptp_fs->valid = false;
 }
 
 static int mlx5e_ptp_rx_set_fs(struct mlx5e_priv *priv)
 {
 	u32 tirn = mlx5e_rx_res_get_tirn_ptp(priv->rx_res);
-	struct mlx5e_ptp_fs *ptp_fs = priv->fs.ptp_fs;
+	struct mlx5e_flow_steering *fs = priv->fs;
 	struct mlx5_flow_handle *rule;
+	struct mlx5e_ptp_fs *ptp_fs;
 	int err;
 
+	ptp_fs = mlx5e_fs_get_ptp(fs);
 	if (ptp_fs->valid)
 		return 0;
 
-	err = mlx5e_fs_tt_redirect_udp_create(priv);
+	err = mlx5e_fs_tt_redirect_udp_create(fs);
 	if (err)
 		goto out_free;
 
-	rule = mlx5e_fs_tt_redirect_udp_add_rule(priv, MLX5_TT_IPV4_UDP,
+	rule = mlx5e_fs_tt_redirect_udp_add_rule(fs, MLX5_TT_IPV4_UDP,
 						 tirn, PTP_EV_PORT);
 	if (IS_ERR(rule)) {
 		err = PTR_ERR(rule);
@@ -635,7 +666,7 @@ static int mlx5e_ptp_rx_set_fs(struct mlx5e_priv *priv)
 	}
 	ptp_fs->udp_v4_rule = rule;
 
-	rule = mlx5e_fs_tt_redirect_udp_add_rule(priv, MLX5_TT_IPV6_UDP,
+	rule = mlx5e_fs_tt_redirect_udp_add_rule(fs, MLX5_TT_IPV6_UDP,
 						 tirn, PTP_EV_PORT);
 	if (IS_ERR(rule)) {
 		err = PTR_ERR(rule);
@@ -643,11 +674,11 @@ static int mlx5e_ptp_rx_set_fs(struct mlx5e_priv *priv)
 	}
 	ptp_fs->udp_v6_rule = rule;
 
-	err = mlx5e_fs_tt_redirect_any_create(priv);
+	err = mlx5e_fs_tt_redirect_any_create(fs);
 	if (err)
 		goto out_destroy_udp_v6_rule;
 
-	rule = mlx5e_fs_tt_redirect_any_add_rule(priv, tirn, ETH_P_1588);
+	rule = mlx5e_fs_tt_redirect_any_add_rule(fs, tirn, ETH_P_1588);
 	if (IS_ERR(rule)) {
 		err = PTR_ERR(rule);
 		goto out_destroy_fs_any;
@@ -658,13 +689,13 @@ static int mlx5e_ptp_rx_set_fs(struct mlx5e_priv *priv)
 	return 0;
 
 out_destroy_fs_any:
-	mlx5e_fs_tt_redirect_any_destroy(priv);
+	mlx5e_fs_tt_redirect_any_destroy(fs);
 out_destroy_udp_v6_rule:
 	mlx5e_fs_tt_redirect_del_rule(ptp_fs->udp_v6_rule);
 out_destroy_udp_v4_rule:
 	mlx5e_fs_tt_redirect_del_rule(ptp_fs->udp_v4_rule);
 out_destroy_fs_udp:
-	mlx5e_fs_tt_redirect_udp_destroy(priv);
+	mlx5e_fs_tt_redirect_udp_destroy(fs);
 out_free:
 	return err;
 }
@@ -681,8 +712,10 @@ int mlx5e_ptp_open(struct mlx5e_priv *priv, struct mlx5e_params *params,
 
 	c = kvzalloc_node(sizeof(*c), GFP_KERNEL, dev_to_node(mlx5_core_dma_dev(mdev)));
 	cparams = kvzalloc(sizeof(*cparams), GFP_KERNEL);
-	if (!c || !cparams)
-		return -ENOMEM;
+	if (!c || !cparams) {
+		err = -ENOMEM;
+		goto err_free;
+	}
 
 	c->priv     = priv;
 	c->mdev     = priv->mdev;
@@ -698,7 +731,7 @@ int mlx5e_ptp_open(struct mlx5e_priv *priv, struct mlx5e_params *params,
 	if (err)
 		goto err_free;
 
-	netif_napi_add(netdev, &c->napi, mlx5e_ptp_napi_poll, 64);
+	netif_napi_add(netdev, &c->napi, mlx5e_ptp_napi_poll);
 
 	mlx5e_ptp_build_params(c, cparams, params);
 
@@ -731,47 +764,35 @@ void mlx5e_ptp_close(struct mlx5e_ptp *c)
 	kvfree(c);
 }
 
-void mlx5e_ptp_enable_channel(struct mlx5e_ptp *c)
-{
-	napi_enable(&c->napi);
-}
-
-void mlx5e_ptp_start_channel(struct mlx5e_ptp *c)
+void mlx5e_ptp_activate_channel(struct mlx5e_ptp *c)
 {
 	int tc;
 
+	napi_enable(&c->napi);
+
 	if (test_bit(MLX5E_PTP_STATE_TX, c->state)) {
-		for (tc = 0; tc < c->num_tc; tc++) {
-			mlx5e_enable_txqsq(&c->ptpsq[tc].txqsq);
-			mlx5e_start_txqsq(&c->ptpsq[tc].txqsq);
-		}
+		for (tc = 0; tc < c->num_tc; tc++)
+			mlx5e_activate_txqsq(&c->ptpsq[tc].txqsq);
 	}
 	if (test_bit(MLX5E_PTP_STATE_RX, c->state)) {
 		mlx5e_ptp_rx_set_fs(c->priv);
 		mlx5e_activate_rq(&c->rq);
-		mlx5e_trigger_napi_sched(&c->napi);
 	}
+	mlx5e_trigger_napi_sched(&c->napi);
 }
 
-void mlx5e_ptp_disable_channel(struct mlx5e_ptp *c)
+void mlx5e_ptp_deactivate_channel(struct mlx5e_ptp *c)
 {
 	int tc;
 
 	if (test_bit(MLX5E_PTP_STATE_RX, c->state))
 		mlx5e_deactivate_rq(&c->rq);
 
-	if (test_bit(MLX5E_PTP_STATE_TX, c->state))
+	if (test_bit(MLX5E_PTP_STATE_TX, c->state)) {
 		for (tc = 0; tc < c->num_tc; tc++)
-			mlx5e_disable_txqsq(&c->ptpsq[tc].txqsq);
-}
+			mlx5e_deactivate_txqsq(&c->ptpsq[tc].txqsq);
+	}
 
-void mlx5e_ptp_stop_channel(struct mlx5e_ptp *c)
-{
-	int tc;
-
-	if (test_bit(MLX5E_PTP_STATE_TX, c->state))
-		for (tc = 0; tc < c->num_tc; tc++)
-			mlx5e_stop_txqsq(&c->ptpsq[tc].txqsq);
 	napi_disable(&c->napi);
 }
 
@@ -784,29 +805,31 @@ int mlx5e_ptp_get_rqn(struct mlx5e_ptp *c, u32 *rqn)
 	return 0;
 }
 
-int mlx5e_ptp_alloc_rx_fs(struct mlx5e_priv *priv)
+int mlx5e_ptp_alloc_rx_fs(struct mlx5e_flow_steering *fs,
+			  const struct mlx5e_profile *profile)
 {
 	struct mlx5e_ptp_fs *ptp_fs;
 
-	if (!mlx5e_profile_feature_cap(priv->profile, PTP_RX))
+	if (!mlx5e_profile_feature_cap(profile, PTP_RX))
 		return 0;
 
 	ptp_fs = kzalloc(sizeof(*ptp_fs), GFP_KERNEL);
 	if (!ptp_fs)
 		return -ENOMEM;
+	mlx5e_fs_set_ptp(fs, ptp_fs);
 
-	priv->fs.ptp_fs = ptp_fs;
 	return 0;
 }
 
-void mlx5e_ptp_free_rx_fs(struct mlx5e_priv *priv)
+void mlx5e_ptp_free_rx_fs(struct mlx5e_flow_steering *fs,
+			  const struct mlx5e_profile *profile)
 {
-	struct mlx5e_ptp_fs *ptp_fs = priv->fs.ptp_fs;
+	struct mlx5e_ptp_fs *ptp_fs = mlx5e_fs_get_ptp(fs);
 
-	if (!mlx5e_profile_feature_cap(priv->profile, PTP_RX))
+	if (!mlx5e_profile_feature_cap(profile, PTP_RX))
 		return;
 
-	mlx5e_ptp_rx_unset_fs(priv);
+	mlx5e_ptp_rx_unset_fs(fs);
 	kfree(ptp_fs);
 }
 
@@ -832,6 +855,6 @@ int mlx5e_ptp_rx_manage_fs(struct mlx5e_priv *priv, bool set)
 		netdev_WARN_ONCE(priv->netdev, "Don't try to remove PTP RX-FS rules");
 		return -EINVAL;
 	}
-	mlx5e_ptp_rx_unset_fs(priv);
+	mlx5e_ptp_rx_unset_fs(priv->fs);
 	return 0;
 }

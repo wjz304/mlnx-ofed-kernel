@@ -79,10 +79,6 @@ int mlx5_ec_init(struct mlx5_core_dev *dev)
 	if (!mlx5_core_is_ecpf(dev))
 		return 0;
 
-	/* Management PF don't have a peer PF */
-	if (mlx5_core_is_management_pf(dev))
-		return 0;
-
 	return mlx5_host_pf_init(dev);
 }
 
@@ -93,15 +89,45 @@ void mlx5_ec_cleanup(struct mlx5_core_dev *dev)
 	if (!mlx5_core_is_ecpf(dev))
 		return;
 
-	/* Management PF don't have a peer PF */
-	if (mlx5_core_is_management_pf(dev))
-		return;
-
 	mlx5_host_pf_cleanup(dev);
 
-	err = mlx5_wait_for_pages(dev, &dev->priv.host_pf_pages);
+	err = mlx5_wait_for_pages(dev, &dev->priv.page_counters[MLX5_HOST_PF]);
 	if (err)
 		mlx5_core_warn(dev, "Timeout reclaiming external host PF pages err(%d)\n", err);
+
+	err = mlx5_wait_for_pages(dev, &dev->priv.page_counters[MLX5_VF]);
+	if (err)
+		mlx5_core_warn(dev, "Timeout reclaiming external host VFs pages err(%d)\n", err);
+}
+
+static int mlx5_regex_query(struct mlx5_core_dev *dev, int vport)
+{
+	u32 in_query[MLX5_ST_SZ_DW(query_hca_cap_in)] = {};
+	u32 *out_query;
+	int res = 0;
+
+	out_query = kzalloc(MLX5_ST_SZ_BYTES(query_hca_cap_out), GFP_KERNEL);
+	if (!out_query)
+		return -ENOMEM;
+
+	MLX5_SET(query_hca_cap_in, in_query, opcode,
+		 MLX5_CMD_OP_QUERY_HCA_CAP);
+	MLX5_SET(query_hca_cap_in, in_query, op_mod,
+		 MLX5_SET_HCA_CAP_OP_MOD_GENERAL_DEVICE |
+		 HCA_CAP_OPMOD_GET_CUR);
+	MLX5_SET(query_hca_cap_in, in_query, other_function, 1);
+	MLX5_SET(query_hca_cap_in, in_query, function_id, vport);
+
+	res =  mlx5_cmd_exec(dev, in_query, MLX5_ST_SZ_BYTES(query_hca_cap_in),
+			     out_query, MLX5_ST_SZ_BYTES(query_hca_cap_out));
+	if (res)
+		goto out;
+
+	res = MLX5_GET(query_hca_cap_out,
+		       out_query, capability.cmd_hca_cap.regexp_mmo_qp);
+out:
+	kfree(out_query);
+	return res;
 }
 
 static int mlx5_regex_enable(struct mlx5_core_dev *dev, int vport, bool en)
@@ -309,7 +335,16 @@ static ssize_t regex_en_show(struct kobject *kobj,
 			     struct kobj_attribute *attr,
 			     char *buf)
 {
-	return sprintf(buf, "Usage: write 1/0 to enable/disable regex\n");
+	struct mlx5_smart_nic_vport *tmp =
+		container_of(kobj, struct mlx5_smart_nic_vport, kobj);
+	struct mlx5_eswitch *esw = tmp->esw;
+	int res;
+
+	res = mlx5_regex_query(esw->dev, tmp->vport);
+	if (res < 0)
+		return sprintf(buf, "Failed to query device\n");
+
+	return sprintf(buf, "%d\n", res);
 }
 
 static int strpolicy(const char *buf, enum port_state_policy *policy)
@@ -518,6 +553,8 @@ static struct attribute *smart_nic_attrs[] = {
 	NULL,
 };
 
+ATTRIBUTE_GROUPS(smart_nic);
+
 static const struct sysfs_ops smart_nic_sysfs_ops = {
 	.show   = smart_nic_attr_show,
 	.store  = smart_nic_attr_store
@@ -525,7 +562,7 @@ static const struct sysfs_ops smart_nic_sysfs_ops = {
 
 static struct kobj_type smart_nic_type = {
 	.sysfs_ops     = &smart_nic_sysfs_ops,
-	.default_attrs = smart_nic_attrs
+	.default_groups = smart_nic_groups
 };
 
 void mlx5_smartnic_sysfs_init(struct net_device *dev)
@@ -637,7 +674,15 @@ static ssize_t regex_store(struct kobject *kobj, struct kobj_attribute *attr,
 static ssize_t regex_show(struct kobject *kobj, struct kobj_attribute *attr,
 			  char *buf)
 {
-	return sprintf(buf, "Usage: write 1/0 to enable/disable regex\n");
+	struct mlx5_regex_vport *regex =
+		container_of(kobj, struct mlx5_regex_vport, kobj);
+	int res;
+
+	res = mlx5_regex_query(regex->dev, regex->vport);
+	if (res < 0)
+		return sprintf(buf, "Failed to query device\n");
+
+	return sprintf(buf, "%d\n", res);
 }
 
 static struct kobj_attribute attr_regex = {
@@ -670,9 +715,11 @@ static const struct sysfs_ops regex_sysfs_ops = {
 	.store  = regex_attr_store
 };
 
+ATTRIBUTE_GROUPS(regex);
+
 static struct kobj_type regex_type = {
 	.sysfs_ops     = &regex_sysfs_ops,
-	.default_attrs = regex_attrs
+	.default_groups = regex_groups
 };
 
 int mlx5_regex_sysfs_init(struct mlx5_core_dev *dev)

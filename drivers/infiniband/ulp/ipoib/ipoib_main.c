@@ -65,6 +65,8 @@ module_param_named(send_queue_size, ipoib_sendq_size, int, 0444);
 MODULE_PARM_DESC(send_queue_size, "Number of descriptors in send queue");
 module_param_named(recv_queue_size, ipoib_recvq_size, int, 0444);
 MODULE_PARM_DESC(recv_queue_size, "Number of descriptors in receive queue");
+module_param_named(ipoib_enhanced, ipoib_enhanced_enabled, int, 0444);
+MODULE_PARM_DESC(ipoib_enhanced, "Non-functional module parameter");
 
 #ifdef CONFIG_INFINIBAND_IPOIB_DEBUG
 int ipoib_debug_level;
@@ -72,9 +74,6 @@ int ipoib_debug_level;
 module_param_named(debug_level, ipoib_debug_level, int, 0644);
 MODULE_PARM_DESC(debug_level, "Enable debug tracing if > 0");
 #endif
-
-module_param_named(ipoib_enhanced, ipoib_enhanced_enabled, int, 0444);
-MODULE_PARM_DESC(ipoib_enhanced, "Enable IPoIB enhanced for capable devices (default = 1) (0-1)");
 
 #define		IPOIB_MAX_NEIGH_TIME  (240UL * HZ)
 #define		IPOIB_MIN_NEIGH_TIME  (30UL * HZ)
@@ -226,12 +225,8 @@ static netdev_features_t ipoib_fix_features(struct net_device *dev, netdev_featu
 {
 	struct ipoib_dev_priv *priv = ipoib_priv(dev);
 
-	if (test_bit(IPOIB_FLAG_ADMIN_CM, &priv->flags)) {
-		features &= ~(NETIF_F_IP_CSUM | NETIF_F_TSO | NETIF_F_SG);
-	} else {
-		if (priv->max_send_sge > 1)
-			features |= NETIF_F_SG;
-	}
+	if (test_bit(IPOIB_FLAG_ADMIN_CM, &priv->flags))
+		features &= ~(NETIF_F_IP_CSUM | NETIF_F_TSO);
 
 	return features;
 }
@@ -540,23 +535,8 @@ int ipoib_set_mode(struct net_device *dev, const char *buf)
 
 	/* flush paths if we switch modes so that connections are restarted */
 	if (!strcmp(buf, "connected\n")) {
-		if (IPOIB_CM_SUPPORTED(dev->dev_addr)) {
-			set_bit(IPOIB_FLAG_ADMIN_CM, &priv->flags);
-			ipoib_warn(priv, "enabling connected mode "
-				   "will cause multicast packet drops\n");
-			netdev_update_features(dev);
-			dev_set_mtu(dev, ipoib_cm_max_mtu(dev));
-			rtnl_unlock();
-			priv->tx_wr.wr.send_flags &= ~IB_SEND_IP_CSUM;
-			priv->tx_wr.wr.opcode = IB_WR_SEND;
-
-			ipoib_flush_paths(dev);
-			return (!rtnl_trylock()) ? -EBUSY : 0;
-		} else {
-			ipoib_warn(priv, "Setting Connected Mode failed, "
-				   "not supported by this device");
-			return -EINVAL;
-		}
+		ipoib_warn(priv, "Connected Mode not supported from MLNX_OFED 23.07 and above");
+		return -EINVAL;
 	}
 
 	if (!strcmp(buf, "datagram\n")) {
@@ -763,7 +743,7 @@ void ipoib_flush_paths(struct net_device *dev)
 
 static void path_rec_completion(int status,
 				struct sa_path_rec *pathrec,
-				int num_prs, void *path_ptr)
+				unsigned int num_prs, void *path_ptr)
 {
 	struct ipoib_path *path = path_ptr;
 	struct net_device *dev = path->dev;
@@ -936,7 +916,7 @@ static int path_rec_start(struct net_device *dev,
 				   IB_SA_PATH_REC_NUMB_PATH	|
 				   IB_SA_PATH_REC_TRAFFIC_CLASS |
 				   IB_SA_PATH_REC_PKEY,
-				   1000, 0, GFP_ATOMIC,
+				   1000, GFP_ATOMIC,
 				   path_rec_completion,
 				   path, &path->query);
 	if (path->query_id < 0) {
@@ -1798,8 +1778,10 @@ static void ipoib_napi_add(struct net_device *dev)
 {
 	struct ipoib_dev_priv *priv = ipoib_priv(dev);
 
-	netif_napi_add(dev, &priv->recv_napi, ipoib_rx_poll, IPOIB_NUM_WC);
-	netif_napi_add(dev, &priv->send_napi, ipoib_tx_poll, MAX_SEND_CQE);
+	netif_napi_add_weight(dev, &priv->recv_napi, ipoib_rx_poll,
+			      IPOIB_NUM_WC);
+	netif_napi_add_weight(dev, &priv->send_napi, ipoib_tx_poll,
+			      MAX_SEND_CQE);
 }
 
 static void ipoib_napi_del(struct net_device *dev)
@@ -1835,17 +1817,17 @@ static int ipoib_dev_init_default(struct net_device *dev)
 	ipoib_napi_add(dev);
 
 	/* Allocate RX/TX "rings" to hold queued skbs */
-	priv->rx_ring =	kcalloc(priv->recvq_size,
+	priv->rx_ring =	kcalloc(ipoib_recvq_size,
 				       sizeof(*priv->rx_ring),
 				       GFP_KERNEL);
 	if (!priv->rx_ring)
 		goto out;
 
-	priv->tx_ring = vzalloc(array_size(priv->sendq_size,
+	priv->tx_ring = vzalloc(array_size(ipoib_sendq_size,
 					   sizeof(*priv->tx_ring)));
 	if (!priv->tx_ring) {
 		pr_warn("%s: failed to allocate TX ring (%d entries)\n",
-			priv->ca->name, priv->sendq_size);
+			priv->ca->name, ipoib_sendq_size);
 		goto out_rx_ring_cleanup;
 	}
 
@@ -1984,11 +1966,12 @@ static void ipoib_parent_unregister_pre(struct net_device *ndev)
 static void ipoib_set_dev_features(struct ipoib_dev_priv *priv)
 {
 	priv->hca_caps = priv->ca->attrs.device_cap_flags;
+	priv->kernel_caps = priv->ca->attrs.kernel_cap_flags;
 
 	if (priv->hca_caps & IB_DEVICE_UD_IP_CSUM) {
 		priv->dev->hw_features |= NETIF_F_IP_CSUM | NETIF_F_RXCSUM;
 
-		if (priv->hca_caps & IB_DEVICE_UD_TSO)
+		if (priv->kernel_caps & IBK_UD_TSO)
 			priv->dev->hw_features |= NETIF_F_TSO;
 
 		priv->dev->features |= priv->dev->hw_features;
@@ -2063,10 +2046,6 @@ static int ipoib_ndo_init(struct net_device *ndev)
 		if (rc)
 			return rc;
 	}
-
-	/* Initial ring params*/
-	priv->sendq_size = ipoib_sendq_size;
-	priv->recvq_size = ipoib_recvq_size;
 
 	/* MTU will be reset when mcast join happens */
 	ndev->mtu = IPOIB_UD_MTU(priv->max_ib_mtu);
@@ -2315,11 +2294,10 @@ static void ipoib_build_priv(struct net_device *dev)
 static struct net_device *ipoib_alloc_netdev(struct ib_device *hca, u32 port,
 					     const char *name)
 {
-	struct net_device *dev = NULL;
+	struct net_device *dev;
 
 	dev = rdma_alloc_netdev(hca, port, RDMA_NETDEV_IPOIB, name,
-				NET_NAME_UNKNOWN, ipoib_setup_common,
-				!ipoib_enhanced_enabled);
+				NET_NAME_UNKNOWN, ipoib_setup_common);
 	if (!IS_ERR(dev) || PTR_ERR(dev) != -EOPNOTSUPP)
 		return dev;
 
@@ -2344,9 +2322,11 @@ int ipoib_intf_init(struct ib_device *hca, u32 port, const char *name,
 	priv->ca = hca;
 	priv->port = port;
 
+	if (ipoib_enhanced_enabled == 0)
+		ipoib_warn(priv, "Ignoring non-functional 'ipoib_enhanced' module parameter\n");
+
 	rc = rdma_init_netdev(hca, port, RDMA_NETDEV_IPOIB, name,
-			      NET_NAME_UNKNOWN, ipoib_setup_common, dev,
-			      !ipoib_enhanced_enabled);
+			      NET_NAME_UNKNOWN, ipoib_setup_common, dev);
 	if (rc) {
 		if (rc != -EOPNOTSUPP)
 			goto out;
@@ -2355,11 +2335,19 @@ int ipoib_intf_init(struct ib_device *hca, u32 port, const char *name,
 		rn->attach_mcast = ipoib_mcast_attach;
 		rn->detach_mcast = ipoib_mcast_detach;
 		rn->hca = hca;
+
+		rc = netif_set_real_num_tx_queues(dev, 1);
+		if (rc)
+			goto out;
+
+		rc = netif_set_real_num_rx_queues(dev, 1);
+		if (rc)
+			goto out;
 	}
 
 	priv->rn_ops = dev->netdev_ops;
 
-	if (hca->attrs.device_cap_flags & IB_DEVICE_VIRTUAL_FUNCTION)
+	if (hca->attrs.kernel_cap_flags & IBK_VIRTUAL_FUNCTION)
 		dev->netdev_ops	= &ipoib_netdev_ops_vf;
 	else
 		dev->netdev_ops	= &ipoib_netdev_ops_pf;
@@ -2784,31 +2772,13 @@ static int __init ipoib_init_module(void)
 {
 	int ret;
 
-	if (ipoib_recvq_size <= IPOIB_MAX_QUEUE_SIZE &&
-	    ipoib_recvq_size >= IPOIB_MIN_QUEUE_SIZE) {
-		ipoib_recvq_size = roundup_pow_of_two(ipoib_recvq_size);
-		ipoib_recvq_size = min(ipoib_recvq_size, IPOIB_MAX_QUEUE_SIZE);
-		ipoib_recvq_size = max(ipoib_recvq_size, IPOIB_MIN_QUEUE_SIZE);
-	} else {
-		pr_warn("ipoib_recvq_size is out of bounds [%d-%d], setting to default %d\n",
-			IPOIB_MIN_QUEUE_SIZE, IPOIB_MAX_QUEUE_SIZE,
-			IPOIB_RX_RING_SIZE);
-		ipoib_recvq_size = IPOIB_RX_RING_SIZE;
-	}
+	ipoib_recvq_size = roundup_pow_of_two(ipoib_recvq_size);
+	ipoib_recvq_size = min(ipoib_recvq_size, IPOIB_MAX_QUEUE_SIZE);
+	ipoib_recvq_size = max(ipoib_recvq_size, IPOIB_MIN_QUEUE_SIZE);
 
-	if (ipoib_sendq_size <= IPOIB_MAX_QUEUE_SIZE &&
-	    ipoib_sendq_size >= IPOIB_MIN_QUEUE_SIZE) {
-		ipoib_sendq_size = roundup_pow_of_two(ipoib_sendq_size);
-		ipoib_sendq_size = min(ipoib_sendq_size, IPOIB_MAX_QUEUE_SIZE);
-		ipoib_sendq_size = max3(ipoib_sendq_size, 2 * MAX_SEND_CQE,
-					IPOIB_MIN_QUEUE_SIZE);
-	} else {
-		pr_warn("ipoib_sendq_size is out of bounds [%d-%d], setting to default %d\n",
-			IPOIB_MIN_QUEUE_SIZE, IPOIB_MAX_QUEUE_SIZE,
-			IPOIB_TX_RING_SIZE);
-		ipoib_sendq_size = IPOIB_TX_RING_SIZE;
-	}
-
+	ipoib_sendq_size = roundup_pow_of_two(ipoib_sendq_size);
+	ipoib_sendq_size = min(ipoib_sendq_size, IPOIB_MAX_QUEUE_SIZE);
+	ipoib_sendq_size = max3(ipoib_sendq_size, 2 * MAX_SEND_CQE, IPOIB_MIN_QUEUE_SIZE);
 #ifdef CONFIG_INFINIBAND_IPOIB_CM
 	ipoib_max_conn_qp = min(ipoib_max_conn_qp, IPOIB_CM_MAX_CONN_QP);
 	ipoib_max_conn_qp = max(ipoib_max_conn_qp, 0);

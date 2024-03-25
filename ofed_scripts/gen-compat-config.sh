@@ -98,15 +98,6 @@ if [[ ! -z ${RHEL7_2} ]]; then
    set_config CONFIG_COMPAT_RHEL_7_2 y
 fi
 
-#if [[ ! -z ${RHEL7_2} ]]; then
-#	set_config CONFIG_COMPAT_IP_TUNNELS y
-#	set_config CONFIG_COMPAT_TCF_GACT y
-#	set_config CONFIG_COMPAT_FLOW_DISSECTOR y
-#	set_config CONFIG_COMPAT_CLS_FLOWER_MOD m
-#	set_config CONFIG_COMPAT_TCF_TUNNEL_KEY_MOD m
-#	set_config CONFIG_COMPAT_TCF_VLAN_MOD m
-#fi
-
 RHEL7_4_JD=$(echo ${KVERSION} | grep 3.10.0-693.21.3)
 
 if [[ ! -z ${RHEL7_4_JD} ]]; then
@@ -118,11 +109,6 @@ if [[ ${RHEL_MAJOR} -eq "7" && ${RHEL_MINOR} -le "4" && ! $RHEL7_4_JD ]]; then
 	set_config CONFIG_COMPAT_TCF_PEDIT_MOD m
 fi
 
-#RHEL7_4ALT_AARCH64=$(echo ${KVERSION} | grep 4.11.0-.*el7a.aarch64)
-#if [[ ! -z ${RHEL7_4ALT_AARCH64} ]]; then
-#	set_config CONFIG_COMPAT_KERNEL_4_11_ARM y
-#fi
-
 KERNEL4_14=$(echo ${KVERSION} | grep ^4\.14)
 if [[ ! -z ${KERNEL4_14} ]]; then
 	set_config CONFIG_COMPAT_KERNEL_4_14 y
@@ -131,10 +117,6 @@ fi
 KERNEL3_10_0_327=$(echo ${KVERSION} | grep ^3\.10\.0\-327)
 if [[ ! -z ${KERNEL3_10_0_327} ]]; then
 	set_config CONFIG_COMPAT_KERNEL3_10_0_327 y
-fi
-
-if [[ ${CONFIG_COMPAT_KERNEL_4_14} = "y" ]]; then
-	set_config CONFIG_COMPAT_CLS_FLOWER_MOD m
 fi
 
 if [ -e /etc/debian_version ]; then
@@ -744,18 +726,6 @@ fi
 # it if kernel doesn't support it.
 tc_ct=0
 
-# try to detect supported kernel 4.18.0 ngn kernel
-# and enable compat flower and ct
-KERNEL4_18=$(echo ${KVERSION} | grep ^4\.18)
-if [ -n "$KERNEL4_18" ]; then
-    if (look_exists "skb_flow_dissect_ct" include/linux/skbuff.h); then
-        if (! look_exists "struct flow_cls_common_offload" include/net/flow_offload.h); then
-            set_config CONFIG_COMPAT_CLS_FLOWER_4_18_MOD m
-            tc_ct=1
-        fi
-    fi
-fi
-
 if (look_exists "flow_rule_match_ct" include/net/flow_offload.h); then
     if (kernel_config_enabled NF_FLOW_TABLE NET_TC_SKB_EXT NET_ACT_CT); then
         set_config CONFIG_COMPAT_KERNEL_CT y
@@ -774,10 +744,6 @@ fi
 
 if [ "$tc_ct" != 1 ]; then
     set_config CONFIG_MLX5_TC_CT n
-fi
-
-if (look_exists "void auxiliary_bus_init(void)" drivers/base/base.h); then
-	set_config  CONFIG_COMPAT_AUXILIARY_EXTERNAL_INIT  y
 fi
 
 if (look_exists_reg "define.*GENMASK\(.*U32" include/linux/bitops.h); then

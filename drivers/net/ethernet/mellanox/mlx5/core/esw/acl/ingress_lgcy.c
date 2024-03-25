@@ -177,8 +177,8 @@ int esw_acl_ingress_lgcy_setup(struct mlx5_eswitch *esw,
 	 */
 	int table_size = need_vlan_filter ? 8192 : 4;
 	int dest_num = 0;
-	u16 vlan_id = 0;
 	int err = 0;
+	u16 vlan_id = 0;
 	u8 *smac_v;
 
 	if ((vport->info.vlan || vport->info.qos) && need_vlan_filter) {
@@ -223,6 +223,7 @@ int esw_acl_ingress_lgcy_setup(struct mlx5_eswitch *esw,
 	if (err)
 		goto out;
 
+
 	esw_debug(esw->dev,
 		  "vport[%d] configure ingress rules, vlan(%d) qos(%d) vst_mode (%d)\n",
 		  vport->vport, vport->info.vlan, vport->info.qos, vst_mode);
@@ -247,18 +248,22 @@ int esw_acl_ingress_lgcy_setup(struct mlx5_eswitch *esw,
 		flow_act.vlan[0].ethtype = ntohs(vport->info.vlan_proto);
 	}
 
-	if (need_vlan_filter || (vst_mode == ESW_VST_MODE_BASIC &&
-				 (vport->info.vlan || vport->info.qos)))
-		MLX5_SET_TO_ONES(fte_match_param, spec->match_criteria, outer_headers.cvlan_tag);
+	if (need_vlan_filter ||
+	    (vst_mode == ESW_VST_MODE_BASIC && (vport->info.vlan || vport->info.qos)))
+		MLX5_SET_TO_ONES(fte_match_param, spec->match_criteria,
+				 outer_headers.cvlan_tag);
 
 	if (vport->info.spoofchk) {
-		MLX5_SET_TO_ONES(fte_match_param, spec->match_criteria, outer_headers.smac_47_16);
-		MLX5_SET_TO_ONES(fte_match_param, spec->match_criteria, outer_headers.smac_15_0);
+		MLX5_SET_TO_ONES(fte_match_param, spec->match_criteria,
+				 outer_headers.smac_47_16);
+		MLX5_SET_TO_ONES(fte_match_param, spec->match_criteria,
+				 outer_headers.smac_15_0);
 		smac_v = MLX5_ADDR_OF(fte_match_param,
 				      spec->match_value,
 				      outer_headers.smac_47_16);
 		ether_addr_copy(smac_v, vport->info.mac);
 	}
+
 
 	/* Allow untagged */
 	if (!need_vlan_filter ||
@@ -312,11 +317,11 @@ int esw_acl_ingress_lgcy_setup(struct mlx5_eswitch *esw,
 			 &vport->ingress.legacy.allow_vlans_rules);
 	}
 
+
 drop_rule:
 	memset(spec, 0, sizeof(*spec));
 	memset(&flow_act, 0, sizeof(flow_act));
 	flow_act.action = MLX5_FLOW_CONTEXT_ACTION_DROP;
-
 	/* Attach drop flow counter */
 	if (counter) {
 		flow_act.action |= MLX5_FLOW_CONTEXT_ACTION_COUNT;

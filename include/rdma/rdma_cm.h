@@ -49,7 +49,6 @@ struct rdma_addr {
 	struct rdma_dev_addr dev_addr;
 };
 
-#define RDMA_PRIMARY_PATH_MAX_REC_NUM 3
 struct rdma_route {
 	struct rdma_addr addr;
 	struct sa_path_rec *path_rec;
@@ -120,6 +119,7 @@ struct rdma_cm_id {
 	enum rdma_ucm_port_space ps;
 	enum ib_qp_type		 qp_type;
 	u32			 port_num;
+	struct work_struct net_work;
 };
 
 struct rdma_cm_id *

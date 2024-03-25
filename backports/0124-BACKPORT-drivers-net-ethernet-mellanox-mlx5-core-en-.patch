@@ -1,37 +1,53 @@
 From: Valentine Fatiev <valentinef@nvidia.com>
 Subject: [PATCH] BACKPORT:
- drivers/net/ethernet/mellanox/mlx5/core/en/xsk/setup.h
+ drivers/net/ethernet/mellanox/mlx5/core/en/tc/int_port.c
 
-Change-Id: I5c6b2e7b95848317cbaecd65b51378c0ae8b9e16
+Change-Id: I99ee5232ab5400f64b286b6968c4f31c42c9b969
 ---
- drivers/net/ethernet/mellanox/mlx5/core/en/xsk/setup.h | 9 ++++++++-
- 1 file changed, 8 insertions(+), 1 deletion(-)
+ .../net/ethernet/mellanox/mlx5/core/en/tc/int_port.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
 
---- a/drivers/net/ethernet/mellanox/mlx5/core/en/xsk/setup.h
-+++ b/drivers/net/ethernet/mellanox/mlx5/core/en/xsk/setup.h
-@@ -4,6 +4,7 @@
- #ifndef __MLX5_EN_XSK_SETUP_H__
- #define __MLX5_EN_XSK_SETUP_H__
+--- a/drivers/net/ethernet/mellanox/mlx5/core/en/tc/int_port.c
++++ b/drivers/net/ethernet/mellanox/mlx5/core/en/tc/int_port.c
+@@ -30,8 +30,12 @@ struct mlx5e_tc_int_port_priv {
  
-+#ifdef HAVE_XSK_ZERO_COPY_SUPPORT
- #include "en.h"
- 
- struct mlx5e_xsk_param;
-@@ -12,10 +13,16 @@ bool mlx5e_validate_xsk_param(struct mlx
- 			      struct mlx5e_xsk_param *xsk,
- 			      struct mlx5_core_dev *mdev);
- int mlx5e_open_xsk(struct mlx5e_priv *priv, struct mlx5e_params *params,
--		   struct mlx5e_xsk_param *xsk, struct xsk_buff_pool *pool,
-+		   struct mlx5e_xsk_param *xsk,
-+#ifdef HAVE_NETDEV_BPF_XSK_BUFF_POOL
-+		   struct xsk_buff_pool *pool,
+ bool mlx5e_tc_int_port_supported(const struct mlx5_eswitch *esw)
+ {
++#ifdef HAVE_FLOW_BLOCK_OFFLOAD
+ 	return mlx5_eswitch_vport_match_metadata_enabled(esw) &&
+ 	       MLX5_CAP_GEN(esw->dev, reg_c_preserve);
 +#else
-+		   struct xdp_umem *umem,
++	return false;
 +#endif
- 		   struct mlx5e_channel *c);
- void mlx5e_close_xsk(struct mlx5e_channel *c);
- void mlx5e_activate_xsk(struct mlx5e_channel *c);
- void mlx5e_deactivate_xsk(struct mlx5e_channel *c);
+ }
  
-+#endif /* HAVE_XSK_ZERO_COPY_SUPPORT */
- #endif /* __MLX5_EN_XSK_SETUP_H__ */
+ u32 mlx5e_tc_int_port_get_metadata(struct mlx5e_tc_int_port *int_port)
+@@ -291,7 +295,11 @@ mlx5e_int_port_remove(struct mlx5e_tc_in
+ 		mlx5_del_flow_rules(int_port->rx_rule);
+ 	mapping_remove(ctx, int_port->mapping);
+ 	mlx5e_int_port_metadata_free(priv, int_port->match_metadata);
++#ifdef HAVE_KFREE_RCU_MIGHTSLEEP
+ 	kfree_rcu_mightsleep(int_port);
++#else
++	kfree_rcu(int_port, rcu_head);
++#endif
+ 	priv->num_ports--;
+ }
+ 
+@@ -493,12 +501,16 @@ mlx5e_tc_int_port_dev_fwd(struct mlx5e_t
+ 
+ 	if (fwd_type == MLX5E_TC_INT_PORT_INGRESS) {
+ 		skb->pkt_type = PACKET_HOST;
++#ifdef HAVE_SKB_SET_REDIRECTED
+ 		skb_set_redirected(skb, true);
++#endif
+ 		*forward_tx = false;
+ 	} else {
+ 		skb_reset_network_header(skb);
+ 		skb_push_rcsum(skb, skb->mac_len);
++#ifdef HAVE_SKB_SET_REDIRECTED
+ 		skb_set_redirected(skb, false);
++#endif
+ 		*forward_tx = true;
+ 	}
+ 

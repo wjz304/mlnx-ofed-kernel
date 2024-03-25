@@ -4,7 +4,6 @@
 #ifndef __MLX5_ESW_FT_H__
 #define __MLX5_ESW_FT_H__
 
-#include "en/tc_ct.h"
 #ifdef CONFIG_MLX5_CLS_ACT
 
 struct mlx5_esw_indir_table *
@@ -14,10 +13,8 @@ mlx5_esw_indir_table_destroy(struct mlx5_esw_indir_table *indir);
 
 struct mlx5_flow_table *mlx5_esw_indir_table_get(struct mlx5_eswitch *esw,
 						 struct mlx5_flow_attr *attr,
-						 struct mlx5_flow_spec *spec,
 						 u16 vport, bool decap);
 void mlx5_esw_indir_table_put(struct mlx5_eswitch *esw,
-			      struct mlx5_flow_attr *attr,
 			      u16 vport, bool decap);
 
 bool
@@ -45,7 +42,6 @@ mlx5_esw_indir_table_destroy(struct mlx5_esw_indir_table *indir)
 static inline struct mlx5_flow_table *
 mlx5_esw_indir_table_get(struct mlx5_eswitch *esw,
 			 struct mlx5_flow_attr *attr,
-			 struct mlx5_flow_spec *spec,
 			 u16 vport, bool decap)
 {
 	return ERR_PTR(-EOPNOTSUPP);
@@ -53,7 +49,6 @@ mlx5_esw_indir_table_get(struct mlx5_eswitch *esw,
 
 static inline void
 mlx5_esw_indir_table_put(struct mlx5_eswitch *esw,
-			 struct mlx5_flow_attr *attr,
 			 u16 vport, bool decap)
 {
 }
