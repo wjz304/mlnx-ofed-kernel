@@ -33,31 +33,13 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mlx5/driver.h>
-#include <linux/mlx5/cmd.h>
 #include "mlx5_core.h"
 
-void mlx5_init_mkey_table(struct mlx5_core_dev *dev)
+int mlx5_core_create_mkey(struct mlx5_core_dev *dev, u32 *mkey, u32 *in,
+			  int inlen)
 {
-	struct mlx5_mkey_table *table = &dev->priv.mkey_table;
-
-	memset(table, 0, sizeof(*table));
-	spin_lock_init(&table->lock);
-	INIT_RADIX_TREE(&table->tree, GFP_ATOMIC);
-}
-
-void mlx5_cleanup_mkey_table(struct mlx5_core_dev *dev)
-{
-}
-
-int mlx5_core_create_mkey(struct mlx5_core_dev *dev,
-			  struct mlx5_core_mkey *mkey,
-			  u32 *in,  int inlen)
-{
-	struct mlx5_mkey_table *table = &dev->priv.mkey_table;
-	unsigned long flags;
-	u32 lout[MLX5_ST_SZ_DW(create_mkey_out)] = {0};
+	u32 lout[MLX5_ST_SZ_DW(create_mkey_out)] = {};
 	u32 mkey_index;
-	void *mkc;
 	int err;
 
 	MLX5_SET(create_mkey_in, in, opcode, MLX5_CMD_OP_CREATE_MKEY);
@@ -66,63 +48,33 @@ int mlx5_core_create_mkey(struct mlx5_core_dev *dev,
 	if (err)
 		return err;
 
-	mkc = MLX5_ADDR_OF(create_mkey_in, in, memory_key_mkey_entry);
 	mkey_index = MLX5_GET(create_mkey_out, lout, mkey_index);
-	mkey->iova = MLX5_GET64(mkc, mkc, start_addr);
-	mkey->size = MLX5_GET64(mkc, mkc, len);
-	mkey->key |= mlx5_idx_to_mkey(mkey_index);
-	mkey->pd = MLX5_GET(mkc, mkc, pd);
+	*mkey = MLX5_GET(create_mkey_in, in, memory_key_mkey_entry.mkey_7_0) |
+		mlx5_idx_to_mkey(mkey_index);
 
-	mlx5_core_dbg(dev, "out 0x%x, mkey 0x%x\n", mkey_index, mkey->key);
-
-	/* connect to mkey tree */
-	spin_lock_irqsave(&table->lock, flags);
-	err = radix_tree_insert(&table->tree, mlx5_mkey_to_idx(mkey->key),
-				mkey);
-	spin_unlock_irqrestore(&table->lock, flags);
-	if (err) {
-		mlx5_core_warn(dev, "failed radix tree insert of mkey 0x%x, %d\n",
-			       mkey->key, err);
-		mlx5_core_destroy_mkey(dev, mkey);
-	}
-
-	return err;
+	mlx5_core_dbg(dev, "out 0x%x, mkey 0x%x\n", mkey_index, *mkey);
+	return 0;
 }
 EXPORT_SYMBOL(mlx5_core_create_mkey);
 
-int mlx5_core_destroy_mkey(struct mlx5_core_dev *dev,
-			   struct mlx5_core_mkey *mkey)
+int mlx5_core_destroy_mkey(struct mlx5_core_dev *dev, u32 mkey)
 {
-	struct mlx5_mkey_table *table = &dev->priv.mkey_table;
-	u32 out[MLX5_ST_SZ_DW(destroy_mkey_out)] = {0};
-	u32 in[MLX5_ST_SZ_DW(destroy_mkey_in)]   = {0};
-	struct mlx5_core_mkey *deleted_mkey;
-	unsigned long flags;
-
-	spin_lock_irqsave(&table->lock, flags);
-	deleted_mkey = radix_tree_delete(&table->tree,
-					 mlx5_mkey_to_idx(mkey->key));
-	spin_unlock_irqrestore(&table->lock, flags);
-	if (!deleted_mkey) {
-		mlx5_core_dbg(dev, "failed radix tree delete of mkey 0x%x\n",
-			      mkey->key);
-		return -ENOENT;
-	}
+	u32 in[MLX5_ST_SZ_DW(destroy_mkey_in)] = {};
 
 	MLX5_SET(destroy_mkey_in, in, opcode, MLX5_CMD_OP_DESTROY_MKEY);
-	MLX5_SET(destroy_mkey_in, in, mkey_index, mlx5_mkey_to_idx(mkey->key));
-	return mlx5_cmd_exec(dev, in, sizeof(in), out, sizeof(out));
+	MLX5_SET(destroy_mkey_in, in, mkey_index, mlx5_mkey_to_idx(mkey));
+	return mlx5_cmd_exec_in(dev, destroy_mkey, in);
 }
 EXPORT_SYMBOL(mlx5_core_destroy_mkey);
 
-int mlx5_core_query_mkey(struct mlx5_core_dev *dev, struct mlx5_core_mkey *mkey,
-			 u32 *out, int outlen)
+int mlx5_core_query_mkey(struct mlx5_core_dev *dev, u32 mkey, u32 *out,
+			 int outlen)
 {
-	u32 in[MLX5_ST_SZ_DW(query_mkey_in)] = {0};
+	u32 in[MLX5_ST_SZ_DW(query_mkey_in)] = {};
 
 	memset(out, 0, outlen);
 	MLX5_SET(query_mkey_in, in, opcode, MLX5_CMD_OP_QUERY_MKEY);
-	MLX5_SET(query_mkey_in, in, mkey_index, mlx5_mkey_to_idx(mkey->key));
+	MLX5_SET(query_mkey_in, in, mkey_index, mlx5_mkey_to_idx(mkey));
 	return mlx5_cmd_exec(dev, in, sizeof(in), out, outlen);
 }
 EXPORT_SYMBOL(mlx5_core_query_mkey);
@@ -140,8 +92,8 @@ static inline u32 mlx5_get_psv(u32 *out, int psv_index)
 int mlx5_core_create_psv(struct mlx5_core_dev *dev, u32 pdn,
 			 int npsvs, u32 *sig_index)
 {
-	u32 out[MLX5_ST_SZ_DW(create_psv_out)] = {0};
-	u32 in[MLX5_ST_SZ_DW(create_psv_in)]   = {0};
+	u32 out[MLX5_ST_SZ_DW(create_psv_out)] = {};
+	u32 in[MLX5_ST_SZ_DW(create_psv_in)] = {};
 	int i, err;
 
 	if (npsvs > MLX5_MAX_PSVS)
@@ -151,7 +103,7 @@ int mlx5_core_create_psv(struct mlx5_core_dev *dev, u32 pdn,
 	MLX5_SET(create_psv_in, in, pd, pdn);
 	MLX5_SET(create_psv_in, in, num_psv, npsvs);
 
-	err = mlx5_cmd_exec(dev, in, sizeof(in), out, sizeof(out));
+	err = mlx5_cmd_exec_inout(dev, create_psv, in, out);
 	if (err)
 		return err;
 
@@ -164,11 +116,10 @@ EXPORT_SYMBOL(mlx5_core_create_psv);
 
 int mlx5_core_destroy_psv(struct mlx5_core_dev *dev, int psv_num)
 {
-	u32 out[MLX5_ST_SZ_DW(destroy_psv_out)] = {0};
-	u32 in[MLX5_ST_SZ_DW(destroy_psv_in)]   = {0};
+	u32 in[MLX5_ST_SZ_DW(destroy_psv_in)] = {};
 
 	MLX5_SET(destroy_psv_in, in, opcode, MLX5_CMD_OP_DESTROY_PSV);
 	MLX5_SET(destroy_psv_in, in, psvn, psv_num);
-	return mlx5_cmd_exec(dev, in, sizeof(in), out, sizeof(out));
+	return mlx5_cmd_exec_in(dev, destroy_psv, in);
 }
 EXPORT_SYMBOL(mlx5_core_destroy_psv);

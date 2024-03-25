@@ -48,6 +48,7 @@
 /* QP and CQ parameters */
 #define IB_MAD_QP_SEND_SIZE	128
 #define IB_MAD_QP_RECV_SIZE	512
+#define IB_MAD_QP_SMP_WINDOW	128 /* Use INT_MAX to disable the feature */
 #define IB_MAD_QP_MIN_SIZE	64
 #define IB_MAD_QP_MAX_SIZE	8192
 #define IB_MAD_SEND_REQ_MAX_SG	2
@@ -79,13 +80,13 @@ struct ib_mad_private {
 	struct ib_mad_private_header header;
 	size_t mad_size;
 	struct ib_grh grh;
-	u8 mad[0];
+	u8 mad[];
 } __packed;
 
 struct ib_rmpp_segment {
 	struct list_head list;
 	u32 num;
-	u8 data[0];
+	u8 data[];
 };
 
 struct ib_mad_agent_private {
@@ -103,7 +104,7 @@ struct ib_mad_agent_private {
 	struct work_struct local_work;
 	struct list_head rmpp_list;
 
-	atomic_t refcount;
+	refcount_t refcount;
 	int send_list_closed;
 	union {
 		struct completion comp;
@@ -116,7 +117,6 @@ struct ib_mad_snoop_private {
 	struct ib_mad_qp_info *qp_info;
 	int snoop_index;
 	int mad_snoop_flags;
-	atomic_t refcount;
 	struct completion comp;
 };
 
@@ -153,6 +153,9 @@ struct ib_mad_send_wr_private {
 	int seg_num;
 	int newwin;
 	int pad;
+
+	/* SMP window */
+	int is_smp_mad;
 
 	/* SA congestion controlled MAD */
 	int is_sa_cc_mad;
@@ -209,6 +212,12 @@ struct ib_mad_qp_info {
 	atomic_t snoop_count;
 };
 
+struct smp_window {
+	unsigned long outstanding;
+	unsigned long max_outstanding;
+	struct list_head overflow_list;
+};
+
 struct to_fifo {
 	struct list_head to_head;
 	struct list_head fifo_head;
@@ -243,6 +252,8 @@ struct ib_mad_port_private {
 	struct ib_mad_mgmt_version_table version[MAX_MGMT_VERSION];
 	struct workqueue_struct *wq;
 	struct ib_mad_qp_info qp_info[IB_MAD_QPS_CORE];
+
+	struct smp_window smp_window;
 	struct sa_cc_data sa_cc;
 };
 

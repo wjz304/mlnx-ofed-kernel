@@ -1,4 +1,4 @@
-PHONY += all kernel install_kernel install clean clean_kernel distclean install_modules install_scripts build_py_scripts install_py_scripts help
+PHONY += all autoversion kernel install_kernel install clean clean_kernel distclean install_modules install_scripts build_py_scripts help
 	
 all:
 .PHONY: $(PHONY)
@@ -14,13 +14,10 @@ export KSRC_OBJ
 export KLIB_BUILD
 export KVERSION
 export MAKE
-ifneq (,$(MLNX_PYTHON_EXECUTABLE))
-MLNX_PYTHON = $(MLNX_PYTHON_EXECUTABLE)
-else
-MLNX_PYTHON = python
-endif
 
 -include $(COMPAT_CONFIG)
+
+data_dir = /usr/share/mlnx_ofed
 
 export CREL=$(shell cat $(CWD)/compat_version)
 export CREL_PRE:=.compat_autoconf_
@@ -40,7 +37,7 @@ CC  ?= $(CROSS_COMPILE)gcc
 CPP ?= $(CC) -E
 
 ifneq ($(CC),cc)
-override WITH_MAKE_PARAMS += CC=$(CC)
+override WITH_MAKE_PARAMS += CC="$(CC)"
 endif
 
 # try-run
@@ -83,41 +80,14 @@ MLNX_CFLAGS += $(shell if [ $(CPP_VERS) -ge 4004004 ]; then \
 endif #(,$(filter $(ARCH), i386 x86_64))
 export MLNX_CFLAGS
 
-# GCC earlier than 4.6.0 will build modules which require 'mcount',
-# and this symbol will not be available in the kernel if the kernel was
-# compiled with GCC 4.6.0 and above.
-# therefore, to prevent unknown symbol issues we disable function tracing.
-#
-compile_h=$(shell /bin/ls -1 $(KSRC_OBJ)/include/*/compile.h 2> /dev/null | head -1)
-ifneq ($(compile_h),)
-KERNEL_GCC_MAJOR := $(shell grep LINUX_COMPILER $(compile_h) | sed -r -e 's/.*gcc version ([0-9\.\-]*) .*/\1/g' | cut -d'.' -f1)
-KERNEL_GCC_MINOR := $(shell grep LINUX_COMPILER $(compile_h) | sed -r -e 's/.*gcc version ([0-9\.\-]*) .*/\1/g' | cut -d'.' -f2)
-KERNEL_GCC_PATCH := $(shell grep LINUX_COMPILER $(compile_h) | sed -r -e 's/.*gcc version ([0-9\.\-]*) .*/\1/g' | cut -d'.' -f3)
-KERNEL_GCC_VER  := $(shell expr 0$(KERNEL_GCC_MAJOR) \* 1000000 + 0$(KERNEL_GCC_MINOR) \* 1000 + 0$(KERNEL_GCC_PATCH))
-ifneq ($(shell if [ $(CPP_VERS) -lt 4006000 ] && [ $(KERNEL_GCC_VER) -ge 4006000 ]; then \
-					echo "YES"; else echo ""; fi),)
-$(info Warning: The kernel was compiled with GCC newer than 4.6.0, while the current GCC is older than 4.6.0, Disabling function tracing to prevent unknown symbol issues...)
-override WITH_MAKE_PARAMS += CONFIG_FUNCTION_TRACER= CONFIG_HAVE_FENTRY=
-endif
-ifneq ($(shell if [ $(CPP_VERS) -ge 4006000 ] && [ $(KERNEL_GCC_VER) -lt 4006000 ]; then \
-					echo "YES"; else echo ""; fi),)
-$(info Warning: The kernel was compiled with GCC older than 4.6.0, while the current GCC is newer than 4.6.0, Disabling function tracing to prevent unknown symbol issues...)
-override WITH_MAKE_PARAMS += CONFIG_FUNCTION_TRACER= CONFIG_HAVE_FENTRY=
-endif
-endif
-
 ifneq ($(shell if (echo $(KVERSION) | grep -qE 'uek'); then \
 					echo "YES"; else echo ""; fi),)
-override WITH_MAKE_PARAMS += ctf-dir=$(CWD)/.ctf
-CFLAGS += -DMLX_DISABLE_TRACEPOINTS
-endif
-
-ifneq ($(shell /usr/bin/lsb_release -s -i 2>/dev/null | grep -qiE "debian|ubuntu" 2>/dev/null && echo YES || echo ''),)
+override WITH_MAKE_PARAMS += ctf-dir="$(CWD)/.ctf"
 CFLAGS += -DMLX_DISABLE_TRACEPOINTS
 endif
 
 DEPMOD  = /sbin/depmod
-INSTALL_MOD_DIR ?= $(shell ( test -f /etc/SuSE-release && echo updates ) || ( test -f /etc/SUSE-brand && echo updates ) || ( echo extra/mlnx-ofa_kernel ) )
+INSTALL_MOD_DIR ?= $(shell ( test -f /etc/SuSE-release && echo updates ) || ( test -f /etc/SUSE-brand && echo updates ) || ( test -f /etc/fedora-release && echo updates ) || ( echo extra/mlnx-ofa_kernel ) )
 
 ifeq ($(CONFIG_MEMTRACK),m)
         export KERNEL_MEMTRACK_CFLAGS = -include $(CWD)/drivers/infiniband/debug/mtrack.h
@@ -137,6 +107,9 @@ configure.mk.kernel:
 	@echo Please run ./configure
 	@exit 1
 
+autoversion:
+	@./ofed_scripts/autoversion.sh
+
 all: kernel build_py_scripts
 
 install: install_kernel install_scripts
@@ -151,13 +124,41 @@ endif
 
 V ?= 0
 
+LINUXINCLUDE=\
+		-D__OFED_BUILD__ \
+		-D__KERNEL__ \
+		$(CFLAGS) \
+		-include $(autoconf_h) \
+		$(KCONFIG_H) \
+		-include $(CWD)/include/linux/compat-2.6.h \
+		$(BACKPORT_INCLUDES) \
+		$(KERNEL_MEMTRACK_CFLAGS) \
+		$(OPENIB_KERNEL_EXTRA_CFLAGS) \
+		-I$(CWD)/include \
+		-I$(CWD)/include/uapi \
+		-I$(CWD)/drivers/infiniband/debug \
+		$$(if $$(CONFIG_XEN),-D__XEN_INTERFACE_VERSION__=$$(CONFIG_XEN_INTERFACE_VERSION)) \
+		$$(if $$(CONFIG_XEN),-I$$(srctree)/arch/x86/include/mach-xen) \
+		-I$$(srctree)/arch/$$(SRCARCH)/include \
+		-Iarch/$$(SRCARCH)/include/generated \
+		-Iinclude \
+		-I$$(srctree)/arch/$$(SRCARCH)/include/uapi \
+		-Iarch/$$(SRCARCH)/include/generated/uapi \
+		-I$$(srctree)/include \
+		-I$$(srctree)/include/uapi \
+		-Iinclude/generated/uapi \
+		$$(if $$(KBUILD_SRC),-Iinclude2 -I$$(srctree)/include) \
+		-I$$(srctree)/arch/$$(SRCARCH)/include \
+		-Iarch/$$(SRCARCH)/include/generated \
+		#
+
 #########################
 #	make kernel	#
 #########################
 #NB: The LINUXINCLUDE value comes from main kernel Makefile
 #    with local directories prepended. This eventually affects
 #    CPPFLAGS in the kernel Makefile
-kernel: $(COMPAT_CONFIG) $(COMPAT_AUTOCONF)
+kernel: $(COMPAT_CONFIG) $(COMPAT_AUTOCONF) autoversion
 	@echo "Building kernel modules"
 	@echo "Kernel version: $(KVERSION)"
 	@echo "Modules directory: $(INSTALL_MOD_PATH)/lib/modules/$(KVERSION)/$(INSTALL_MOD_DIR)"
@@ -170,6 +171,7 @@ kernel: $(COMPAT_CONFIG) $(COMPAT_AUTOCONF)
 		CONFIG_COMPAT_KOBJECT_BACKPORT=$(CONFIG_COMPAT_KOBJECT_BACKPORT) \
 		CONFIG_MEMTRACK=$(CONFIG_MEMTRACK) \
 		CONFIG_DEBUG_INFO=$(CONFIG_DEBUG_INFO) \
+		CONFIG_DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT=y \
 		CONFIG_INFINIBAND=$(CONFIG_INFINIBAND) \
 		CONFIG_INFINIBAND_CORE_DUMMY=$(CONFIG_INFINIBAND_CORE_DUMMY) \
 		CONFIG_INFINIBAND_IPOIB=$(CONFIG_INFINIBAND_IPOIB) \
@@ -217,12 +219,9 @@ kernel: $(COMPAT_CONFIG) $(COMPAT_AUTOCONF)
 		CONFIG_INFINIBAND_SDP_DEBUG=$(CONFIG_INFINIBAND_SDP_DEBUG) \
 		CONFIG_INFINIBAND_SDP_DEBUG_DATA=$(CONFIG_INFINIBAND_SDP_DEBUG_DATA) \
 		CONFIG_INFINIBAND_MADEYE=$(CONFIG_INFINIBAND_MADEYE) \
-		CONFIG_MLX4_CORE=$(CONFIG_MLX4_CORE) \
-		CONFIG_MLX4_CORE_GEN2=$(CONFIG_MLX4_CORE_GEN2) \
 		CONFIG_MLXFW=$(CONFIG_MLXFW) \
 		CONFIG_MLX5_CORE=$(CONFIG_MLX5_CORE) \
 		CONFIG_MLX5_ACCEL=$(CONFIG_MLX5_ACCEL) \
-		CONFIG_MLX5_EN_ACCEL_FS=$(CONFIG_MLX5_EN_ACCEL_FS) \
 		CONFIG_MLX5_EN_TLS=$(CONFIG_MLX5_EN_TLS) \
 		CONFIG_MLX5_TLS=$(CONFIG_MLX5_TLS) \
 		CONFIG_MLX5_FPGA_TLS=$(CONFIG_MLX5_FPGA_TLS) \
@@ -230,25 +229,22 @@ kernel: $(COMPAT_CONFIG) $(COMPAT_AUTOCONF)
 		CONFIG_MLX5_IPSEC=$(CONFIG_MLX5_IPSEC) \
 		CONFIG_MLX5_EN_IPSEC=$(CONFIG_MLX5_EN_IPSEC) \
 		CONFIG_MLX5_FPGA=$(CONFIG_MLX5_FPGA) \
-		CONFIG_MLX5_FPGA_TOOLS=$(CONFIG_MLX5_FPGA_TOOLS) \
 		CONFIG_MLX5_CORE_EN=$(CONFIG_MLX5_CORE_EN) \
 		CONFIG_MLX5_CORE_EN_DCB=$(CONFIG_MLX5_CORE_EN_DCB) \
 		CONFIG_MLX5_EN_ARFS=$(CONFIG_MLX5_EN_ARFS) \
 		CONFIG_MLX5_EN_RXNFC=$(CONFIG_MLX5_EN_RXNFC) \
 		CONFIG_MLX5_MPFS=$(CONFIG_MLX5_MPFS) \
 		CONFIG_MLX5_ESWITCH=$(CONFIG_MLX5_ESWITCH) \
+		CONFIG_MLX5_CLS_ACT=$(CONFIG_MLX5_CLS_ACT) \
+		CONFIG_MLX5_BRIDGE=$(CONFIG_MLX5_BRIDGE) \
+		CONFIG_MLX5_TC_CT=$(CONFIG_MLX5_TC_CT) \
+		CONFIG_MLX5_SF=$(CONFIG_MLX5_SF) \
+		CONFIG_MLX5_SF_MANAGER=$(CONFIG_MLX5_SF_MANAGER) \
 		CONFIG_MLX5_SW_STEERING=$(CONFIG_MLX5_SW_STEERING) \
 		CONFIG_MLX5_CORE_IPOIB=$(CONFIG_MLX5_CORE_IPOIB) \
-		CONFIG_MLX5_MDEV=n \
-		CONFIG_MLX4_EN=$(CONFIG_MLX4_EN) \
-		CONFIG_MLX4_EN_DCB=$(CONFIG_MLX4_EN_DCB) \
-		CONFIG_MLX4_IB_DEBUG_FS=$(CONFIG_MLX4_IB_DEBUG_FS) \
-		CONFIG_MLX4_INFINIBAND=$(CONFIG_MLX4_INFINIBAND) \
 		CONFIG_MLX5_INFINIBAND=$(CONFIG_MLX5_INFINIBAND) \
-		CONFIG_MLX4_ETHERNET=$(CONFIG_MLX4_ETHERNET) \
-		CONFIG_MLX4_DEBUG=$(CONFIG_MLX4_DEBUG) \
 		CONFIG_MLX5_DEBUG=$(CONFIG_MLX5_DEBUG) \
-		CONFIG_MLX4_FC=$(CONFIG_MLX4_FC) \
+		CONFIG_AUXILIARY_BUS=$(CONFIG_AUXILIARY_BUS) \
 		CONFIG_SUNRPC_XPRT_RDMA=$(CONFIG_SUNRPC_XPRT_RDMA) \
 		CONFIG_SUNRPC_XPRT_RDMA_DUMMY=$(CONFIG_SUNRPC_XPRT_RDMA_DUMMY) \
 		CONFIG_DTRACE= \
@@ -256,35 +252,13 @@ kernel: $(COMPAT_CONFIG) $(COMPAT_AUTOCONF)
 		CONFIG_INFINIBAND_ON_DEMAND_PAGING=$(CONFIG_INFINIBAND_ON_DEMAND_PAGING) \
 		CONFIG_BF_DEVICE_EMULATION=$(CONFIG_BF_DEVICE_EMULATION) \
 		CONFIG_BF_POWER_FAILURE_EVENT=$(CONFIG_BF_POWER_FAILURE_EVENT) \
+		CONFIG_GPU_DIRECT_STORAGE=$(CONFIG_GPU_DIRECT_STORAGE) \
 		CONFIG_ENABLE_MLX5_FS_DEBUGFS=$(CONFIG_ENABLE_MLX5_FS_DEBUGFS) \
-		CONFIG_ENABLE_CX4LX_OPTIMIZATIONS=$(CONFIG_ENABLE_CX4LX_OPTIMIZATIONS) \
-		LINUXINCLUDE=' \
-		-D__OFED_BUILD__ \
-		-D__KERNEL__ \
-		$(CFLAGS) \
-		-include $(autoconf_h) \
-		$(KCONFIG_H) \
-		-include $(CWD)/include/linux/compat-2.6.h \
-		$(BACKPORT_INCLUDES) \
-		$(KERNEL_MEMTRACK_CFLAGS) \
-		$(OPENIB_KERNEL_EXTRA_CFLAGS) \
-		-I$(CWD)/include \
-		-I$(CWD)/include/uapi \
-		-I$(CWD)/drivers/infiniband/debug \
-		$$(if $$(CONFIG_XEN),-D__XEN_INTERFACE_VERSION__=$$(CONFIG_XEN_INTERFACE_VERSION)) \
-		$$(if $$(CONFIG_XEN),-I$$(srctree)/arch/x86/include/mach-xen) \
-		-I$$(srctree)/arch/$$(SRCARCH)/include \
-		-Iarch/$$(SRCARCH)/include/generated \
-		-Iinclude \
-		-I$$(srctree)/arch/$$(SRCARCH)/include/uapi \
-		-Iarch/$$(SRCARCH)/include/generated/uapi \
-		-I$$(srctree)/include \
-		-I$$(srctree)/include/uapi \
-		-Iinclude/generated/uapi \
-		$$(if $$(KBUILD_SRC),-Iinclude2 -I$$(srctree)/include) \
-		-I$$(srctree)/arch/$$(SRCARCH)/include \
-		-Iarch/$$(SRCARCH)/include/generated \
-		' \
+		CONFIG_MLXDEVM=$(CONFIG_MLXDEVM) \
+		CONFIG_MLX5_SF_CFG=$(CONFIG_MLX5_SF_CFG) \
+		CONFIG_MLX5_TC_SAMPLE=$(CONFIG_MLX5_TC_SAMPLE) \
+		CONFIG_MLX5_EN_MACSEC=$(CONFIG_MLX5_EN_MACSEC) \
+		LINUXINCLUDE='$(LINUXINCLUDE)' \
 		modules
 
 
@@ -310,9 +284,10 @@ endif
 #########################
 #	Install scripts	 #
 #########################
-install_scripts: install_py_scripts
+install_scripts:
 	@echo "Installing scripts and configuration files"
 	install -d $(INSTALL_MOD_PATH)/etc/init.d
+	install -d $(INSTALL_MOD_PATH)$(data_dir)
 ifeq ($(shell /usr/bin/lsb_release -s -i 2>/dev/null | grep -qiE "debian|ubuntu" 2>/dev/null && echo YES || echo ''),)
 	install -m 0755 ofed_scripts/openibd $(INSTALL_MOD_PATH)/etc/init.d
 else
@@ -322,18 +297,9 @@ endif
 	@echo "Running install helper script"
 	ofed_scripts/install_helper $(INSTALL_MOD_PATH)
 
-# Disable mlx4_en load on SLES10
-ifeq ($(shell echo $(KVERSION) | grep -q '2.6.16' && echo y || echo ''),y)
-	sed -i -e 's/MLX4_EN_LOAD=yes/MLX4_EN_LOAD=no/g' $(INSTALL_MOD_PATH)/etc/infiniband/openib.conf
-endif
-
 	install -d $(INSTALL_MOD_PATH)/sbin
-	install -m 0755 ofed_scripts/sysctl_perf_tuning $(INSTALL_MOD_PATH)/sbin
-	install -m 0755 ofed_scripts/mlnx_bf_configure $(INSTALL_MOD_PATH)/sbin
-	install -m 0755 ofed_scripts/mlnx-sf $(INSTALL_MOD_PATH)/sbin
 	install -d $(INSTALL_MOD_PATH)/$(prefix)/sbin
-	install -m 0755 ofed_scripts/*affinity* $(INSTALL_MOD_PATH)/$(prefix)/sbin
-	install -m 0755 ofed_scripts/vf-net-link-name.sh $(INSTALL_MOD_PATH)/etc/infiniband
+	install -m 0755 ofed_scripts/mlnx_bf_assign_ct_cores.sh $(INSTALL_MOD_PATH)$(data_dir)
 
 	install -d $(INSTALL_MOD_PATH)/etc/modprobe.d
 ifeq ("$(wildcard $(INSTALL_MOD_PATH)/etc/modprobe.d/mlnx.conf)","")
@@ -344,16 +310,9 @@ ifeq ("$(wildcard $(INSTALL_MOD_PATH)/etc/modprobe.d/mlnx-bf.conf)","")
 	install -m 0644 ofed_scripts/mlnx-bf.conf $(INSTALL_MOD_PATH)/etc/modprobe.d
 endif
 
-ifneq ($(filter m,$(CONFIG_MLX5_CORE) $(CONFIG_MLX4_CORE)),)
+ifneq ($(filter m,$(CONFIG_MLX5_CORE)),)
 	install -d $(INSTALL_MOD_PATH)/$(prefix)/bin
-	install -m 0755 ofed_scripts/ibdev2netdev $(INSTALL_MOD_PATH)/$(prefix)/bin
-endif
-
-ifeq ($(CONFIG_MLX4_EN),m)
-	install -d $(INSTALL_MOD_PATH)/sbin
-	install -m 0755 ofed_scripts/connectx_port_config $(INSTALL_MOD_PATH)/sbin
-	install -d $(INSTALL_MOD_PATH)/etc/infiniband
-	touch $(INSTALL_MOD_PATH)/etc/infiniband/connectx.conf
+	install -m 0755 ofed_scripts/ibdev2netdev $(INSTALL_MOD_PATH)/$(prefix)/sbin
 endif
 
 ifeq ($(CONFIG_INFINIBAND_IPOIB),m)
@@ -363,43 +322,16 @@ ifeq ("$(wildcard $(INSTALL_MOD_PATH)/etc/modprobe.d/ib_ipoib.conf)","")
 endif
 endif
 
-	install -d $(INSTALL_MOD_PATH)/etc/udev/rules.d
-ifeq ("$(wildcard $(INSTALL_MOD_PATH)/etc/udev/rules.d/90-ib.rules)","")
-	install -m 0644 ofed_scripts/90-ib.rules $(INSTALL_MOD_PATH)/etc/udev/rules.d
-endif
-ifeq ("$(wildcard $(INSTALL_MOD_PATH)/etc/udev/rules.d/82-net-setup-link.rules)","")
-	install -m 0644 ofed_scripts/82-net-setup-link.rules $(INSTALL_MOD_PATH)/etc/udev/rules.d
-endif
-ifneq ($(shell udevinfo -V 2> /dev/null | awk '{print $NF}' 2>/dev/null | grep -E "^0[1-4]"),)
-	sed -i -e 's/KERNEL==/KERNEL=/g' $(INSTALL_MOD_PATH)/etc/udev/rules.d
-endif
+	install -d $(INSTALL_MOD_PATH)/lib/udev/rules.d
+	install -m 0755 ofed_scripts/auxdev-sf-netdev-rename $(INSTALL_MOD_PATH)/lib/udev
+	install -m 0755 ofed_scripts/sf-rep-netdev-rename $(INSTALL_MOD_PATH)/lib/udev
+	install -m 0644 ofed_scripts/83-mlnx-sf-name.rules $(INSTALL_MOD_PATH)/lib/udev/rules.d
+	install -m 0644 ofed_scripts/90-ib.rules $(INSTALL_MOD_PATH)/lib/udev/rules.d
 
 	install -d $(INSTALL_MOD_PATH)/usr/sbin
-	install -m 0755 ofed_scripts/mlnx_tune $(INSTALL_MOD_PATH)/usr/sbin
-	install -m 0755 ofed_scripts/show_gids $(INSTALL_MOD_PATH)/usr/sbin
-	install -m 0755 ofed_scripts/compat_gid_gen $(INSTALL_MOD_PATH)/usr/sbin
-	install -m 0755 ofed_scripts/cma_roce_mode $(INSTALL_MOD_PATH)/usr/sbin
-	install -m 0755 ofed_scripts/cma_roce_tos $(INSTALL_MOD_PATH)/usr/sbin
 	install -m 0755 ofed_scripts/setup_mr_cache.sh $(INSTALL_MOD_PATH)/usr/sbin
 	install -m 0755 ofed_scripts/odp_stat.sh $(INSTALL_MOD_PATH)/usr/sbin
-	install -m 0755 ofed_scripts/show_counters $(INSTALL_MOD_PATH)/usr/sbin
 	install -d $(INSTALL_MOD_PATH)/etc/
-
-
-# build the python scripts
-build_py_scripts:
-ifeq ($(shell /usr/bin/lsb_release -s -i 2>/dev/null | grep -qiE "debian|ubuntu" 2>/dev/null && echo YES || echo ''),)
-	cd ofed_scripts/utils && $(MLNX_PYTHON) setup.py build && cd -
-endif
-
-
-# install the python scripts
-install_py_scripts:
-ifeq ($(RECORD_PY_FILES),1)
-	cd ofed_scripts/utils && $(MLNX_PYTHON) setup.py install -O1 --root=$(INSTALL_MOD_PATH) --record ../../../../ofed-files && cd -
-else
-	cd ofed_scripts/utils && $(MLNX_PYTHON) setup.py install -O1 --root=$(INSTALL_MOD_PATH)/ && cd -
-endif
 
 
 clean: clean_kernel
@@ -417,7 +349,6 @@ clean-files += $(COMPAT_CONFIG) $(COMPAT_AUTOCONF)
 help:
 	@echo
 	@echo "kernel:                      Build kernel modules"
-	@echo "build_py_scripts:            Build python scripts"
 	@echo "all:                         Run kernel and build_py_scripts"
 	@echo
 	@echo "install_kernel:              Install kernel modules under $(INSTALL_MOD_PATH)/lib/modules/$(KVERSION)/$(INSTALL_MOD_DIR)"

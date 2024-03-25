@@ -6,9 +6,6 @@
 #define _IBA_DEFS_H_
 
 #include <linux/kernel.h>
-#ifndef GENMASK
-#include <linux/bits.h>
-#endif
 #include <linux/bitfield.h>
 #include <asm/unaligned.h>
 

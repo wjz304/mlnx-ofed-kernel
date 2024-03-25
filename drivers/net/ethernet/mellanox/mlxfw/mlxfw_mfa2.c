@@ -9,8 +9,8 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/netlink.h>
-#include <linux/xz.h>
 #include <linux/vmalloc.h>
+#include <linux/xz.h>
 #include "mlxfw_mfa2.h"
 #include "mlxfw_mfa2_file.h"
 #include "mlxfw_mfa2_tlv.h"
@@ -270,7 +270,7 @@ struct mlxfw_mfa2_file *mlxfw_mfa2_file_init(const struct firmware *fw)
 	const void *first_tlv_ptr;
 	const void *cb_top_ptr;
 
-	mfa2_file = kcalloc(1, sizeof(*mfa2_file), GFP_KERNEL);
+	mfa2_file = kzalloc(sizeof(*mfa2_file), GFP_KERNEL);
 	if (!mfa2_file)
 		return ERR_PTR(-ENOMEM);
 
@@ -499,7 +499,7 @@ mlxfw_mfa2_file_component_tlv_get(const struct mlxfw_mfa2_file *mfa2_file,
 
 struct mlxfw_mfa2_comp_data {
 	struct mlxfw_mfa2_component comp;
-	u8 buff[0];
+	u8 buff[];
 };
 
 static const struct mlxfw_mfa2_tlv_component_descriptor *

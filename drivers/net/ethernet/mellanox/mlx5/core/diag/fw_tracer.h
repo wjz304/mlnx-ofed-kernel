@@ -89,7 +89,7 @@ struct mlx5_fw_tracer {
 		void *log_buf;
 		dma_addr_t dma;
 		u32 size;
-		struct mlx5_core_mkey mkey;
+		u32 mkey;
 		u32 consumer_index;
 	} buff;
 
@@ -104,7 +104,6 @@ struct mlx5_fw_tracer {
 	struct work_struct handle_traces_work;
 	struct hlist_head hash[MESSAGE_HASH_SIZE];
 	struct list_head ready_strings_list;
-	char ready_string[1024];
 };
 
 struct tracer_string_format {
@@ -192,5 +191,6 @@ void mlx5_fw_tracer_destroy(struct mlx5_fw_tracer *tracer);
 int mlx5_fw_tracer_trigger_core_dump_general(struct mlx5_core_dev *dev);
 int mlx5_fw_tracer_get_saved_traces_objects(struct mlx5_fw_tracer *tracer,
 					    struct devlink_fmsg *fmsg);
+int mlx5_fw_tracer_reload(struct mlx5_fw_tracer *tracer);
 
 #endif

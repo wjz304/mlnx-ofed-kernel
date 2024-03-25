@@ -2,7 +2,6 @@
 #define _COMPAT_LINUX_BLK_MQ_H
 
 #include "../../compat/config.h"
-#include <linux/version.h>
 
 #include_next <linux/blk-mq.h>
 #ifndef HAVE_BLK_MQ_TAGSET_WAIT_COMPLETED_REQUEST
@@ -80,6 +79,11 @@ typedef int blk_status_t;
 #define BLK_STS_NEXUS		-EBADE
 #define BLK_STS_PROTECTION	-EILSEQ
 
+static inline int blk_status_to_errno(blk_status_t status)
+{
+        return status;
+}
+
 #endif /* HAVE_BLK_STATUS_T */
 
 #ifndef HAVE_BLK_PATH_ERROR
@@ -100,8 +104,15 @@ static inline bool blk_path_error(blk_status_t error)
 }
 #endif
 
-#if !defined(HAVE_BLK_MQ_REQUEST_COMPLETED) && \
-	defined(HAVE_MQ_RQ_STATE)
+#ifdef HAVE_MQ_RQ_STATE
+#ifndef HAVE_BLK_MQ_SET_REQUEST_COMPLETE
+static inline void blk_mq_set_request_complete(struct request *rq)
+{
+	WRITE_ONCE(rq->state, MQ_RQ_COMPLETE);
+}
+#endif
+
+#ifndef HAVE_BLK_MQ_REQUEST_COMPLETED
 static inline enum mq_rq_state blk_mq_rq_state(struct request *rq)
 {
 	return READ_ONCE(rq->state);
@@ -112,12 +123,16 @@ static inline int blk_mq_request_completed(struct request *rq)
 	return blk_mq_rq_state(rq) == MQ_RQ_COMPLETE;
 }
 #endif
+#endif /* HAVE_MQ_RQ_STATE */
 
 #ifndef HAVE_BLK_MQ_TAGSET_WAIT_COMPLETED_REQUEST
 #ifdef HAVE_MQ_RQ_STATE
-#ifdef HAVE_BLK_MQ_BUSY_TAG_ITER_FN_BOOL
+#ifdef HAVE_BLK_MQ_BUSY_TAG_ITER_FN_BOOL_3_PARAMS
 static inline bool blk_mq_tagset_count_completed_rqs(struct request *rq,
                         void *data, bool reserved)
+#elif defined HAVE_BLK_MQ_BUSY_TAG_ITER_FN_BOOL_2_PARAMS
+static inline bool blk_mq_tagset_count_completed_rqs(struct request *rq,
+                        void *data)
 #else
 static inline void blk_mq_tagset_count_completed_rqs(struct request *rq,
                         void *data, bool reserved)

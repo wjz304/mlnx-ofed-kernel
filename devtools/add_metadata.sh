@@ -56,6 +56,7 @@ Options:
                                     Must exist in: 'metadata/features_metadata_db.csv'
     -s, --upstream-status <STATUS>  Upstream status to assign to new commits.
                                     Valid values: [NA, ignore, in_progress, sent, accepted, rejected]
+    -g, --general <TAG>	     add current upsream delta tag to general(f.e v5.6-rc2).
 
     --dry-run                Just print, don't really change anything.
 
@@ -99,6 +100,10 @@ do
 		;;
 		-f | --feature)
 		def_feature="$2"
+		shift
+		;;
+		-g | --general)
+		general="tag: $2"
 		shift
 		;;
 		-s | --upstream-status)
@@ -205,6 +210,32 @@ get_upstream_from_csv()
 	echo $(echo "$line" | sed -r -e 's/.*;\s*upstream_status=\s*//' -e 's/;\s*general.*//')
 }
 
+get_general_from_csv()
+{
+	local line=$1; shift
+
+	echo $(echo "$line" | sed -r -e 's/.*;\s*general=\s*//' -e 's/;.*//')
+}
+
+get_line_from_ref()
+{
+	local uniqID=$1; shift
+	local ref_db=$1; shift
+	local subject=$1; shift
+	local line=""
+
+	if [ "X$changeid_map" != "X" ]; then
+		uniqID=$(map_id_new_to_old $uniqID $changeid_map "$subject")
+		line=$(grep --no-filename -wr -- "$uniqID" ${ref_db}/*csv 2>/dev/null)
+	else
+		line=$(grep --no-filename -wr -- "subject=$subject;" ${ref_db}/*csv 2>/dev/null | tail -1)
+	fi
+	if [ "X$line" == "X" ]; then
+		return
+	fi
+	echo "$line"
+}
+
 map_id_new_to_old()
 {
 	local newid=$1; shift
@@ -233,10 +264,7 @@ get_feature_from_ref()
 	local ref_db=$1; shift
 	local subject=$1; shift
 
-	if [ "X$changeid_map" != "X" ]; then
-		uniqID=$(map_id_new_to_old $uniqID $changeid_map "$subject")
-	fi
-	local line=$(grep --no-filename -wr -- "$uniqID" ${ref_db}/*csv 2>/dev/null)
+	local line=$(get_line_from_ref "$uniqID" "$ref_db" "$subject")
 	if [ "X$line" == "X" ]; then
 		echo ""
 		return
@@ -250,10 +278,7 @@ get_upstream_status_from_ref()
 	local ref_db=$1; shift
 	local subject=$1; shift
 
-	if [ "X$changeid_map" != "X" ]; then
-		uniqID=$(map_id_new_to_old $uniqID $changeid_map "$subject")
-	fi
-	local line=$(grep --no-filename -wr -- "$uniqID" ${ref_db}/*csv 2>/dev/null)
+	local line=$(get_line_from_ref "$uniqID" "$ref_db" "$subject")
 	if [ "X$line" == "X" ]; then
 		echo ""
 		return
@@ -263,6 +288,25 @@ get_upstream_status_from_ref()
 		status=NA
 	fi
 	echo $status
+}
+
+get_general_from_ref()
+{
+	local uniqID=$1; shift
+	local ref_db=$1; shift
+	local subject=$1; shift
+
+	local line=$(get_line_from_ref "$uniqID" "$ref_db" "$subject")
+	if [ "X$line" == "X" ]; then
+		echo ""
+		return
+	fi
+	local tag=$(get_general_from_csv "$line")
+	if [ "X$tag" == "X-1" ]; then
+		echo ""
+		return
+	fi
+	echo $tag
 }
 
 ##################################################################
@@ -294,6 +338,26 @@ if [ -z "$commitIDs" ]; then
 	echo "-E- Failed to get list of commit IDs." >&2
 	exit 1
 fi
+if [ ! -z "$def_ustatus" ]; then
+	case $def_ustatus in
+		NA|rejected|accepted|in_progress|ignore)
+			;; # Valid status
+		*)	echo "-E- Valid status is one of the follow options: 'NA'|'rejected'|'accepted'|'in_progress'|'ignore'"
+			exit 1
+			;;
+	esac
+fi
+if [ "X$def_ustatus" = "Xaccepted" ];then
+	if [ "X$general" = "X" ]; then
+		echo "-E- -g|--general must be used in case of status accepted"
+		exit 1
+	fi
+else
+	if [ ! -z "$general" ]; then
+		echo "-E- -g|--general can be used only in case of status accepted"
+		exit 1
+	fi
+fi
 
 echo "Getting info about commits..."
 echo ----------------------------------------------------
@@ -308,7 +372,6 @@ do
 	subject=
 	feature=
 	upstream=
-	general=
 
 	uniqID=
 	changeID=$(get_by_tag $cid "change-id")
@@ -331,8 +394,10 @@ do
 	subject=$(get_subject $cid)
 	feature=$(get_by_tag $cid "feature")
 	upstream=$(get_by_tag $cid "upstream(.*status)")
-	general=$(get_by_tag $cid "general")
-
+	if [ -z "$general" ]
+	then
+		general=$(get_by_tag $cid "general")
+	fi
 	# auto-detect commits that changes only backports, ofed-scripts
 	if is_backports_change_only $cid ;then
 		feature="backports"
@@ -349,6 +414,7 @@ do
 		if [ "X$upstream" == "X" ]; then
 			upstream=$(get_upstream_status_from_ref "$uniqID" "$ref_db" "$subject")
 		fi
+		general=$(get_general_from_ref "$uniqID" "$ref_db" "$subject")
 	fi
 
 	if [ "X$feature" == "X" ]; then
@@ -358,6 +424,9 @@ do
 		upstream=$def_ustatus
 	fi
 	entry="$uniqID; subject=${subject}; feature=${feature}; upstream_status=${upstream}; general=${general};"
+	if [ "X$ref_db" != "X" ]; then
+		general="" #remove for each iteration
+	fi
 	echo "'$entry' to metadata/${author}.csv"
 	csvfile="${WDIR}/metadata/${author}.csv"
 	if [ $dry_run -eq 0 ]; then

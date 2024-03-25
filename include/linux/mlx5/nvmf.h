@@ -58,7 +58,7 @@ struct mlx5_ns_attr {
 
 struct mlx5_core_nvmf_be_ctrl {
 	int			id;
-	void (*event)(struct mlx5_core_nvmf_be_ctrl *, int, int);
+	void (*event)(struct mlx5_core_nvmf_be_ctrl *, int, int, int);
 	spinlock_t		lock;
 	struct list_head	ns_list;
 	struct list_head	entry;
@@ -73,6 +73,9 @@ struct mlx5_core_nvmf_ns_counters {
 	u64 num_flush_cmd;
 	u64 num_error_cmd;
 	u64 num_backend_error_cmd;
+	u64 last_read_latency;
+	u64 last_write_latency;
+	u64 queue_depth;
 };
 
 struct mlx5_core_nvmf_ns {

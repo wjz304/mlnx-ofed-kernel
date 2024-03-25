@@ -1,8 +1,11 @@
+# SPDX-License-Identifier: GPL-2.0-only
 ccflags-y		:= -Idrivers/target -Idrivers/target/iscsi
 obj-$(CONFIG_INFINIBAND_ISERT)	+= ib_isert.o
 obj-$(CONFIG_INFINIBAND_ISERT_DUMMY) += ib_isert.o
 
 ifeq ($(CONFIG_INFINIBAND_ISERT_DUMMY),m)
+ib_isert-y := ib_isert_dummy.o
+else ifeq ($(CONFIG_ISCSI_TARGET),)
 ib_isert-y := ib_isert_dummy.o
 endif
 
@@ -13,7 +16,9 @@ endif
 # subdir-ccflags-y will be set by the toplevel Makefile.
 ifneq (,$(findstring $(ARCH),i386 x86_64))
   ifndef CONFIG_RETPOLINE
-    CFLAGS_RETPOLINE=-mindirect-branch=thunk-inline -mindirect-branch-register -DRETPOLINE_MLNX
+    ifneq (,$(shell awk 'BEGIN {if ($(VERSION).$(PATCHLEVEL) < 4.15) {print 1}}' </dev/null))
+      CFLAGS_RETPOLINE=-mindirect-branch=thunk-inline -mindirect-branch-register -DRETPOLINE_MLNX
+    endif
   endif
 endif
 

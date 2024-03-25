@@ -1,9 +1,16 @@
-#ifndef _COMPAT_COMPILER_H
-#define _COMPAT_COMPILER_H
+#ifndef _COMPAT_LINUX_COMPILER_H
+#define _COMPAT_LINUX_COMPILER_H
+
+#include "../../compat/config.h"
 
 #include_next <linux/compiler.h>
 #include <linux/types.h>
-#include "../../compat/config.h"
+
+#ifndef OPTIMIZER_HIDE_VAR
+/* Make the optimizer believe the variable can be manipulated arbitrarily. */
+#define OPTIMIZER_HIDE_VAR(var)                                         \
+	        __asm__ ("" : "=r" (var) : "0" (var))
+#endif
 
 #ifndef HAVE_CONST_READ_ONCE_SIZE
 #define __read_once_size LINUX_BACKPORT(__read_once_size)
@@ -44,4 +51,4 @@ static __always_inline void __read_once_size(const volatile void *p, void *res, 
 #define WRITE_ONCE(var, val)	{ ACCESS_ONCE(var) = val; }
 #endif
 
-#endif /* _COMPAT_COMPILER_H */
+#endif /* _COMPAT_LINUX_COMPILER_H */

@@ -9,9 +9,7 @@
 #include <linux/kernel.h>
 #include <linux/io.h>           /* For ioremap_nocache, ioremap, iounmap */
 #include <linux/random.h>
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 27)
 # include <linux/io-mapping.h>	/* For ioremap_nocache, ioremap, iounmap */
-#endif
 #include <linux/mm.h>           /* For all page handling */
 #include <linux/workqueue.h>    /* For all work-queue handling */
 #include <linux/scatterlist.h>  /* For using scatterlists */
@@ -32,22 +30,32 @@
 #endif
 
 #ifdef CONFIG_ARM64
+#ifndef CONFIG_GENERIC_IOREMAP
 #undef ioremap
 static inline void *ioremap(phys_addr_t phys_addr, size_t size)
 {
 	return __ioremap(phys_addr, size, __pgprot(PROT_DEVICE_nGnRE));
 }
+#endif /* CONFIG_GENERIC_IOREMAP */
 
 #undef ioremap_nocache
 static inline void *ioremap_nocache(phys_addr_t phys_addr, size_t size)
 {
+#ifndef CONFIG_GENERIC_IOREMAP
 	return __ioremap(phys_addr, size, __pgprot(PROT_DEVICE_nGnRE));
+#else
+	return ioremap_prot(phys_addr, size, PROT_DEVICE_nGnRE);
+#endif
 }
 
 #undef ioremap_wc
 static inline void *ioremap_wc(phys_addr_t phys_addr, size_t size)
 {
+#ifndef CONFIG_GENERIC_IOREMAP
 	return __ioremap(phys_addr, size, __pgprot(PROT_NORMAL_NC));
+#else
+	return ioremap_prot(phys_addr, size, PROT_NORMAL_NC);
+#endif
 }
 
 /* ARCH_HAS_IOREMAP_WC was defined for arm64 until 2014-07-24 */
@@ -64,21 +72,6 @@ static inline void iounmap(void *addr)
 #endif /* iounmap  */
 #endif /* CONFIG_ARM64 */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 14)
-#define RDMA_KZALLOC_H
-#define kzalloc(size, flags) ({							\
-	void *__memtrack_kz_addr = NULL;					\
-										\
-	if (memtrack_inject_error(THIS_MODULE, __FILE__, "kzalloc", __func__, __LINE__)) \
-		MEMTRACK_ERROR_INJECTION_MESSAGE(THIS_MODULE, __FILE__, __LINE__, __func__, "kzalloc");\
-	else									\
-		__memtrack_kz_addr = kmalloc(size, flags);			\
-	if (__memtrack_kz_addr && !is_non_trackable_alloc_func(__func__)) {	\
-		memset(__memtrack_kz_addr, 0, size);				\
-	}									\
-	__memtrack_kz_addr;							\
-})
-#else
 #define kzalloc(size, flags) ({							\
 	void *__memtrack_addr = NULL;						\
 										\
@@ -91,7 +84,6 @@ static inline void iounmap(void *addr)
 	}									\
 	__memtrack_addr;							\
 })
-#endif
 
 #define kzalloc_node(size, flags, node) ({					\
 	void *__memtrack_addr = NULL;						\
@@ -162,9 +154,6 @@ static inline void iounmap(void *addr)
 	__memtrack_addr;							\
 })
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 19)
-#define kcalloc(n, size, flags) kzalloc((n)*(size), flags)
-#else
 #define kcalloc(n, size, flags) ({ \
 	void *__memtrack_addr = NULL;						\
 										\
@@ -178,7 +167,6 @@ static inline void iounmap(void *addr)
 	}									\
 	__memtrack_addr;							\
 })
-#endif
 
 #define kmalloc(sz, flgs) ({							\
 	void *__memtrack_addr = NULL;						\
@@ -208,6 +196,25 @@ static inline void iounmap(void *addr)
 			memset(__memtrack_addr, 0x5A, sz);			\
 	}									\
 	__memtrack_addr;							\
+})
+
+#define krealloc(p, new_size, flags) ({	\
+	void *__memtrack_addr = NULL;	\
+	void *__old_addr = (void *)p;   \
+					\
+	if (memtrack_inject_error(THIS_MODULE, __FILE__, "krealloc", __func__, __LINE__))		\
+		MEMTRACK_ERROR_INJECTION_MESSAGE(THIS_MODULE, __FILE__, __LINE__, __func__, "krealloc");\
+	else {												\
+		if (IS_VALID_ADDR(__old_addr) &&			                                        \
+			!is_non_trackable_alloc_func(__func__)) {				\
+			memtrack_free(MEMTRACK_KMALLOC, 0UL, (unsigned long)(__old_addr), 0UL, 0, __FILE__, __LINE__); \
+		}												\
+		__memtrack_addr = krealloc(p, new_size, flags);						\
+	}												\
+	if (IS_VALID_ADDR(__memtrack_addr) && !is_non_trackable_alloc_func(__func__)) {			\
+		memtrack_alloc(MEMTRACK_KMALLOC, 0UL, (unsigned long)(__memtrack_addr), new_size, 0UL, 0, __FILE__, __LINE__, flags);\
+	}												\
+	__memtrack_addr;										\
 })
 
 #define kvmalloc(sz, flgs) ({						\
@@ -253,9 +260,6 @@ static inline void iounmap(void *addr)
 	__memtrack_addr;							\
 })
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 4, 0)
-#define kmalloc_array(n, size, flags) kzalloc((n)*(size), flags)
-#else
 #define kmalloc_array(n, size, flags) ({ \
 	void *__memtrack_addr = NULL;						\
 										\
@@ -268,7 +272,6 @@ static inline void iounmap(void *addr)
 	}									\
 	__memtrack_addr;							\
 })
-#endif
 
 #define kmemdup(src, sz, flgs) ({						\
 	void *__memtrack_addr = NULL;						\
@@ -324,8 +327,9 @@ static inline void iounmap(void *addr)
               kvfree_call_rcu(head, (rcu_callback_t)(unsigned long)(offset)); \
        } while (0)
 #endif /* !defined(__kvfree_rcu) && !defined(kfree_rcu) */
+
 #ifdef __kvfree_rcu
-#define kfree_rcu(addr, rcu_head) ({								\
+#define kfree_rcu_2(addr, rcu_head) ({								\
 	void *__memtrack_addr = (void *)addr;					\
 										\
 	if (IS_VALID_ADDR(__memtrack_addr) &&					\
@@ -334,8 +338,16 @@ static inline void iounmap(void *addr)
 	}									\
 	__kvfree_rcu(&((addr)->rcu_head), offsetof(typeof(*(addr)), rcu_head));					\
 })
+
+#define __kvfree_rcu_1(ptr)                                   	\
+do {                                                            \
+        typeof(ptr) ___p = (ptr);                               \
+                                                                \
+        if (___p)                                               \
+                kvfree_call_rcu(NULL, (rcu_callback_t) (___p)); \
+} while (0)
 #else
-#define kfree_rcu(addr, rcu_head) ({								\
+#define kfree_rcu_2(addr, rcu_head) ({								\
 	void *__memtrack_addr = (void *)addr;					\
 										\
 	if (IS_VALID_ADDR(__memtrack_addr) &&					\
@@ -344,7 +356,36 @@ static inline void iounmap(void *addr)
 	}									\
 	__kfree_rcu(&((addr)->rcu_head), offsetof(typeof(*(addr)), rcu_head));					\
 })
-#endif
+
+#define __kvfree_rcu_1(ptr)                                   	\
+do {                                                            \
+        typeof(ptr) ___p = (ptr);                               \
+                                                                \
+        if (___p)                                               \
+                kfree_call_rcu(NULL, (rcu_callback_t) (___p)); \
+} while (0)
+#endif /* __kvfree_rcu */
+
+/* commit 1835f475e351 ("rcu: Introduce single argument kvfree_rcu() interface") */
+#undef kvfree_rcu_arg_1
+#undef kvfree_rcu_arg_2
+
+#define kvfree_rcu_arg_1(ptr) ({ 						\
+	void *__memtrack_addr = (void *)ptr;					\
+										\
+	if (IS_VALID_ADDR(__memtrack_addr) &&					\
+	    !is_non_trackable_free_func(__func__)) {				\
+		memtrack_free(MEMTRACK_KMALLOC, 0UL, (unsigned long)(__memtrack_addr), 0UL, 0, __FILE__, __LINE__); \
+	}									\
+	__kvfree_rcu_1(ptr);					\
+})
+
+#define kfree_rcu(ptr, rhf...) kvfree_rcu(ptr, ## rhf)
+#define kvfree_rcu(...) KVFREE_GET_MACRO(__VA_ARGS__,           \
+        kvfree_rcu_arg_2, kvfree_rcu_arg_1)(__VA_ARGS__)
+
+#define KVFREE_GET_MACRO(_1, _2, NAME, ...) NAME
+#define kvfree_rcu_arg_2(ptr, rhf) kfree_rcu_2(ptr, rhf)
 #endif /* CONFIG_COMPAT_RCU */
 
 #define vmalloc(size) ({							\
@@ -393,6 +434,7 @@ static inline void iounmap(void *addr)
 #endif
 
 #ifndef __vmalloc
+#ifdef HAVE_VMALLOC_3_PARAM
 #define __vmalloc(size, mask, prot) ({						\
 	void *__memtrack_addr = NULL;						\
 										\
@@ -407,6 +449,22 @@ static inline void iounmap(void *addr)
 	}									\
 	__memtrack_addr;							\
 })
+#else
+#define __vmalloc(size, mask) ({						\
+	void *__memtrack_addr = NULL;						\
+										\
+	if (memtrack_inject_error(THIS_MODULE, __FILE__, "__vmalloc", __func__, __LINE__)) \
+		MEMTRACK_ERROR_INJECTION_MESSAGE(THIS_MODULE, __FILE__, __LINE__, __func__, "__vmalloc"); \
+	else									\
+		__memtrack_addr = __vmalloc(size, mask);			\
+	if (IS_VALID_ADDR(__memtrack_addr)) {					\
+		memtrack_alloc(MEMTRACK_VMALLOC, 0UL, (unsigned long)(__memtrack_addr), size, 0UL, 0, __FILE__, __LINE__, GFP_ATOMIC); \
+		if (memtrack_randomize_mem())					\
+			memset(__memtrack_addr, 0x5A, size);			\
+	}									\
+	__memtrack_addr;							\
+})
+#endif
 #endif
 
 #define vmalloc_node(size, node) ({						\
@@ -603,17 +661,6 @@ static inline void iounmap(void *addr)
 	__memtrack_addr;							\
 })
 #else
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 18) /* 2.6.16 - 2.6.17 */
-#define ioremap_nocache(phys_addr, size) ({					\
-	void __iomem *__memtrack_addr = NULL;					\
-										\
-	if (memtrack_inject_error(THIS_MODULE, __FILE__, "ioremap_nocache", __func__, __LINE__)) \
-		MEMTRACK_ERROR_INJECTION_MESSAGE(THIS_MODULE, __FILE__, __LINE__, __func__, "ioremap_nocache"); \
-	else									\
-		__memtrack_addr = ioremap(phys_addr, size);			\
-	__memtrack_addr;							\
-})
-#else
 #define ioremap_nocache(phys_addr, size) ({ \
 	void __iomem *__memtrack_addr = NULL;					\
 										\
@@ -626,7 +673,6 @@ static inline void iounmap(void *addr)
 	}									\
 	__memtrack_addr;							\
 })
-#endif /* Kernel version is under 2.6.18 */
 #endif	/* PPC */
 
 #ifdef iounmap
@@ -817,185 +863,10 @@ static inline void iounmap(void *addr)
 #ifdef create_singlethread_workqueue
 	#undef create_singlethread_workqueue
 #endif
-/* if kernel version < 2.6.37, it's defined in compat as
- * singlethread_workqueue
-*/
-#if defined(alloc_ordered_workqueue) && LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)
+
+#if defined(alloc_ordered_workqueue)
 	#undef alloc_ordered_workqueue
 #endif
-
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 16) /* 2.6.16 */
-#ifdef alloc_workqueue
-	#undef alloc_workqueue
-#endif
-
-#define alloc_workqueue(name, flags, max_active) ({				\
-	struct workqueue_struct *wq_addr = NULL;				\
-										\
-	if (memtrack_inject_error(THIS_MODULE, __FILE__, "alloc_workqueue", __func__, __LINE__)) \
-		MEMTRACK_ERROR_INJECTION_MESSAGE(THIS_MODULE, __FILE__, __LINE__, __func__, "alloc_workqueue"); \
-	else									\
-	wq_addr = __create_workqueue((name), (max_active));				\
-	if (wq_addr) {								\
-		memtrack_alloc(MEMTRACK_WORK_QUEUE, 0UL, (unsigned long)(wq_addr), 0, 0UL, 0, __FILE__, __LINE__, GFP_ATOMIC); \
-	}									\
-	wq_addr;								\
-})
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 20) /* 2.6.18 - 2.6.19 */
-#define create_workqueue(name) ({						\
-	struct workqueue_struct *wq_addr = NULL;				\
-										\
-	if (memtrack_inject_error(THIS_MODULE, __FILE__, "create_workqueue", __func__, __LINE__)) \
-		MEMTRACK_ERROR_INJECTION_MESSAGE(THIS_MODULE, __FILE__, __LINE__, __func__, "create_workqueue"); \
-	else									\
-		wq_addr = __create_workqueue((name), 0);			\
-	if (wq_addr) {								\
-		memtrack_alloc(MEMTRACK_WORK_QUEUE, 0UL, (unsigned long)(wq_addr), 0, 0UL, 0, __FILE__, __LINE__, GFP_ATOMIC); \
-	}									\
-	wq_addr;								\
-})
-
-#define create_singlethread_workqueue(name) ({					\
-	struct workqueue_struct *wq_addr = NULL;				\
-										\
-	if (memtrack_inject_error(THIS_MODULE, __FILE__, "create_singlethread_workqueue", __func__, __LINE__)) \
-		MEMTRACK_ERROR_INJECTION_MESSAGE(THIS_MODULE, __FILE__, __LINE__, __func__, "create_singlethread_workqueue"); \
-	else									\
-		wq_addr = __create_workqueue((name), 1);			\
-	if (wq_addr) {								\
-		memtrack_alloc(MEMTRACK_WORK_QUEUE, 0UL, (unsigned long)(wq_addr), 0, 0UL, 0, __FILE__, __LINE__, GFP_ATOMIC); \
-	}									\
-	wq_addr;								\
-})
-
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 28) /* 2.6.20 - 2.6.27 */
-#define create_workqueue(name) ({						\
-	struct workqueue_struct *wq_addr = NULL;				\
-										\
-	if (memtrack_inject_error(THIS_MODULE, __FILE__, "create_workqueue", __func__, __LINE__)) \
-		MEMTRACK_ERROR_INJECTION_MESSAGE(THIS_MODULE, __FILE__, __LINE__, __func__, "create_workqueue"); \
-	else									\
-		wq_addr = __create_workqueue((name), 0, 0);			\
-	if (wq_addr) {								\
-		memtrack_alloc(MEMTRACK_WORK_QUEUE, 0UL, (unsigned long)(wq_addr), 0, 0UL, 0, __FILE__, __LINE__, GFP_ATOMIC); \
-	}									\
-	wq_addr;								\
-})
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 22) /* 2.6.20 - 2.6.21 */
-#define create_freezeable_workqueue(name) ({					\
-	struct workqueue_struct *wq_addr = NULL;				\
-										\
-	if (memtrack_inject_error(THIS_MODULE, __FILE__, "create_freezeable_workqueue", __func__, __LINE__)) \
-		MEMTRACK_ERROR_INJECTION_MESSAGE(THIS_MODULE, __FILE__, __LINE__, __func__, "create_freezeable_workqueue"); \
-	else									\
-	wq_addr = __create_workqueue((name), 0, 1);				\
-	if (wq_addr) {								\
-		memtrack_alloc(MEMTRACK_WORK_QUEUE, 0UL, (unsigned long)(wq_addr), 0, 0UL, 0, __FILE__, __LINE__, GFP_ATOMIC); \
-	}									\
-	wq_addr;								\
-})
-#else /* 2.6.22 - 2.6.27 */
-#define create_freezeable_workqueue(name) ({					\
-	struct workqueue_struct *wq_addr = NULL;				\
-										\
-	if (memtrack_inject_error(THIS_MODULE, __FILE__, "create_freezeable_workqueue", __func__, __LINE__)) \
-		MEMTRACK_ERROR_INJECTION_MESSAGE(THIS_MODULE, __FILE__, __LINE__, __func__, "create_freezeable_workqueue"); \
-	else									\
-		wq_addr = __create_workqueue((name), 1, 1);			\
-	if (wq_addr) {								\
-		memtrack_alloc(MEMTRACK_WORK_QUEUE, 0UL, (unsigned long)(wq_addr), 0, 0UL, 0, __FILE__, __LINE__, GFP_ATOMIC); \
-	}									\
-	wq_addr;								\
-})
-#endif /* 2.6.20 - 2.6.27 */
-
-#define create_singlethread_workqueue(name) ({					\
-	struct workqueue_struct *wq_addr = NULL;				\
-										\
-	if (memtrack_inject_error(THIS_MODULE, __FILE__, "create_singlethread_workqueue", __func__, __LINE__)) \
-		MEMTRACK_ERROR_INJECTION_MESSAGE(THIS_MODULE, __FILE__, __LINE__, __func__, "create_singlethread_workqueue"); \
-	else									\
-		wq_addr = __create_workqueue((name), 1, 0);			\
-	if (wq_addr) {								\
-		memtrack_alloc(MEMTRACK_WORK_QUEUE, 0UL, (unsigned long)(wq_addr), 0, 0UL, 0, __FILE__, __LINE__, GFP_ATOMIC); \
-	}									\
-	wq_addr;								\
-})
-
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36) /* 2.6.28 - 2.6.35 */
-
-#ifdef alloc_workqueue
-	#undef alloc_workqueue
-#endif
-
-#define alloc_workqueue(name, flags, max_active) ({				\
-	struct workqueue_struct *wq_addr = NULL;				\
-										\
-	if (memtrack_inject_error(THIS_MODULE, __FILE__, "alloc_workqueue", __func__, __LINE__)) \
-		MEMTRACK_ERROR_INJECTION_MESSAGE(THIS_MODULE, __FILE__, __LINE__, __func__, "alloc_workqueue"); \
-	else									\
-	wq_addr = __create_workqueue((name), (flags), (max_active), 0);				\
-	if (wq_addr) {								\
-		memtrack_alloc(MEMTRACK_WORK_QUEUE, 0UL, (unsigned long)(wq_addr), 0, 0UL, 0, __FILE__, __LINE__, GFP_ATOMIC); \
-	}									\
-	wq_addr;								\
-})
-
-#define create_workqueue(name) ({						\
-	struct workqueue_struct *wq_addr = NULL;				\
-										\
-	if (memtrack_inject_error(THIS_MODULE, __FILE__, "create_workqueue", __func__, __LINE__)) \
-		MEMTRACK_ERROR_INJECTION_MESSAGE(THIS_MODULE, __FILE__, __LINE__, __func__, "create_workqueue"); \
-	else									\
-	wq_addr = __create_workqueue((name), 0, 0, 0);				\
-	if (wq_addr) {								\
-		memtrack_alloc(MEMTRACK_WORK_QUEUE, 0UL, (unsigned long)(wq_addr), 0, 0UL, 0, __FILE__, __LINE__, GFP_ATOMIC); \
-	}									\
-	wq_addr;								\
-})
-
-#define create_rt_workqueue(name) ({						\
-	struct workqueue_struct *wq_addr = NULL;				\
-										\
-	if (memtrack_inject_error(THIS_MODULE, __FILE__, "create_rt_workqueue", __func__, __LINE__)) \
-		MEMTRACK_ERROR_INJECTION_MESSAGE(THIS_MODULE, __FILE__, __LINE__, __func__, "create_rt_workqueue"); \
-	else									\
-		wq_addr = __create_workqueue((name), 0, 0, 1);			\
-	if (wq_addr) {								\
-		memtrack_alloc(MEMTRACK_WORK_QUEUE, 0UL, (unsigned long)(wq_addr), 0, 0UL, 0, __FILE__, __LINE__, GFP_ATOMIC); \
-	}									\
-	wq_addr;								\
-})
-
-#define create_freezeable_workqueue(name) ({					\
-	struct workqueue_struct *wq_addr = NULL;				\
-										\
-	if (memtrack_inject_error(THIS_MODULE, __FILE__, "create_freezeable_workqueue", __func__, __LINE__)) \
-		MEMTRACK_ERROR_INJECTION_MESSAGE(THIS_MODULE, __FILE__, __LINE__, __func__, "create_freezeable_workqueue"); \
-	else									\
-		wq_addr = __create_workqueue((name), 1, 1, 0);			\
-	if (wq_addr) {								\
-		memtrack_alloc(MEMTRACK_WORK_QUEUE, 0UL, (unsigned long)(wq_addr), 0, 0UL, 0, __FILE__, __LINE__, GFP_ATOMIC); \
-	}									\
-	wq_addr;								\
-})
-
-#define create_singlethread_workqueue(name) ({					\
-	struct workqueue_struct *wq_addr = NULL;				\
-										\
-	if (memtrack_inject_error(THIS_MODULE, __FILE__, "create_singlethread_workqueue", __func__, __LINE__)) \
-		MEMTRACK_ERROR_INJECTION_MESSAGE(THIS_MODULE, __FILE__, __LINE__, __func__, "create_singlethread_workqueue"); \
-	else									\
-		wq_addr = __create_workqueue((name), 1, 0, 0);			\
-	if (wq_addr) {								\
-		memtrack_alloc(MEMTRACK_WORK_QUEUE, 0UL, (unsigned long)(wq_addr), 0, 0UL, 0, __FILE__, __LINE__, GFP_ATOMIC); \
-	}									\
-	wq_addr;								\
-})
-#else /* 2.6.36 */
 
 #ifdef alloc_workqueue
 /* In kernels < 5.1, alloc_workqueue was a macro */
@@ -1053,9 +924,7 @@ static inline void iounmap(void *addr)
 })
 #endif
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0))
 #define WQ_RESCUER 1 << 7 /* internal: workqueue has rescuer */
-#endif
 
 #define create_workqueue(name)							\
 	alloc_workqueue((name), WQ_RESCUER, 1);
@@ -1066,18 +935,8 @@ static inline void iounmap(void *addr)
 #define create_singlethread_workqueue(name)					\
 	alloc_workqueue((name), WQ_UNBOUND | WQ_RESCUER, 1);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
 #define alloc_ordered_workqueue(name, flags, args...)				\
 	alloc_workqueue((name), WQ_UNBOUND | __WQ_ORDERED | (flags), 1, ##args)
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 3, 0)
-#define alloc_ordered_workqueue(name, flags, args...)				\
-	alloc_workqueue((name), WQ_UNBOUND | (flags), 1, ##args)
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37))
-#define alloc_ordered_workqueue(name, flags)					\
-	alloc_workqueue((name), WQ_UNBOUND | (flags), 1)
-#endif /* alloc_ordered_workqueue */
-
-#endif /* Work-Queue Kernel Versions */
 
 #define destroy_workqueue(wq_addr) ({						\
 	void *__memtrack_addr = (void *)wq_addr;				\

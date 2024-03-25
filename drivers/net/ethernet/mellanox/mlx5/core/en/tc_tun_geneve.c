@@ -20,9 +20,9 @@ static int mlx5e_tc_tun_calc_hlen_geneve(struct mlx5e_encap_entry *e)
 }
 
 static int mlx5e_tc_tun_check_udp_dport_geneve(struct mlx5e_priv *priv,
-					       struct tc_cls_flower_offload *f)
+					       struct flow_cls_offload *f)
 {
-	struct flow_rule *rule = tc_cls_flower_offload_flow_rule(f);
+	struct flow_rule *rule = flow_cls_offload_flow_rule(f);
 	struct netlink_ext_ack *extack = f->common.extack;
 	struct flow_match_ports enc_ports;
 
@@ -48,7 +48,7 @@ static int mlx5e_tc_tun_check_udp_dport_geneve(struct mlx5e_priv *priv,
 
 static int mlx5e_tc_tun_parse_udp_ports_geneve(struct mlx5e_priv *priv,
 					       struct mlx5_flow_spec *spec,
-					       struct tc_cls_flower_offload *f,
+					       struct flow_cls_offload *f,
 					       void *headers_c,
 					       void *headers_v)
 {
@@ -122,9 +122,9 @@ static int mlx5e_gen_ip_tunnel_header_geneve(char buf[],
 
 static int mlx5e_tc_tun_parse_geneve_vni(struct mlx5e_priv *priv,
 					 struct mlx5_flow_spec *spec,
-					 struct tc_cls_flower_offload *f)
+					 struct flow_cls_offload *f)
 {
-	struct flow_rule *rule = tc_cls_flower_offload_flow_rule(f);
+	struct flow_rule *rule = flow_cls_offload_flow_rule(f);
 	struct netlink_ext_ack *extack = f->common.extack;
 	struct flow_match_enc_keyid enc_keyid;
 	void *misc_c, *misc_v;
@@ -154,11 +154,11 @@ static int mlx5e_tc_tun_parse_geneve_vni(struct mlx5e_priv *priv,
 
 static int mlx5e_tc_tun_parse_geneve_options(struct mlx5e_priv *priv,
 					     struct mlx5_flow_spec *spec,
-					     struct tc_cls_flower_offload *f)
+					     struct flow_cls_offload *f)
 {
 	u8 max_tlv_option_data_len = MLX5_CAP_GEN(priv->mdev, max_geneve_tlv_option_data_len);
 	u8 max_tlv_options = MLX5_CAP_GEN(priv->mdev, max_geneve_tlv_options);
-	struct flow_rule *rule = tc_cls_flower_offload_flow_rule(f);
+	struct flow_rule *rule = flow_cls_offload_flow_rule(f);
 	struct netlink_ext_ack *extack = f->common.extack;
 	void *misc_c, *misc_v, *misc_3_c, *misc_3_v;
 	struct geneve_opt *option_key, *option_mask;
@@ -220,12 +220,14 @@ static int mlx5e_tc_tun_parse_geneve_options(struct mlx5e_priv *priv,
 		return -EOPNOTSUPP;
 	}
 
+	MLX5_SET(fte_match_set_misc, misc_c, geneve_opt_len, enc_opts.mask->len / 4);
+	MLX5_SET(fte_match_set_misc, misc_v, geneve_opt_len, enc_opts.key->len / 4);
+
 	/* we support matching on one option only, so just get it */
 	option_key = (struct geneve_opt *)&enc_opts.key->data[0];
 	option_mask = (struct geneve_opt *)&enc_opts.mask->data[0];
 
-	/* Don't do option check if class/mask is 0 */
-	if (!option_key->opt_class ||
+	if (option_mask->opt_class == 0 && option_mask->type == 0 &&
 	    !memchr_inv(option_mask->opt_data, 0, option_mask->length * 4))
 		return 0;
 
@@ -246,9 +248,6 @@ static int mlx5e_tc_tun_parse_geneve_options(struct mlx5e_priv *priv,
 			    "Matching on GENEVE options: can't match on 0 data field\n");
 		return -EOPNOTSUPP;
 	}
-
-	MLX5_SET(fte_match_set_misc, misc_c, geneve_opt_len, enc_opts.mask->len / 4);
-	MLX5_SET(fte_match_set_misc, misc_v, geneve_opt_len, enc_opts.key->len / 4);
 
 	/* add new GENEVE TLV options object */
 	res = mlx5_geneve_tlv_option_add(priv->mdev->geneve, option_key);
@@ -274,6 +273,11 @@ static int mlx5e_tc_tun_parse_geneve_options(struct mlx5e_priv *priv,
 		 geneve_tlv_option_0_data, be32_to_cpu(opt_data_key));
 	MLX5_SET(fte_match_set_misc3, misc_3_c,
 		 geneve_tlv_option_0_data, be32_to_cpu(opt_data_mask));
+	if (MLX5_CAP_ESW_FLOWTABLE_FDB(priv->mdev,
+				       ft_field_support.geneve_tlv_option_0_exist)) {
+		MLX5_SET_TO_ONES(fte_match_set_misc, misc_c, geneve_tlv_option_0_exist);
+		MLX5_SET_TO_ONES(fte_match_set_misc, misc_v, geneve_tlv_option_0_exist);
+	}
 
 	spec->match_criteria_enable |= MLX5_MATCH_MISC_PARAMETERS_3;
 
@@ -282,7 +286,7 @@ static int mlx5e_tc_tun_parse_geneve_options(struct mlx5e_priv *priv,
 
 static int mlx5e_tc_tun_parse_geneve_params(struct mlx5e_priv *priv,
 					    struct mlx5_flow_spec *spec,
-					    struct tc_cls_flower_offload *f)
+					    struct flow_cls_offload *f)
 {
 	void *misc_c = MLX5_ADDR_OF(fte_match_param, spec->match_criteria, misc_parameters);
 	void *misc_v = MLX5_ADDR_OF(fte_match_param, spec->match_value,  misc_parameters);
@@ -306,12 +310,14 @@ static int mlx5e_tc_tun_parse_geneve_params(struct mlx5e_priv *priv,
 		MLX5_SET(fte_match_set_misc, misc_v, geneve_protocol_type, ETH_P_TEB);
 	}
 
+	spec->match_criteria_enable |= MLX5_MATCH_MISC_PARAMETERS;
+
 	return 0;
 }
 
 static int mlx5e_tc_tun_parse_geneve(struct mlx5e_priv *priv,
 				     struct mlx5_flow_spec *spec,
-				     struct tc_cls_flower_offload *f,
+				     struct flow_cls_offload *f,
 				     void *headers_c,
 				     void *headers_v)
 {
@@ -328,6 +334,34 @@ static int mlx5e_tc_tun_parse_geneve(struct mlx5e_priv *priv,
 	return mlx5e_tc_tun_parse_geneve_options(priv, spec, f);
 }
 
+static bool mlx5e_tc_tun_encap_info_equal_geneve(struct mlx5e_encap_key *a,
+						 struct mlx5e_encap_key *b)
+{
+	struct ip_tunnel_info *a_info;
+	struct ip_tunnel_info *b_info;
+	bool a_has_opts, b_has_opts;
+
+	if (!mlx5e_tc_tun_encap_info_equal_generic(a, b))
+		return false;
+
+	a_has_opts = !!(a->ip_tun_key->tun_flags & TUNNEL_GENEVE_OPT);
+	b_has_opts = !!(b->ip_tun_key->tun_flags & TUNNEL_GENEVE_OPT);
+
+	/* keys are equal when both don't have any options attached */
+	if (!a_has_opts && !b_has_opts)
+		return true;
+
+	if (a_has_opts != b_has_opts)
+		return false;
+
+	/* geneve options stored in memory next to ip_tunnel_info struct */
+	a_info = container_of(a->ip_tun_key, struct ip_tunnel_info, key);
+	b_info = container_of(b->ip_tun_key, struct ip_tunnel_info, key);
+
+	return a_info->options_len == b_info->options_len &&
+		memcmp(a_info + 1, b_info + 1, a_info->options_len) == 0;
+}
+
 struct mlx5e_tc_tunnel geneve_tunnel = {
 	.tunnel_type          = MLX5E_TC_TUNNEL_TYPE_GENEVE,
 	.match_level          = MLX5_MATCH_L4,
@@ -337,4 +371,5 @@ struct mlx5e_tc_tunnel geneve_tunnel = {
 	.generate_ip_tun_hdr  = mlx5e_gen_ip_tunnel_header_geneve,
 	.parse_udp_ports      = mlx5e_tc_tun_parse_udp_ports_geneve,
 	.parse_tunnel         = mlx5e_tc_tun_parse_geneve,
+	.encap_info_equal     = mlx5e_tc_tun_encap_info_equal_geneve,
 };

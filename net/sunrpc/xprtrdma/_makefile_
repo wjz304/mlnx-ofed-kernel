@@ -1,18 +1,8 @@
 KVER ?= $(shell uname -r)
 SRC_DIR ?= $(shell pwd)
-OFA_DIR ?= /usr/src/ofa_kernel
-# get flavor
-knownvariants=(default|trace|ppc64|bigsmp|debug|ppc|kdump|kdumppae|smp|vmi|vmipae|xen|xenpae|pae)
-verrel=$(shell echo $(KVER) | sed -r -e s'/-$(knownvariants)//g')
-ifneq ($(verrel),$(KVER))
-variant1=$(shell echo $(KVER) | sed -r -e s'/$(verrel)[-]//g')
-variant=$(shell test -d $(OFA_DIR)/$(variant1) && echo $(variant1) || echo default)
-else
-variant=default
-endif
-FLAVOR ?= $(variant)
-OFA = $(shell ( test -d $(OFA_DIR)/$(KVER) && echo $(OFA_DIR)/$(KVER) ) || ( test -d $(OFA_DIR)/$(FLAVOR) && echo $(OFA_DIR)/$(FLAVOR) ) || ( test -d /var/lib/dkms/mlnx-ofed-kernel/ && ls -d /var/lib/dkms/mlnx-ofed-kernel/*/build ) || ( echo $(OFA_DIR) ))
-OFA_SYMBOLS = $(wildcard $(OFA)/Module*.symvers)
+MLNX_ARCH = $(shell uname -m)
+OFA_DIR ?= /usr/src/ofa_kernel/$(MLNX_ARCH)
+OFA = $(shell ( test -d $(OFA_DIR)/$(KVER) && echo $(OFA_DIR)/$(KVER) ) || ( test -d /var/lib/dkms/mlnx-ofed-kernel/ && ls -d /var/lib/dkms/mlnx-ofed-kernel/*/build ) || ( echo $(OFA_DIR) ))
 
 ifneq ($(shell test -d $(OFA) && echo "true" || echo "" ),)
 include $(OFA)/configure.mk.kernel
@@ -84,17 +74,9 @@ rpmmacros =\
 		   --define='_srcrpmdir $(rpmroot)'\
 		   --define='_sourcedir $(rpmroot)'\
 		   --define='_specdir $(PWD)'
+override WITH_MAKE_PARAMS += KBUILD_EXTRA_SYMBOLS=$(OFA)/Module.symvers
 
-default:
-# compile with ofed driver
-	make -C $(K_BUILD) O=$(K_OBJ) M=$(shell pwd) $(WITH_MAKE_PARAMS) \
-		CONFIG_SUNRPC_XPRT_RDMA=m \
-		CONFIG_SUNRPC_XPRT_RDMA_CLIENT=m \
-		CONFIG_SUNRPC_XPRT_RDMA_SERVER=m \
-		CONFIG_SUNRPC_XPRT_RDMA_DUMMY= \
-		CONFIG_DTRACE= \
-		CONFIG_CTF= \
-		LINUXINCLUDE=' \
+LINUXINCLUDE=\
 		$(EXTRA_CFLAGS) \
 		-include $(autoconf_h) \
 		$(KCONFIG_H) \
@@ -116,9 +98,19 @@ default:
 		$$(if $$(KBUILD_SRC),-Iinclude2 -I$$(srctree)/include) \
 		-I$$(srctree)/arch/$$(SRCARCH)/include \
 		-Iarch/$$(SRCARCH)/include/generated \
-		' \
-		KBUILD_EXTRA_SYMBOLS="$(OFA_SYMBOLS)" \
-		modulesymfile=$(SRC_DIR)/Module.symvers \
+		#
+
+default:
+# compile with ofed driver
+	make -C $(K_BUILD) O=$(K_OBJ) M=$(shell pwd) $(WITH_MAKE_PARAMS) \
+		CONFIG_SUNRPC_XPRT_RDMA=m \
+		CONFIG_SUNRPC_XPRT_RDMA_CLIENT=m \
+		CONFIG_SUNRPC_XPRT_RDMA_SERVER=m \
+		CONFIG_SUNRPC_XPRT_RDMA_DUMMY= \
+		CONFIG_GPU_DIRECT_STORAGE=$(CONFIG_GPU_DIRECT_STORAGE) \
+		CONFIG_DTRACE= \
+		CONFIG_CTF= \
+		LINUXINCLUDE='$(LINUXINCLUDE)' \
 		modules
 
 install:
@@ -148,6 +140,7 @@ binrpm: rpmcheck $(rpmspec)
 dist:
 	mkdir -p $(rpmroot)/$(PACKAGE)/
 	cp {$(rpmspec),makefile,Makefile,dkms.conf,Module.supported} $(rpmroot)/$(PACKAGE)/
+	cp common.postinst $(rpmroot)/$(PACKAGE)/
 	cp *.c $(rpmroot)/$(PACKAGE)/
 	cp *.h $(rpmroot)/$(PACKAGE)/
 	cp -r debian $(rpmroot)/$(PACKAGE)/

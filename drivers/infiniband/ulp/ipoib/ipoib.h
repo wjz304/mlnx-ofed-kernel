@@ -112,7 +112,7 @@ enum {
 	MAX_SEND_CQE		  = 64,
 	IPOIB_CM_COPYBREAK	  = 256,
 
-	IPOIB_MAX_INLINE_SIZE	  = 120,
+	IPOIB_MAX_INLINE_SIZE     = 120,
 
 	IPOIB_NON_CHILD		  = 0,
 	IPOIB_LEGACY_CHILD	  = 1,
@@ -132,7 +132,7 @@ enum {
 
 struct ipoib_header {
 	__be16	proto;
-	u16	tss_qpn_mask_sz;
+	u16	reserved;
 };
 
 struct ipoib_pseudo_header {
@@ -243,8 +243,6 @@ struct ipoib_cm_rx {
 	unsigned long		jiffies;
 	enum ipoib_cm_state	state;
 	int			recv_count;
-	int			qpn;
-	int index; /* For RSS ring counters */
 };
 
 struct ipoib_cm_tx {
@@ -289,8 +287,6 @@ struct ipoib_cm_dev_priv {
 	int			nonsrq_conn_qp;
 	int			max_cm_mtu;
 	int			num_frags;
-	u32			rx_cq_ind; /* For RSS */
-	u32			tx_cq_ind; /* For RSS */
 };
 
 struct ipoib_ethtool_st {
@@ -319,8 +315,6 @@ struct ipoib_qp_state_validate {
 	struct work_struct work;
 	struct ipoib_dev_priv   *priv;
 };
-
-#include "rss_tss/ipoib_rss.h"
 
 struct ipoib_arp_repath {
 	struct work_struct	 work;
@@ -395,9 +389,12 @@ struct ipoib_dev_priv {
 	struct ipoib_rx_buf *rx_ring;
 
 	struct ipoib_tx_buf *tx_ring;
+	/* cyclic ring variables for managing tx_ring, for UD only */
 	unsigned int	     tx_head;
 	unsigned int	     tx_tail;
-	atomic_t             tx_outstanding;
+	/* cyclic ring variables for counting overall outstanding send WRs */
+	unsigned int	     global_tx_head;
+	unsigned int	     global_tx_tail;
 	struct ib_sge	     tx_sge[MAX_SKB_FRAGS + 1];
 	struct ib_ud_wr      tx_wr;
 	struct ib_wc	     send_wc[MAX_SEND_CQE];
@@ -426,27 +423,11 @@ struct ipoib_dev_priv {
 	struct dentry *path_dentry;
 #endif
 	u64	hca_caps;
-	u64     hca_caps_exp;
 	struct ipoib_ethtool_st ethtool;
 	u32 sendq_size;
 	u32 recvq_size;
 	unsigned int max_send_sge;
-	bool sm_fullmember_sendonly_support;
 	const struct net_device_ops	*rn_ops;
-	struct ipoib_recv_ring *recv_ring;
-	struct ipoib_send_ring *send_ring;
-	unsigned int rss_qp_num; /* No RSS HW support 0 */
-	unsigned int tss_qp_num; /* No TSS (HW or SW) used 0 */
-	unsigned int max_rx_queues; /* No RSS HW support 1 */
-	unsigned int max_tx_queues; /* No TSS HW support tss_qp_num + 1 */
-	unsigned int num_rx_queues; /* Actual */
-	unsigned int num_tx_queues; /* Actual */
-	struct rw_semaphore rings_rwsem;
-	__be16 tss_qpn_mask_sz; /* Put in ipoib header reserved */
-	atomic_t tx_ring_ind;
-
-	/* Function pointers for RSS support */
-	struct ipoib_func_pointers fp;
 };
 
 struct ipoib_ah {
@@ -487,9 +468,8 @@ struct ipoib_neigh {
 	struct list_head    list;
 	struct ipoib_neigh __rcu *hnext;
 	struct rcu_head     rcu;
-	atomic_t	    refcnt;
+	refcount_t	    refcnt;
 	unsigned long       alive;
-	int index; /* For RSS ndo_select_queue and ring counters */
 };
 
 #define IPOIB_UD_MTU(ib_mtu)		(ib_mtu - IPOIB_ENCAP_LEN)
@@ -498,7 +478,7 @@ struct ipoib_neigh {
 void ipoib_neigh_dtor(struct ipoib_neigh *neigh);
 static inline void ipoib_neigh_put(struct ipoib_neigh *neigh)
 {
-	if (atomic_dec_and_test(&neigh->refcnt))
+	if (refcount_dec_and_test(&neigh->refcnt))
 		ipoib_neigh_dtor(neigh);
 }
 struct ipoib_neigh *ipoib_neigh_get(struct net_device *dev, u8 *daddr);
@@ -532,14 +512,15 @@ int ipoib_send(struct net_device *dev, struct sk_buff *skb,
 	       struct ib_ah *address, u32 dqpn);
 void ipoib_reap_ah(struct work_struct *work);
 void ipoib_repath_ah(struct work_struct *work);
+
 void ipoib_napi_schedule_work(struct work_struct *work);
 struct ipoib_path *__path_find(struct net_device *dev, void *gid);
 void ipoib_mark_paths_invalid(struct net_device *dev);
 void ipoib_flush_paths(struct net_device *dev);
-struct net_device *ipoib_intf_alloc(struct ib_device *hca, u8 port,
+struct net_device *ipoib_intf_alloc(struct ib_device *hca, u32 port,
 				    const char *format);
-int ipoib_intf_init(struct ib_device *hca, u8 port, const char *format,
-		    struct net_device *dev, struct ipoib_dev_priv *priv);
+int ipoib_intf_init(struct ib_device *hca, u32 port, const char *format,
+		    struct net_device *dev);
 void ipoib_ib_tx_timer_func(struct timer_list *t);
 void ipoib_ib_dev_flush_light(struct work_struct *work);
 void ipoib_ib_dev_flush_normal(struct work_struct *work);
@@ -550,7 +531,7 @@ void ipoib_ib_dev_cleanup(struct net_device *dev);
 
 int ipoib_ib_dev_open_default(struct net_device *dev);
 int ipoib_ib_dev_open(struct net_device *dev);
-int ipoib_ib_dev_stop(struct net_device *dev);
+void ipoib_ib_dev_stop(struct net_device *dev);
 void ipoib_ib_dev_up(struct net_device *dev);
 void ipoib_ib_dev_down(struct net_device *dev);
 int ipoib_ib_dev_stop_default(struct net_device *dev);
@@ -562,7 +543,7 @@ void ipoib_mcast_send(struct net_device *dev, u8 *daddr, struct sk_buff *skb);
 
 void ipoib_mcast_restart_task(struct work_struct *work);
 void ipoib_mcast_start_thread(struct net_device *dev);
-int ipoib_mcast_stop_thread(struct net_device *dev);
+void ipoib_mcast_stop_thread(struct net_device *dev);
 
 void ipoib_mcast_dev_down(struct net_device *dev);
 void ipoib_mcast_dev_flush(struct net_device *dev);
@@ -646,6 +627,14 @@ void ipoib_drain_cq(struct net_device *dev);
 
 void ipoib_set_ethtool_ops(struct net_device *dev);
 
+int ipoib_register_genl(void);
+void ipoib_unregister_genl(void);
+
+void ipoib_path_add_notify(struct ipoib_dev_priv *priv,
+			    struct sa_path_rec *pathrec);
+
+void ipoib_path_del_notify(struct ipoib_dev_priv *priv,
+			    struct sa_path_rec *pathrec);
 #define IPOIB_FLAGS_RC		0x80
 #define IPOIB_FLAGS_UC		0x40
 
@@ -712,8 +701,6 @@ void ipoib_cm_skb_too_long(struct net_device *dev, struct sk_buff *skb,
 void ipoib_cm_handle_rx_wc(struct net_device *dev, struct ib_wc *wc);
 void ipoib_cm_handle_tx_wc(struct net_device *dev, struct ib_wc *wc);
 #else
-
-struct ipoib_cm_tx;
 
 #define ipoib_max_conn_qp 0
 
@@ -877,7 +864,5 @@ extern int ipoib_debug_level;
 #endif /* CONFIG_INFINIBAND_IPOIB_DEBUG_DATA */
 
 #define IPOIB_QPN(ha) (be32_to_cpup((__be32 *) ha) & 0xffffff)
-
-extern const char ipoib_driver_version[];
 
 #endif /* _IPOIB_H */

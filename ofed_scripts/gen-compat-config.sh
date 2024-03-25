@@ -57,14 +57,6 @@ if [[ ${KERNEL_VERSION} -eq "3" ]]; then
 	KERNEL_SUBLEVEL3=$(${MAKE} -C ${KLIB_BUILD} kernelversion | sed -n 's/^3\.\([0-9]\+\).*/\1/p')
 elif [[ ${KERNEL_VERSION} -eq "4" ]]; then
 	KERNEL_SUBLEVEL4=$(${MAKE} -C ${KLIB_BUILD} kernelversion | sed -n 's/^4\.\([0-9]\+\).*/\1/p')
-elif [[ ${KERNEL_VERSION} -eq "2" ]]; then
-	COMPAT_26LATEST_VERSION="39"
-	KERNEL_26SUBLEVEL=$(${MAKE} -C ${KLIB_BUILD} kernelversion | sed -n 's/^2\.6\.\([0-9]\+\).*/\1/p')
-	let KERNEL_26SUBLEVEL=${KERNEL_26SUBLEVEL}+1
-
-	for i in $(seq ${KERNEL_26SUBLEVEL} ${COMPAT_26LATEST_VERSION}); do
-		set_config CONFIG_COMPAT_KERNEL_2_6_${i} y
-	done
 fi
 
 let KERNEL_SUBLEVEL3=${KERNEL_SUBLEVEL3}+1
@@ -92,59 +84,6 @@ if [[ ! -z ${RHEL_MAJOR} ]]; then
 	done
 fi
 
-if [[ ${CONFIG_COMPAT_KERNEL_2_6_36} = "y" ]]; then
-	if [[ ! ${CONFIG_COMPAT_RHEL_6_1} = "y" ]]; then
-		set_config CONFIG_COMPAT_KFIFO y
-	fi
-fi
-
-case ${KVERSION} in
-	3.0.7[6-9]-[0-9].[0-9]* | 3.0.[8-9][0-9]-[0-9].[0-9]* | 3.0.[1-9][0-9][0-9]-[0-9].[0-9]*)
-	SLES_11_3_KERNEL=${KVERSION}
-	SLES_MAJOR="11"
-	SLES_MINOR="3"
-	set_config CONFIG_COMPAT_SLES_11_3 y
-	;;
-esac
-
-SLES_11_2_KERNEL=$(echo ${KVERSION} | sed -n 's/^\(3\.0\.[0-9]\+\)\-\(.*\)\-\(.*\)/\1-\2-\3/p')
-if [[ ! -z ${SLES_11_2_KERNEL} ]]; then
-	SLES_MAJOR="11"
-	SLES_MINOR="2"
-	set_config CONFIG_COMPAT_SLES_11_2 y
-fi
-
-SLES_11_1_KERNEL=$(echo ${KVERSION} | sed -n 's/^\(2\.6\.32\.[0-9]\+\)\-\(.*\)\-\(.*\)/\1-\2-\3/p')
-if [[ ! -z ${SLES_11_1_KERNEL} ]]; then
-	SLES_MAJOR="11"
-	SLES_MINOR="1"
-	set_config CONFIG_COMPAT_SLES_11_1 y
-fi
-
-SLES_12_0_KERNEL=$(echo ${KVERSION} | sed -n 's/^\(3\.12\.28\)\-\([0-9]\)\-\(.*\)/\1-\2-\3/p')
-if [[ ! -z ${SLES_12_0_KERNEL} ]]; then
-	SLES_MAJOR="12"
-	SLES_MINOR="0"
-	set_config CONFIG_COMPAT_SLES_12 y
-	set_config CONFIG_COMPAT_SLES_12_0 y
-fi
-
-SLES_12_1_KERNEL=$(echo ${KVERSION} | sed -n 's/^\(3\.12\.4[8-9]\)\-\([0-9]*\)\-\(.*\)/\1-\2-\3/p')
-if [[ ! -z ${SLES_12_1_KERNEL} ]]; then
-	SLES_MAJOR="12"
-	SLES_MINOR="1"
-	set_config CONFIG_COMPAT_SLES_12 y
-	set_config CONFIG_COMPAT_SLES_12_1 y
-fi
-
-SLES_12_2_KERNEL=$(echo ${KVERSION} | sed -n 's/^\(4\.4\.21\)\-\([0-9]*\)\-\(.*\)/\1-\2-\3/p')
-if [[ ! -z ${SLES_12_2_KERNEL} ]]; then
-	SLES_MAJOR="12"
-	SLES_MINOR="2"
-	set_config CONFIG_COMPAT_SLES_12 y
-	set_config CONFIG_COMPAT_SLES_12_2 y
-fi
-
 SLES_12_3_KERNEL=$(echo ${KVERSION} | sed -n 's/^\(4\.4\.73\)\-\([0-9]*\)\-\(.*\)/\1-\2-\3/p')
 if [[ ! -z ${SLES_12_3_KERNEL} ]]; then
 	SLES_MAJOR="12"
@@ -153,51 +92,20 @@ if [[ ! -z ${SLES_12_3_KERNEL} ]]; then
 	set_config CONFIG_COMPAT_SLES_12_3 y
 fi
 
-FC14_KERNEL=$(echo ${KVERSION} | grep fc14)
-if [[ ! -z ${FC14_KERNEL} ]]; then
- # CONFIG_COMPAT_DISABLE_DCB should be set to 'y' as it used in drivers/net/ethernet/mellanox/mlx4/Makefile
-	set_config CONFIG_COMPAT_DISABLE_DCB y
-fi
-
-FC16_KERNEL=$(echo ${KVERSION} | grep fc16)
-if [[ ! -z ${FC16_KERNEL} ]]; then
-	set_config CONFIG_COMPAT_EN_SYSFS y
-fi
-
-FBK16_KERNEL=$(echo ${KVERSION} | grep 3.10.53)
-if [[ ! -z ${FBK16_KERNEL} ]]; then
-   set_config CONFIG_COMPAT_FBK_16 y
-fi
-
-UBUNTU12_3_2=$(uname -v | grep -qs Ubuntu && echo ${KVERSION} | grep ^3\.2)
-if [[ ! -z ${UBUNTU12_3_2} ]]; then
-	set_config CONFIG_COMPAT_EN_SYSFS y
-fi
-
-UBUNTU14_4_1=$(uname -v | grep -qs Ubuntu && echo ${KVERSION} | grep ^3\.13)
-if [[ ! -z ${UBUNTU14_4_1} ]]; then
-	set_config CONFIG_COMPAT_UBUNTU_14_4 y
-fi
-
-RHEL7_1=$(echo ${KVERSION} | grep 3.10.0-229 )
-if [[ ! -z ${RHEL7_1} ]]; then
-   set_config CONFIG_COMPAT_RHEL_7_1 y
-fi
-
 RHEL7_2=$(echo ${KVERSION} | grep 3.10.0-327)
 if [[ ! -z ${RHEL7_2} ]]; then
    set_config CONFIG_COMPAT_RHEL_7_1 y
    set_config CONFIG_COMPAT_RHEL_7_2 y
 fi
 
-if [[ ! -z ${RHEL7_2} ]]; then
-	set_config CONFIG_COMPAT_IP_TUNNELS y
-	set_config CONFIG_COMPAT_TCF_GACT y
-	set_config CONFIG_COMPAT_FLOW_DISSECTOR y
-	set_config CONFIG_COMPAT_CLS_FLOWER_MOD m
-	set_config CONFIG_COMPAT_TCF_TUNNEL_KEY_MOD m
-	set_config CONFIG_COMPAT_TCF_VLAN_MOD m
-fi
+#if [[ ! -z ${RHEL7_2} ]]; then
+#	set_config CONFIG_COMPAT_IP_TUNNELS y
+#	set_config CONFIG_COMPAT_TCF_GACT y
+#	set_config CONFIG_COMPAT_FLOW_DISSECTOR y
+#	set_config CONFIG_COMPAT_CLS_FLOWER_MOD m
+#	set_config CONFIG_COMPAT_TCF_TUNNEL_KEY_MOD m
+#	set_config CONFIG_COMPAT_TCF_VLAN_MOD m
+#fi
 
 RHEL7_4_JD=$(echo ${KVERSION} | grep 3.10.0-693.21.3)
 
@@ -210,10 +118,10 @@ if [[ ${RHEL_MAJOR} -eq "7" && ${RHEL_MINOR} -le "4" && ! $RHEL7_4_JD ]]; then
 	set_config CONFIG_COMPAT_TCF_PEDIT_MOD m
 fi
 
-RHEL7_4ALT_AARCH64=$(echo ${KVERSION} | grep 4.11.0-.*el7a.aarch64)
-if [[ ! -z ${RHEL7_4ALT_AARCH64} ]]; then
-	set_config CONFIG_COMPAT_KERNEL_4_11_ARM y
-fi
+#RHEL7_4ALT_AARCH64=$(echo ${KVERSION} | grep 4.11.0-.*el7a.aarch64)
+#if [[ ! -z ${RHEL7_4ALT_AARCH64} ]]; then
+#	set_config CONFIG_COMPAT_KERNEL_4_11_ARM y
+#fi
 
 KERNEL4_14=$(echo ${KVERSION} | grep ^4\.14)
 if [[ ! -z ${KERNEL4_14} ]]; then
@@ -229,57 +137,11 @@ if [[ ${CONFIG_COMPAT_KERNEL_4_14} = "y" ]]; then
 	set_config CONFIG_COMPAT_CLS_FLOWER_MOD m
 fi
 
-KERNEL4_9=$(echo ${KVERSION} | grep ^4\.9)
-if [[ ! -z ${KERNEL4_9} ]]; then
-	set_config CONFIG_COMPAT_KERNEL_4_9 y
-fi
-
-if [[ ${CONFIG_COMPAT_KERNEL_4_9} = "y" || ${CONFIG_COMPAT_KERNEL_4_11_ARM} = "y" ]]; then
-	set_config CONFIG_NET_SCHED_NEW y
-	set_config CONFIG_COMPAT_FLOW_DISSECTOR y
-	set_config CONFIG_COMPAT_CLS_FLOWER_MOD m
-	set_config CONFIG_COMPAT_TCF_TUNNEL_KEY_MOD m
-fi
-
-if [[ ${CONFIG_COMPAT_KERNEL_4_9} = "y" ]]; then
-	set_config CONFIG_COMPAT_TCF_PEDIT_MOD m
-fi
-
 if [ -e /etc/debian_version ]; then
 	DEBIAN6=$(cat /etc/debian_version | grep 6\.0)
 	if [[ ! -z ${DEBIAN6} ]]; then
 		set_config CONFIG_COMPAT_DISABLE_DCB y
 	fi
-fi
-
-if [[ ${CONFIG_COMPAT_KERNEL_2_6_38} = "y" ]]; then
-	if [[ ! ${CONFIG_COMPAT_RHEL_6_3} = "y" ]]; then
-		set_config CONFIG_COMPAT_NO_PRINTK_NEEDED y
-	fi
-fi
-
-if [[ ${CONFIG_COMPAT_SLES_11_1} = "y" ]]; then
-	set_config CONFIG_COMPAT_DISABLE_DCB y
-	set_config CONFIG_COMPAT_UNDO_I6_PRINT_GIDS y
-	set_config CONFIG_COMPAT_DISABLE_REAL_NUM_TXQ y
-fi
-
-if [[ ${CONFIG_COMPAT_SLES_11_2} = "y" ]]; then
-	set_config CONFIG_COMPAT_MIN_DUMP_ALLOC_ARG y
-	set_config CONFIG_COMPAT_IS_NUM_TX_QUEUES y
-	set_config CONFIG_COMPAT_NEW_TX_RING_SCHEME y
-	set_config CONFIG_COMPAT_EN_SYSFS y
-fi
-
-
-FC21=$(echo ${KVERSION} | grep .fc21.)
-if [[ ! -z ${FC21} ]]; then
-	set_config CONFIG_COMPAT_FC_21 y
-fi
-
-EL7=$(echo ${KVERSION} | grep .el7.)
-if [[ ! -z ${EL7} ]]; then
-	set_config CONFIG_COMPAT_EL_7 y
 fi
 
 if (grep -qw SRP_RPORT_LOST ${KLIB_BUILD}/include/scsi/scsi_transport_srp.h > /dev/null 2>&1 || grep -qw SRP_RPORT_LOST ${KSRC}/include/scsi/scsi_transport_srp.h > /dev/null 2>&1); then
@@ -307,16 +169,6 @@ if (grep -q 'scsi_target_unblock(struct device \*, enum scsi_device_state)' ${KL
     grep -q 'scsi_target_unblock(struct device \*, enum scsi_device_state)' ${KSRC}/include/scsi/scsi_device.h  > /dev/null 2>&1); then
 	set_config CONFIG_COMPAT_SCSI_TARGET_UNBLOCK y
 fi
-
-if [[ "${KVERSION}" == "2.6.32.43-0.4.1.xs1.6.10.784.170772xen" || ${KVERSION} == "2.6.32.43-0.4.1.xs1.6.10.796.170785xen" ]]; then
-	set_config CONFIG_COMPAT_MIN_DUMP_ALLOC_ARG y
-fi
-
-case $KVERSION in
-	2\.6\.32\.*xs.*xen)
-	set_config CONFIG_COMPAT_ALLOC_PAGES_ORDER_0 y
-	;;
-esac
 
 if (grep -q dst_set_neighbour ${KLIB_BUILD}/include/net/dst.h > /dev/null 2>&1 || grep -q dst_set_neighbour ${KSRC}/include/net/dst.h > /dev/null 2>&1); then
 	set_config CONFIG_COMPAT_DST_NEIGHBOUR y
@@ -404,27 +256,6 @@ if (grep -qw "NETIF_F_RXHASH" ${KLIB_BUILD}/include/linux/netdev_features.h > /d
 fi
 if (grep -q "struct cpu_rmap {" ${KLIB_BUILD}/include/linux/cpu_rmap.h > /dev/null 2>&1 || grep -q "struct cpu_rmap {" ${KSRC}/include/linux/cpu_rmap.h > /dev/null 2>&1); then
 	set_config CONFIG_COMPAT_IS_LINUX_CPU_RMAP y
-fi
-
-if [[ ${CONFIG_COMPAT_RHEL_6_4} = "y" ]]; then
-	set_config CONFIG_COMPAT_NETLINK_3_7 y
-	set_config CONFIG_COMPAT_HAS_NUM_CHANNELS y
-	set_config CONFIG_COMPAT_ETHTOOL_OPS_EXT y
-fi
-
-if [[ ${RHEL_MAJOR} -eq "6" ]]; then
-	set_config CONFIG_COMPAT_DEFINE_NUM_LRO y
-	set_config CONFIG_COMPAT_EN_SYSFS y
-	set_config CONFIG_COMPAT_LOOPBACK y
-
-	if [[ ${RHEL_MINOR} -ne "1" ]]; then
-		set_config CONFIG_COMPAT_IS_NUM_TX_QUEUES y
-		set_config CONFIG_COMPAT_NEW_TX_RING_SCHEME y
-	fi
-
-	if [[ ${RHEL_MINOR} -eq "1" ]]; then
-		set_config CONFIG_COMPAT_DISABLE_DCB y
-	fi
 fi
 
 if (grep -qw kfree_rcu ${KLIB_BUILD}/include/linux/rcupdate.h > /dev/null 2>&1 || grep -qw kfree_rcu ${KSRC}/include/linux/rcupdate.h > /dev/null 2>&1); then
@@ -865,3 +696,94 @@ if (test ! -f "$HASH_TYPES" -a ! -f "$HASH_TYPES2"); then
 	fi
 fi
 
+if (grep -q "^int hmm_range_fault" ${KLIB_BUILD}/include/linux/hmm.h > /dev/null 2>&1 || grep -q "^int hmm_range_fault" ${KSRC}/include/linux/hmm.h > /dev/null 2>&1); then
+	set_config CONFIG_COMPAT_HMM_RANGE_FAULT_RETURNS_INT y
+fi
+
+function look_exists() {
+    local word="$1"
+    local path="$2"
+    if (grep -qw "$word" ${KLIB_BUILD}/$path &>/dev/null || grep -qw "$word" ${KSRC}/$path &>/dev/null); then
+        return 0
+    fi
+    return 1
+}
+
+function look_exists_reg() {
+    local word="$1"
+    local path="$2"
+    if (grep -qE "$word" ${KLIB_BUILD}/$path &>/dev/null || grep -qE "$word" ${KSRC}/$path &>/dev/null); then
+        return 0
+    fi
+    return 1
+}
+
+function kernel_config_enabled() {
+    local opts=($@)
+    local opt
+    local val
+
+    for opt in $opts ; do
+        val=`grep "CONFIG_$opt=" ${KLIB_BUILD}/.config 2>/dev/null || grep "CONFIG_$opt=" ${KSRC}/.config 2>/dev/null`
+        val=${val##*=}
+        if [ "$val" != "m" ] && [ "$val" != "y" ]; then
+           return 1
+        fi
+    done
+
+    return 0
+}
+
+# In v5.3-rc6
+# ef01adae0e43 net: sched: use major priority number as hardware priority
+if (look_exists "cls_common->prio = tp->prio >> 16" include/net/pkt_cls.h); then
+    set_config CONFIG_COMPAT_TC_PRIO_IS_MAJOR y
+fi
+
+# by default MLX5_TC_CT is enabled by configure and here we disable
+# it if kernel doesn't support it.
+tc_ct=0
+
+# try to detect supported kernel 4.18.0 ngn kernel
+# and enable compat flower and ct
+KERNEL4_18=$(echo ${KVERSION} | grep ^4\.18)
+if [ -n "$KERNEL4_18" ]; then
+    if (look_exists "skb_flow_dissect_ct" include/linux/skbuff.h); then
+        if (! look_exists "struct flow_cls_common_offload" include/net/flow_offload.h); then
+            set_config CONFIG_COMPAT_CLS_FLOWER_4_18_MOD m
+            tc_ct=1
+        fi
+    fi
+fi
+
+if (look_exists "flow_rule_match_ct" include/net/flow_offload.h); then
+    if (kernel_config_enabled NF_FLOW_TABLE NET_TC_SKB_EXT NET_ACT_CT); then
+        set_config CONFIG_COMPAT_KERNEL_CT y
+        tc_ct=1
+    fi
+fi
+
+# try to detect supported kernel 4.19 ST CT kernel
+# and disable TC CT as it is not supported by advanced OFED
+KERNEL4_19_ST_CT=$(echo ${KVERSION} | grep ^4\.19)
+if [ -n "$KERNEL4_19_ST_CT" ]; then
+    if (look_exists "tc_setup_cb_egdev_all_call_fast" net/sched/act_api.c); then
+            tc_ct=0
+    fi
+fi
+
+if [ "$tc_ct" != 1 ]; then
+    set_config CONFIG_MLX5_TC_CT n
+fi
+
+if (look_exists "void auxiliary_bus_init(void)" drivers/base/base.h); then
+	set_config  CONFIG_COMPAT_AUXILIARY_EXTERNAL_INIT  y
+fi
+
+if (look_exists_reg "define.*GENMASK\(.*U32" include/linux/bitops.h); then
+	set_config  CONFIG_COMPAT_GENMASK_32_BIT  y
+fi
+
+if (look_exists "vfio_notify_iova_map" include/linux/vfio.h); then
+	set_config CONFIG_COMPAT_NVME_SNAP_VFIO_PCI m
+fi

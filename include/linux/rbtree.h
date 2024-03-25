@@ -1,20 +1,17 @@
-#ifndef _MLNX_LINUX_RBTREE_H
-#define _MLNX_LINUX_RBTREE_H
+#ifndef _COMPAT_LINUX_RBTREE_H
+#define _COMPAT_LINUX_RBTREE_H
 
 #include "../../compat/config.h"
 
 #include_next <linux/rbtree.h>
 
-#ifndef HAVE_RB_ROOT_CACHED
+#if (!defined(HAVE_RB_ROOT_CACHED) || defined(HAVE_INTERVAL_TREE_TAKES_RB_ROOT)) && !defined(HAVE_TIMERQUEUE_HEAD_RB_ROOT_CACHED)
+#if defined(HAVE_RB_ROOT_CACHED)
+#undef HAVE_RB_ROOT_CACHED
+#undef RB_ROOT_CACHED
+#endif
 #define rb_root_cached rb_root
 #define RB_ROOT_CACHED RB_ROOT
-#endif
-
-#ifndef HAVE_RB_FIRST_POSTORDER
-#define rb_first_postorder LINUX_BACKPORT(rb_first_postorder)
-extern struct rb_node *rb_first_postorder(const struct rb_root *);
-#define rb_next_postorder LINUX_BACKPORT(rb_next_postorder)
-extern struct rb_node *rb_next_postorder(const struct rb_node *);
 #endif
 
 #ifndef rb_entry_safe
@@ -32,4 +29,4 @@ extern struct rb_node *rb_next_postorder(const struct rb_node *);
 	     pos = n)
 #endif
 
-#endif /* _MLNX_LINUX_RBTREE_H */
+#endif /* _COMPAT_LINUX_RBTREE_H */

@@ -40,52 +40,26 @@
 #include "mlx5_core.h"
 #include "lib/eq.h"
 #include "fpga/cmd.h"
-#include "fpga/sdk.h"
-
-/* Represents client-specific and Innova device-specific information */
-struct mlx5_fpga_client_data {
-	struct list_head  list;
-	struct mlx5_fpga_client *client;
-	void *data;
-	bool added;
-};
-
-enum mlx5_fdev_state {
-	MLX5_FDEV_STATE_SUCCESS = 0,
-	MLX5_FDEV_STATE_FAILURE = 1,
-	MLX5_FDEV_STATE_IN_PROGRESS = 2,
-	MLX5_FDEV_STATE_DISCONNECTED = 3,
-	MLX5_FDEV_STATE_NONE = 0xFFFF,
-};
 
 /* Represents an Innova device */
 struct mlx5_fpga_device {
 	struct mlx5_core_dev *mdev;
-	struct completion load_event;
 	struct mlx5_nb fpga_err_nb;
 	struct mlx5_nb fpga_qp_err_nb;
 	spinlock_t state_lock; /* Protects state transitions */
-	enum mlx5_fdev_state fdev_state;
-	enum mlx5_fpga_status image_status;
+	enum mlx5_fpga_status state;
 	enum mlx5_fpga_image last_admin_image;
 	enum mlx5_fpga_image last_oper_image;
 
 	/* QP Connection resources */
 	struct {
 		u32 pdn;
-		struct mlx5_core_mkey mkey;
+		u32 mkey;
 		struct mlx5_uars_page *uar;
 	} conn_res;
 
 	struct mlx5_fpga_ipsec *ipsec;
 	struct mlx5_fpga_tls *tls;
-
-	struct list_head list;
-	struct list_head client_data_list;
-
-	/* Shell Transactions state */
-	struct mlx5_fpga_conn *shell_conn;
-	struct mlx5_fpga_trans_device_state *trans;
 };
 
 #define mlx5_fpga_dbg(__adev, format, ...) \

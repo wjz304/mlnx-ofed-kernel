@@ -15,19 +15,16 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
-MLX4 ?= 1
 MLX5 ?= 1
 MLXFW ?= 1
 WITH_DKMS ?= 1
+WITH_MOD_SIGN ?= 0
 MLXNUMC = $(shell grep ^processor /proc/cpuinfo | wc -l)
 NJOBS ?= $(shell if [ $(MLXNUMC) -lt 16 ]; then echo $(MLXNUMC); else echo 16; fi)
 
-PYTHON = $(shell for i in "" 3 2; do if [ -x /usr/bin/python$$i ]; then echo python$$i; break; fi; done)
+WITH_MLXDEVM = $(shell if echo $(MLNX_EN_KERNEL_MODS) | grep -qw mlxdevm; then echo 1; else echo 0; fi)
 
 MLNX_EN_PATCH_PARAMS ?=
-ifneq ($(MLX4),1)
-	MLNX_EN_PATCH_PARAMS = "$(MLNX_EN_PATCH_PARAMS) --without-mlx4"
-endif
 ifneq ($(MLX5),1)
 	MLNX_EN_PATCH_PARAMS = "$(MLNX_EN_PATCH_PARAMS) --without-mlx5"
 endif
@@ -88,6 +85,9 @@ override_dh_auto_install:
 ifneq ($(WITH_DKMS),1)
 	make install_modules KSRC=$(kernel_source_dir) KVERSION=$(kernelver) INSTALL_MOD_DIR=$(INSTALL_MOD_DIR) INSTALL_MOD_PATH=$(INSTALL_MOD_PATH) KERNELRELEASE=$(kernelver)
 	find $(INSTALL_MOD_PATH) \( -type f -a -name "modules.*" \) -delete
+ifeq ($(WITH_MOD_SIGN),1)
+	source/ofed_scripts/tools/sign-modules $(INSTALL_MOD_PATH)/lib/modules/ $(kernel_source_dir)
+endif
 endif
 
 	# For dkms
@@ -99,10 +99,12 @@ endif
 	cp -a source/Makefile		debian/$(pdkms)/usr/src/$(pname)-$(pversion)
 	cp -a source/backports		debian/$(pdkms)/usr/src/$(pname)-$(pversion)
 	cp -a source/compat*		debian/$(pdkms)/usr/src/$(pname)-$(pversion)
-	with_mlx4=$(MLX4) with_mlx5=$(MLX5) with_mlxfw=$(MLXFW) $(CURDIR)/ofed_scripts/generate_mlnx_en_dkms_conf.sh > debian/$(pdkms)/usr/src/$(pname)-$(pversion)/dkms.conf
+	with_mlx5=$(MLX5) with_mlxfw=$(MLXFW) \
+	  $(CURDIR)/ofed_scripts/generate_mlnx_en_dkms_conf.sh \
+	  > debian/$(pdkms)/usr/src/$(pname)-$(pversion)/dkms.conf
 	cp -a source/drivers		debian/$(pdkms)/usr/src/$(pname)-$(pversion)
-	cp -a source/block		debian/$(pdkms)/usr/src/$(pname)-$(pversion)
 	cp -a source/include		debian/$(pdkms)/usr/src/$(pname)-$(pversion)
+	cp -a source/net		debian/$(pdkms)/usr/src/$(pname)-$(pversion)
 	cp -a source/ofed_scripts	debian/$(pdkms)/usr/src/$(pname)-$(pversion)
 	cp -a source/patches		debian/$(pdkms)/usr/src/$(pname)-$(pversion)
 	cp -a source/scripts		debian/$(pdkms)/usr/src/$(pname)-$(pversion)
@@ -121,26 +123,17 @@ endif
 	dh_installdirs -p$(putils)  etc/init
 	dh_installdirs -p$(putils)  etc/init.d
 	dh_installdirs -p$(putils)  sbin
+	dh_installdirs -p$(putils)  lib/udev
 	dh_installdirs -p$(putils)  usr/sbin
+	dh_installdirs -p$(putils)  lib/systemd/system
 
-	install -m 0755 source/ofed_scripts/sysctl_perf_tuning		debian/$(putils)/sbin
-	install -m 0755 source/ofed_scripts/mlnx_bf_configure		debian/$(putils)/sbin
-	install -m 0755 source/ofed_scripts/mlnx-sf			debian/$(putils)/sbin
 	install -m 0755 source/ofed_scripts/mlnx-bf.conf		debian/$(putils)/etc/modprobe.d
-	install -m 0755 source/ofed_scripts/mlnx_tune			debian/$(putils)/usr/sbin
-	install -m 0755 source/ofed_scripts/show_gids			debian/$(putils)/usr/sbin
-	install -m 0755 source/ofed_scripts/compat_gid_gen			debian/$(putils)/usr/sbin
-	install -m 0755 source/ofed_scripts/cma_roce_mode			debian/$(putils)/usr/sbin
-	install -m 0755 source/ofed_scripts/cma_roce_tos			debian/$(putils)/usr/sbin
-	install -m 0755 source/ofed_scripts/*affinity*			debian/$(putils)/usr/sbin
 	install -m 0755 source/ofed_scripts/net-interfaces            debian/$(putils)/usr/sbin
-	install -m 0755 source/ofed_scripts/show_counters		debian/$(putils)/usr/sbin
 	install -m 0644 source/debian/mlnx-en.upstart			debian/$(putils)/etc/init/mlnx-en.conf
 	install -m 0755 source/scripts/mlnx-en.d_deb						debian/$(putils)/etc/init.d/mlnx-en.d
 	install -m 0644 source/scripts/mlnx-en.conf					debian/$(putils)/etc/mlnx-en.conf
-	with_mlx4=$(MLX4) with_mlx5=$(MLX5) with_mlxfw=$(MLXFW) $(CURDIR)/ofed_scripts/deb_mlnx_en_service_install_helper $(CURDIR)/debian/$(putils)
-
-	cd ofed_scripts/utils;	$(PYTHON) ./setup.py install --install-layout=deb --root=../../debian/$(putils)
+	with_mlx5=$(MLX5) with_mlxfw=$(MLXFW) $(CURDIR)/ofed_scripts/deb_mlnx_en_service_install_helper $(CURDIR)/debian/$(putils)
+	install -m 0644 scripts/mlnx-en.d.service			debian/$(putils)/lib/systemd/system
 
 override_dh_installinit:
 
@@ -155,5 +148,8 @@ ifneq ($(WITH_DKMS),1)
 override_dh_strip:
 	dh_strip
 	find debian -name '*.ko' | xargs strip -g
+ifeq ($(WITH_MOD_SIGN),1)
+	source/ofed_scripts/tools/sign-modules $(INSTALL_MOD_PATH)/lib/modules/ $(kernel_source_dir)
+endif
 endif
 endif

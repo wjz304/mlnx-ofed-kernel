@@ -4,10 +4,9 @@ EXTRA_CFLAGS += $(OPENIB_KERNEL_EXTRA_CFLAGS) \
 		-I$(CWD)/drivers/infiniband/ulp/ipoib$(CONFIG_IPOIB_VERSION) \
 		-I$(CWD)/drivers/infiniband/debug \
 		-I$(CWD)/net/rds \
-		-I$(CWD)/drivers/net/ethernet/mellanox/mlx4 \
 		-I$(CWD)/drivers/net/ethernet/mellanox/mlx5/core \
-		-I$(CWD)/drivers/infiniband/hw/mlx4 \
 		-I$(CWD)/drivers/infiniband/hw/mlx5 \
+		-I$(CWD)/net/mlxdevm \
 
 ifneq (,$(CFLAGS_RETPOLINE))
 # This is x86 and kernel has no retpoline support.
@@ -23,11 +22,11 @@ obj-$(CONFIG_INFINIBAND)        += drivers/infiniband/
 obj-$(CONFIG_INFINIBAND_IPATH)  += drivers/infiniband/hw/ipath/
 obj-$(CONFIG_INFINIBAND_EHCA)   += drivers/infiniband/hw/ehca/
 obj-$(CONFIG_INFINIBAND_AMSO1100)   += drivers/infiniband/hw/amso1100/
-obj-$(CONFIG_MLX4_CORE)         += drivers/net/ethernet/mellanox/mlx4/
 obj-$(CONFIG_MLX5_CORE)         += drivers/net/ethernet/mellanox/mlx5/core/
-obj-$(CONFIG_MLX5_FPGA_TOOLS)   += drivers/net/ethernet/mellanox/mlx5/fpga/
 obj-$(CONFIG_MLXFW)             += drivers/net/ethernet/mellanox/mlxfw/
+obj-$(CONFIG_MLXSW_CORE)	+= drivers/net/ethernet/mellanox/mlxsw/
 obj-$(CONFIG_RDS)               += net/rds/
+obj-$(CONFIG_MLXDEVM)          += net/mlxdevm/
 obj-$(CONFIG_MEMTRACK)          += drivers/infiniband/debug/
 obj-$(CONFIG_SUNRPC_XPRT_RDMA)  += net/sunrpc/xprtrdma/
 obj-$(CONFIG_SUNRPC_XPRT_RDMA_DUMMY)  += net/sunrpc/xprtrdma/
@@ -55,12 +54,8 @@ obj-$(CONFIG_NVME_TARGET_DUMMY) += drivers/nvme/target/
 obj-$(CONFIG_RDMA_RXE_DUMMY)	+= drivers/infiniband/sw/rxe/
 obj-$(CONFIG_SMC)		+= net/smc/
 obj-$(CONFIG_SMC_DIAG)		+= net/smc/
-obj-$(CONFIG_CIFS_SMB_DIRECT)	+= fs/cifs/
-ifneq ($(CONFIG_MLX5_ESWITCH),)
-	obj-$(CONFIG_COMPAT_CLS_FLOWER_MOD)     += net/sched/cls_flower.o
-	obj-$(CONFIG_COMPAT_TCF_TUNNEL_KEY_MOD) += net/sched/act_tunnel_key.o
-	obj-$(CONFIG_COMPAT_TCF_VLAN_MOD)       += net/sched/act_vlan.o
-	obj-$(CONFIG_COMPAT_TCF_PEDIT_MOD)      += net/sched/act_pedit.o
-endif
+obj-$(CONFIG_MLX5_CLS_ACT)      += net/sched/
+obj-$(CONFIG_AUXILIARY_BUS)     += drivers/base/
+obj-$(CONFIG_CIFS_SMB_DIRECT)		+= fs/cifs/
 obj-$(CONFIG_MLX5_VDPA_NET)	+= drivers/vdpa/mlx5/
 

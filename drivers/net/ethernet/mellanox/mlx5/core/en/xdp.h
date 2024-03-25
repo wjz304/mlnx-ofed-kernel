@@ -32,39 +32,68 @@
 #ifndef __MLX5_EN_XDP_H__
 #define __MLX5_EN_XDP_H__
 
+#include <linux/indirect_call_wrapper.h>
+
 #include "en.h"
 #include "en/txrx.h"
 
 #define MLX5E_XDP_MIN_INLINE (ETH_HLEN + VLAN_HLEN)
-#define MLX5E_XDP_TX_EMPTY_DS_COUNT \
-	(sizeof(struct mlx5e_tx_wqe) / MLX5_SEND_WQE_DS)
-#define MLX5E_XDP_TX_DS_COUNT (MLX5E_XDP_TX_EMPTY_DS_COUNT + 1 /* SG DS */)
+#define MLX5E_XDP_TX_DS_COUNT (MLX5E_TX_WQE_EMPTY_DS_COUNT + 1 /* SG DS */)
 
-int mlx5e_xdp_max_mtu(struct mlx5e_params *params);
+#define MLX5E_XDP_INLINE_WQE_MAX_DS_CNT 16
+#define MLX5E_XDP_INLINE_WQE_SZ_THRSD \
+	(MLX5E_XDP_INLINE_WQE_MAX_DS_CNT * MLX5_SEND_WQE_DS - \
+	 sizeof(struct mlx5_wqe_inline_seg))
+
+struct mlx5e_xsk_param;
+int mlx5e_xdp_max_mtu(struct mlx5e_params *params, struct mlx5e_xsk_param *xsk);
 bool mlx5e_xdp_handle(struct mlx5e_rq *rq, struct mlx5e_dma_info *di,
-		      void *va, u16 *rx_headroom, u32 *len);
-bool mlx5e_poll_xdpsq_cq(struct mlx5e_cq *cq, struct mlx5e_rq *rq);
-void mlx5e_free_xdpsq_descs(struct mlx5e_xdpsq *sq, struct mlx5e_rq *rq);
+		      u32 *len, struct xdp_buff *xdp);
+void mlx5e_xdp_mpwqe_complete(struct mlx5e_xdpsq *sq);
+bool mlx5e_poll_xdpsq_cq(struct mlx5e_cq *cq);
+void mlx5e_free_xdpsq_descs(struct mlx5e_xdpsq *sq);
 void mlx5e_set_xmit_fp(struct mlx5e_xdpsq *sq, bool is_mpw);
 void mlx5e_xdp_rx_poll_complete(struct mlx5e_rq *rq);
 int mlx5e_xdp_xmit(struct net_device *dev, int n, struct xdp_frame **frames,
 		   u32 flags);
 
+INDIRECT_CALLABLE_DECLARE(bool mlx5e_xmit_xdp_frame_mpwqe(struct mlx5e_xdpsq *sq,
+							  struct mlx5e_xmit_data *xdptxd,
+							  struct mlx5e_xdp_info *xdpi,
+							  int check_result));
+INDIRECT_CALLABLE_DECLARE(bool mlx5e_xmit_xdp_frame(struct mlx5e_xdpsq *sq,
+						    struct mlx5e_xmit_data *xdptxd,
+						    struct mlx5e_xdp_info *xdpi,
+						    int check_result));
+INDIRECT_CALLABLE_DECLARE(int mlx5e_xmit_xdp_frame_check_mpwqe(struct mlx5e_xdpsq *sq));
+INDIRECT_CALLABLE_DECLARE(int mlx5e_xmit_xdp_frame_check(struct mlx5e_xdpsq *sq));
+
 static inline void mlx5e_xdp_tx_enable(struct mlx5e_priv *priv)
 {
 	set_bit(MLX5E_STATE_XDP_TX_ENABLED, &priv->state);
+
+	if (priv->channels.params.xdp_prog)
+		set_bit(MLX5E_STATE_XDP_ACTIVE, &priv->state);
 }
 
 static inline void mlx5e_xdp_tx_disable(struct mlx5e_priv *priv)
 {
+	if (priv->channels.params.xdp_prog)
+		clear_bit(MLX5E_STATE_XDP_ACTIVE, &priv->state);
+
 	clear_bit(MLX5E_STATE_XDP_TX_ENABLED, &priv->state);
-	/* let other device's napi(s) see our new state */
-	synchronize_rcu();
+	/* Let other device's napi(s) and XSK wakeups see our new state. */
+	synchronize_net();
 }
 
 static inline bool mlx5e_xdp_tx_is_enabled(struct mlx5e_priv *priv)
 {
 	return test_bit(MLX5E_STATE_XDP_TX_ENABLED, &priv->state);
+}
+
+static inline bool mlx5e_xdp_is_active(struct mlx5e_priv *priv)
+{
+	return test_bit(MLX5E_STATE_XDP_ACTIVE, &priv->state);
 }
 
 static inline void mlx5e_xmit_xdp_doorbell(struct mlx5e_xdpsq *sq)
@@ -78,39 +107,48 @@ static inline void mlx5e_xmit_xdp_doorbell(struct mlx5e_xdpsq *sq)
 /* Enable inline WQEs to shift some load from a congested HCA (HW) to
  * a less congested cpu (SW).
  */
-static inline void mlx5e_xdp_update_inline_state(struct mlx5e_xdpsq *sq)
+static inline bool mlx5e_xdp_get_inline_state(struct mlx5e_xdpsq *sq, bool cur)
 {
 	u16 outstanding = sq->xdpi_fifo_pc - sq->xdpi_fifo_cc;
-	struct mlx5e_xdp_mpwqe *session = &sq->mpwqe;
 
 #define MLX5E_XDP_INLINE_WATERMARK_LOW	10
 #define MLX5E_XDP_INLINE_WATERMARK_HIGH 128
 
-	if (session->inline_on) {
-		if (outstanding <= MLX5E_XDP_INLINE_WATERMARK_LOW)
-			session->inline_on = 0;
-		return;
-	}
+	if (cur && outstanding <= MLX5E_XDP_INLINE_WATERMARK_LOW)
+		return false;
 
-	/* inline is false */
-	if (outstanding >= MLX5E_XDP_INLINE_WATERMARK_HIGH)
-		session->inline_on = 1;
+	if (!cur && outstanding >= MLX5E_XDP_INLINE_WATERMARK_HIGH)
+		return true;
+
+	return cur;
 }
 
+static inline bool mlx5e_xdp_mpwqe_is_full(struct mlx5e_tx_mpwqe *session, u8 max_sq_mpw_wqebbs)
+{
+	if (session->inline_on)
+		return session->ds_count + MLX5E_XDP_INLINE_WQE_MAX_DS_CNT >
+		       max_sq_mpw_wqebbs * MLX5_SEND_WQEBB_NUM_DS;
+
+	return mlx5e_tx_mpwqe_is_full(session, max_sq_mpw_wqebbs);
+}
+
+struct mlx5e_xdp_wqe_info {
+	u8 num_wqebbs;
+	u8 num_pkts;
+};
+
 static inline void
-mlx5e_xdp_mpwqe_add_dseg(struct mlx5e_xdpsq *sq, struct mlx5e_xdp_info *xdpi,
+mlx5e_xdp_mpwqe_add_dseg(struct mlx5e_xdpsq *sq,
+			 struct mlx5e_xmit_data *xdptxd,
 			 struct mlx5e_xdpsq_stats *stats)
 {
-	struct mlx5e_xdp_mpwqe *session = &sq->mpwqe;
-	dma_addr_t dma_addr    = xdpi->dma_addr;
-	struct xdp_frame *xdpf = xdpi->xdpf;
+	struct mlx5e_tx_mpwqe *session = &sq->mpwqe;
 	struct mlx5_wqe_data_seg *dseg =
 		(struct mlx5_wqe_data_seg *)session->wqe + session->ds_count;
-	u16 dma_len = xdpf->len;
+	u32 dma_len = xdptxd->len;
 
 	session->pkt_count++;
-
-#define MLX5E_XDP_INLINE_WQE_SZ_THRSD (256 - sizeof(struct mlx5_wqe_inline_seg))
+	session->bytes_count += dma_len;
 
 	if (session->inline_on && dma_len <= MLX5E_XDP_INLINE_WQE_SZ_THRSD) {
 		struct mlx5_wqe_inline_seg *inline_dseg =
@@ -118,38 +156,18 @@ mlx5e_xdp_mpwqe_add_dseg(struct mlx5e_xdpsq *sq, struct mlx5e_xdp_info *xdpi,
 		u16 ds_len = sizeof(*inline_dseg) + dma_len;
 		u16 ds_cnt = DIV_ROUND_UP(ds_len, MLX5_SEND_WQE_DS);
 
-		if (unlikely(session->ds_count + ds_cnt > session->max_ds_count)) {
-			/* Not enough space for inline wqe, send with memory pointer */
-			session->complete = true;
-			goto no_inline;
-		}
-
 		inline_dseg->byte_count = cpu_to_be32(dma_len | MLX5_INLINE_SEG);
-		memcpy(inline_dseg->data, xdpf->data, dma_len);
+		memcpy(inline_dseg->data, xdptxd->data, dma_len);
 
 		session->ds_count += ds_cnt;
 		stats->inlnw++;
 		return;
 	}
 
-no_inline:
-	dseg->addr       = cpu_to_be64(dma_addr);
+	dseg->addr       = cpu_to_be64(xdptxd->dma_addr);
 	dseg->byte_count = cpu_to_be32(dma_len);
 	dseg->lkey       = sq->mkey_be;
 	session->ds_count++;
-}
-
-static inline struct mlx5e_tx_wqe *
-mlx5e_xdpsq_fetch_wqe(struct mlx5e_xdpsq *sq, u16 *pi)
-{
-	struct mlx5_wq_cyc *wq = &sq->wq;
-	struct mlx5e_tx_wqe *wqe;
-
-	*pi = mlx5_wq_cyc_ctr2ix(wq, sq->pc);
-	wqe = mlx5_wq_cyc_get_wqe(wq, *pi);
-	memset(wqe, 0, sizeof(*wqe));
-
-	return wqe;
 }
 
 static inline void

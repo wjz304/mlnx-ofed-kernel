@@ -3,9 +3,7 @@
 
 #include "../../../compat/config.h"
 
-#ifdef HAVE_UAPI_LINUX_EVENTPOLL_H
 #include_next <uapi/linux/eventpoll.h>
-#endif
 
 #ifndef EPOLLIN
 #include <linux/poll.h>

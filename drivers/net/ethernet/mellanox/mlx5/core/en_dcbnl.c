@@ -35,6 +35,8 @@
 #include "en/port.h"
 #include "en/port_buffer.h"
 
+#define MLX5E_MAX_BW_ALLOC 100 /* Max percentage of BW allocation */
+
 #define MLX5E_100MB (100000)
 #define MLX5E_1GB   (1000000)
 
@@ -49,6 +51,12 @@ enum {
 	MLX5E_LOWEST_PRIO_GROUP   = 0,
 };
 
+enum {
+	MLX5_DCB_CHG_RESET,
+	MLX5_DCB_NO_CHG,
+	MLX5_DCB_CHG_NO_RESET,
+};
+
 #define MLX5_DSCP_SUPPORTED(mdev) (MLX5_CAP_GEN(mdev, qcam_reg)  && \
 				   MLX5_CAP_QCAM_REG(mdev, qpts) && \
 				   MLX5_CAP_QCAM_REG(mdev, qpdpm))
@@ -56,7 +64,6 @@ enum {
 static int mlx5e_set_trust_state(struct mlx5e_priv *priv, u8 trust_state);
 static int mlx5e_set_dscp2prio(struct mlx5e_priv *priv, u8 dscp, u8 prio);
 
-#ifdef CONFIG_MLX5_CORE_EN_DCB
 /* If dcbx mode is non-host set the dcbx mode to host.
  */
 static int mlx5e_dcbnl_set_dcbx_mode(struct mlx5e_priv *priv,
@@ -239,7 +246,7 @@ static void mlx5e_build_tc_tx_bw(struct ieee_ets *ets, u8 *tc_tx_bw,
  *   Report both group #0 and #1 as ETS type.
  *     All the tcs in group #0 will be reported with 0% BW.
  */
-int mlx5e_dcbnl_ieee_setets_core(struct mlx5e_priv *priv, struct ieee_ets *ets)
+static int mlx5e_dcbnl_ieee_setets_core(struct mlx5e_priv *priv, struct ieee_ets *ets)
 {
 	struct mlx5_core_dev *mdev = priv->mdev;
 	u8 tc_tx_bw[IEEE_8021QAZ_MAX_TCS];
@@ -681,7 +688,7 @@ static void mlx5e_dcbnl_getpermhwaddr(struct net_device *netdev,
 
 	memset(perm_addr, 0xff, MAX_ADDR_LEN);
 
-	mlx5_query_nic_vport_mac_address(priv->mdev, 0, perm_addr);
+	mlx5_query_mac_address(priv->mdev, perm_addr);
 }
 
 static void mlx5e_dcbnl_setpgtccfgtx(struct net_device *netdev,
@@ -978,7 +985,7 @@ static int mlx5e_dcbnl_setbuffer(struct net_device *dev,
 	return err;
 }
 
-const struct dcbnl_rtnl_ops mlx5e_dcbnl_ops = {
+static const struct dcbnl_rtnl_ops mlx5e_dcbnl_ops = {
 	.ieee_getets	= mlx5e_dcbnl_ieee_getets,
 	.ieee_setets	= mlx5e_dcbnl_ieee_setets,
 	.ieee_getmaxrate = mlx5e_dcbnl_ieee_getmaxrate,
@@ -1009,6 +1016,24 @@ const struct dcbnl_rtnl_ops mlx5e_dcbnl_ops = {
 	.getpfcstate    = mlx5e_dcbnl_getpfcstate,
 	.setpfcstate    = mlx5e_dcbnl_setpfcstate,
 };
+
+void mlx5e_dcbnl_build_netdev(struct net_device *netdev)
+{
+	struct mlx5e_priv *priv = netdev_priv(netdev);
+	struct mlx5_core_dev *mdev = priv->mdev;
+
+	if (MLX5_CAP_GEN(mdev, vport_group_manager) && MLX5_CAP_GEN(mdev, qos))
+		netdev->dcbnl_ops = &mlx5e_dcbnl_ops;
+}
+
+void mlx5e_dcbnl_build_rep_netdev(struct net_device *netdev)
+{
+	struct mlx5e_priv *priv = netdev_priv(netdev);
+	struct mlx5_core_dev *mdev = priv->mdev;
+
+	if (MLX5_CAP_GEN(mdev, qos))
+		netdev->dcbnl_ops = &mlx5e_dcbnl_ops;
+}
 
 static void mlx5e_dcbnl_query_dcbx_mode(struct mlx5e_priv *priv,
 					enum mlx5_dcbx_oper_mode *mode)
@@ -1099,56 +1124,73 @@ void mlx5e_dcbnl_delete_app(struct mlx5e_priv *priv)
 	mlx5e_dcbnl_dscp_app(priv, DELETE);
 }
 
-static void mlx5e_trust_update_tx_min_inline_mode(struct mlx5e_priv *priv,
-						  struct mlx5e_params *params)
+static void mlx5e_params_calc_trust_tx_min_inline_mode(struct mlx5_core_dev *mdev,
+						       struct mlx5e_params *params,
+						       u8 trust_state)
 {
-	mlx5_query_min_inline(priv->mdev, &params->tx_min_inline_mode);
-	if (priv->dcbx_dp.trust_state == MLX5_QPTS_TRUST_DSCP &&
+	mlx5_query_min_inline(mdev, &params->tx_min_inline_mode);
+	if (trust_state == MLX5_QPTS_TRUST_DSCP &&
 	    params->tx_min_inline_mode == MLX5_INLINE_MODE_L2)
 		params->tx_min_inline_mode = MLX5_INLINE_MODE_IP;
 }
 
-static void mlx5e_trust_update_sq_inline_mode(struct mlx5e_priv *priv)
+static int mlx5e_update_trust_state_hw(struct mlx5e_priv *priv, void *context)
 {
-	struct mlx5e_channels new_channels = {};
+	u8 *trust_state = context;
+	int err;
 
-	mutex_lock(&priv->state_lock);
+	err = mlx5_set_trust_state(priv->mdev, *trust_state);
+	if (err)
+		return err;
+	WRITE_ONCE(priv->dcbx_dp.trust_state, *trust_state);
 
-	new_channels.params = priv->channels.params;
-	mlx5e_trust_update_tx_min_inline_mode(priv, &new_channels.params);
-
-	if (!test_bit(MLX5E_STATE_OPENED, &priv->state)) {
-		priv->channels.params = new_channels.params;
-		goto out;
-	}
-
-	/* Skip if tx_min_inline is the same */
-	if (new_channels.params.tx_min_inline_mode ==
-	    priv->channels.params.tx_min_inline_mode)
-		goto out;
-
-	mlx5e_safe_switch_channels(priv, &new_channels, NULL);
-
-out:
-	mutex_unlock(&priv->state_lock);
+	return 0;
 }
 
 static int mlx5e_set_trust_state(struct mlx5e_priv *priv, u8 trust_state)
 {
-	struct tc_mqprio_qopt mqprio = {.num_tc = MLX5E_MAX_NUM_TC};
+	struct tc_mqprio_qopt_offload mqprio = {.qopt.num_tc = MLX5E_MAX_NUM_TC};
+	struct mlx5e_params new_params;
+	bool reset = true;
 	int err;
 
-	err = mlx5_set_trust_state(priv->mdev, trust_state);
+	mutex_lock(&priv->state_lock);
+	mqprio.mode = priv->channels.params.mqprio.mode;
+	if (mqprio.mode != TC_MQPRIO_MODE_DCB) {
+		netdev_err(priv->netdev, "Can't change trust state while in channel mode.\n");
+		err = -EINVAL;
+		goto unlock;
+	}
+
+	new_params = priv->channels.params;
+	mlx5e_params_calc_trust_tx_min_inline_mode(priv->mdev, &new_params,
+						   trust_state);
+
+	/* Skip if tx_min_inline is the same */
+	if (new_params.tx_min_inline_mode == priv->channels.params.tx_min_inline_mode)
+		reset = false;
+
+	err = mlx5e_safe_switch_params(priv, &new_params,
+				       mlx5e_update_trust_state_hw,
+				       &trust_state, reset);
+unlock:
+	mutex_unlock(&priv->state_lock);
 	if (err)
 		return err;
-	priv->dcbx_dp.trust_state = trust_state;
-	mlx5e_trust_update_sq_inline_mode(priv);
 
 	/* In DSCP trust state, we need 8 send queues per channel */
-	if (priv->dcbx_dp.trust_state == MLX5_QPTS_TRUST_DSCP)
-		mlx5e_setup_tc_mqprio(priv->netdev, &mqprio);
+	if (priv->dcbx_dp.trust_state == MLX5_QPTS_TRUST_DSCP) {
+		mutex_lock(&priv->state_lock);
+		mlx5e_setup_tc_mqprio(priv, &mqprio);
+		mutex_unlock(&priv->state_lock);
+	} else if (priv->dcbx_dp.trust_state == MLX5_QPTS_TRUST_PCP) {
+		mutex_lock(&priv->state_lock);
+		mqprio.qopt.num_tc = priv->pcp_tc_num;
+		mlx5e_setup_tc_mqprio(priv, &mqprio);
+		mutex_unlock(&priv->state_lock);
+	}
 
-	return err;
+	return 0;
 }
 
 static int mlx5e_set_dscp2prio(struct mlx5e_priv *priv, u8 dscp, u8 prio)
@@ -1167,19 +1209,39 @@ static int mlx5e_trust_initialize(struct mlx5e_priv *priv)
 {
 	struct mlx5_core_dev *mdev = priv->mdev;
 	int err;
+	u8 trust_state;
+	struct tc_mqprio_qopt_offload mqprio = {.qopt.num_tc = MLX5E_MAX_NUM_TC};
+	const bool take_rtnl = priv->netdev->reg_state == NETREG_REGISTERED;
 
-	priv->dcbx_dp.trust_state = MLX5_QPTS_TRUST_PCP;
+	if (!MLX5_DSCP_SUPPORTED(mdev)) {
+		WRITE_ONCE(priv->dcbx_dp.trust_state, MLX5_QPTS_TRUST_PCP);
+ 		return 0;
+	}
 
-	if (!MLX5_DSCP_SUPPORTED(mdev))
-		return 0;
-
-	err = mlx5_query_trust_state(priv->mdev, &priv->dcbx_dp.trust_state);
+	err = mlx5_query_trust_state(priv->mdev, &trust_state);
 	if (err)
 		return err;
+	WRITE_ONCE(priv->dcbx_dp.trust_state, trust_state);
 
-	mlx5e_trust_update_tx_min_inline_mode(priv, &priv->channels.params);
-	if (priv->dcbx_dp.trust_state == MLX5_QPTS_TRUST_DSCP)
-		priv->channels.params.num_tc = MLX5E_MAX_NUM_TC;
+	if (priv->dcbx_dp.trust_state == MLX5_QPTS_TRUST_PCP && priv->dcbx.dscp_app_cnt) {
+		/*
+		 * Align the driver state with the register state.
+		 * Temporary state change is required to enable the app list reset.
+		 */
+		priv->dcbx_dp.trust_state = MLX5_QPTS_TRUST_DSCP;
+		mlx5e_dcbnl_delete_app(priv);
+		priv->dcbx_dp.trust_state = MLX5_QPTS_TRUST_PCP;
+	}
+
+	mlx5e_params_calc_trust_tx_min_inline_mode(priv->mdev, &priv->channels.params,
+						   priv->dcbx_dp.trust_state);
+	if (priv->dcbx_dp.trust_state == MLX5_QPTS_TRUST_DSCP) {
+		if (take_rtnl)
+			rtnl_lock();
+		mlx5e_setup_tc_mqprio(priv, &mqprio);
+		if (take_rtnl)
+			rtnl_unlock();
+	}
 
 	err = mlx5_query_dscp2prio(priv->mdev, priv->dcbx_dp.dscp2prio);
 	if (err)
@@ -1229,4 +1291,3 @@ void mlx5e_dcbnl_initialize(struct mlx5e_priv *priv)
 
 	mlx5e_ets_init(priv);
 }
-#endif

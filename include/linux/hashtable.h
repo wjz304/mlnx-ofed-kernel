@@ -1,11 +1,9 @@
-#ifndef COMPAT_LINUX_HASHTABLE_H
-#define COMPAT_LINUX_HASHTABLE_H
+#ifndef _COMPAT_LINUX_HASHTABLE_H
+#define _COMPAT_LINUX_HASHTABLE_H
 
 #include "../../compat/config.h"
 
-#ifdef HAVE_LINUX_HASHTABLE_H
 #include_next <linux/hashtable.h>
-#endif
 
 #ifndef DECLARE_HASHTABLE
 #include <linux/types.h>
@@ -114,16 +112,13 @@ static inline bool hash_hashed(struct hlist_node *node)
 
 #else /* hash_init */
 
-#ifndef HAVE_HLIST_FOR_EACH_ENTRY_3_PARAMS
-#define compat_hash_for_each(hash, bkt, e, node) \
-	hash_for_each(hash, bkt, hlnode, e, node)
-#define compat_hash_for_each_possible_rcu(hash, bkt, e, node) \
-	hash_for_each_possible_rcu(hash, bkt, hlnode, e, node)
-#else
 #define compat_hash_for_each hash_for_each
+#define compat_hash_for_each_rcu hash_for_each_rcu
+#define compat_hash_for_each_safe hash_for_each_safe
+#define compat_hash_for_each_possible hash_for_each_possible
 #define compat_hash_for_each_possible_rcu hash_for_each_possible_rcu
-#endif
+#define compat_hash_for_each_possible_safe hash_for_each_possible_safe
 
 #endif /* hash_init */
 
-#endif /* COMPAT_LINUX_HASHTABLE_H */
+#endif /* _COMPAT_LINUX_HASHTABLE_H */

@@ -29,7 +29,7 @@
 	IBA_FIELD_MLOC(field_struct,                                           \
 		       (byte_offset + sizeof(struct ib_mad_hdr)), width, type)
 #define CM_STRUCT(field_struct, total_len)                                     \
-	field_struct##_X                                                           \
+	field_struct                                                           \
 	{                                                                      \
 		struct ib_mad_hdr hdr;                                         \
 		u32 _data[(total_len) / 32 +                                   \

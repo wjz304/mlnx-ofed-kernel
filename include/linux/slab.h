@@ -1,25 +1,10 @@
-#ifndef COMPAT_LINUX_SLAB_H
-#define COMPAT_LINUX_SLAB_H
+#ifndef _COMPAT_LINUX_SLAB_H
+#define _COMPAT_LINUX_SLAB_H
 
 #include "../../compat/config.h"
 
 #include_next <linux/slab.h>
 #include <linux/overflow.h>
-
-#ifndef HAVE_KMALLOC_ARRAY
-/**
- * kmalloc_array - allocate memory for an array.
- * @n: number of elements.
- * @size: element size.
- * @flags: the type of memory to allocate (see kmalloc).
- */
-static inline void *kmalloc_array(size_t n, size_t size, gfp_t flags)
-{
-        if (size != 0 && n > SIZE_MAX / size)
-                return NULL;
-        return __kmalloc(n * size, flags);
-}
-#endif
 
 #ifndef HAVE_KMALLOC_ARRAY_NODE
 static inline void *kmalloc_array_node(size_t n, size_t size, gfp_t flags,
@@ -59,4 +44,4 @@ static inline void compat_kmem_cache_destroy(struct kmem_cache *s)
 }
 #define kmem_cache_destroy compat_kmem_cache_destroy
 
-#endif /* COMPAT_LINUX_SLAB_H */
+#endif /* _COMPAT_LINUX_SLAB_H */

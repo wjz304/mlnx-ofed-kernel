@@ -32,7 +32,11 @@ cd ${0%*/*}
 kernelver=${kernelver:-`uname -r`}
 kernel_source_dir=${kernel_source_dir:-"/lib/modules/$kernelver/build"}
 PACKAGE_NAME=${PACKAGE_NAME:-"mlnx-ofed-kernel"}
-PACKAGE_VERSION=${PACKAGE_VERSION:-"4.9"}
+PACKAGE_VERSION=${PACKAGE_VERSION:-"5.8"}
+
+echo 'is_conf_set() {'
+echo '	grep -q "^$1=[ym]" "$kernel_source_dir/.config" 2>/dev/null'
+echo '}'
 
 echo STRIP_MODS=\${STRIP_MODS:-"yes"}
 echo kernelver=\${kernelver:-\$\(uname -r\)}
@@ -40,28 +44,37 @@ echo kernel_source_dir=\${kernel_source_dir:-"/lib/modules/\$kernelver/build"}
 
 modules=`./dkms_ofed $kernelver $kernel_source_dir get-modules`
 
-i=0
+echo 'i=0'
 
 for module in $modules
 do
 	name=`echo ${module##*/} | sed -e "s/.ko.gz//" -e "s/.ko//"`
-	echo BUILT_MODULE_NAME[$i]=$name
-	echo BUILT_MODULE_LOCATION[$i]=${module%*/*}
-	echo DEST_MODULE_NAME[$i]=$name
-	echo DEST_MODULE_LOCATION[$i]=/kernel/${module%*/*}
-	echo STRIP[$i]="\$STRIP_MODS"
-	let i++
+	if [ "$name" = 'auxiliary' ]; then
+		echo "if [[ \$(VER \$kernelver) < \$(VER '5.11.0') ]]; then"
+	fi
+	if [ "$name" = 'mlxdevm' ]; then
+		echo "if [[ ! \$(VER \$kernelver) < \$(VER '4.15.0') ]]; then"
+	fi
+	if [ "$name" = 'irdma' ]; then
+		echo "if is_conf_set CONFIG_INFINIBAND_IRDMA; then"
+	fi
+	echo 'BUILT_MODULE_NAME[$i]='$name
+	echo 'BUILT_MODULE_LOCATION[$i]='${module%*/*}
+	echo 'DEST_MODULE_NAME[$i]='$name
+	echo 'DEST_MODULE_LOCATION[$i]='/kernel/${module%*/*}
+	echo 'STRIP[$i]="$STRIP_MODS"'
+	echo 'let i++'
+	case "$name" in auxiliary | mlxdevm | irdma)
+		echo "fi";;
+	esac
 done
 
-# W/A for --with-innova-ipsec flag opens features (not adding new module)
-if (echo "$configure_options" | grep -q "with-innova-ipsec" 2>/dev/null); then
-	echo '#--with-innova-ipsec'
-fi
-
-# W/A for --with-mlx5-ipsec flag opens features (not adding new module)
-if (echo "$configure_options" | grep -q "with-mlx5-ipsec" 2>/dev/null); then
-	echo '#--with-mlx5-ipsec'
-fi
+EXTRA_OPTIONS="--with-mlx5-macsec --with-mlx5-ipsec --with-gds --without-gds --with-sf-cfg-drv"
+for option in $EXTRA_OPTIONS; do
+	if echo "$configure_options" | grep -q -- "$option"; then
+		echo "#:# ExtraOption $option"
+	fi
+done
 
 echo MAKE=\"./ofed_scripts/pre_build.sh \$kernelver \$kernel_source_dir $PACKAGE_NAME $PACKAGE_VERSION\"
 echo CLEAN=\"make clean\"

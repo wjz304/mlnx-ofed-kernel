@@ -1,9 +1,8 @@
-#ifndef LINUX_BONDING_H
-#define LINUX_BONDING_H
+#ifndef _COMPAT_NET_BONDING_H
+#define _COMPAT_NET_BONDING_H
 
 #include "../../compat/config.h"
 
-#ifdef HAVE_BONDING_H
 #include_next <net/bonding.h>
 
 #define MLX_USES_PRIMARY(mode)				\
@@ -182,6 +181,4 @@ static void mlx_lag_compat_events_close(void)
 }
 #endif
 
-#endif /* HAVE_BONDING_H */
-
-#endif /* LINUX_BONDING_H */
+#endif /* _COMPAT_NET_BONDING_H */

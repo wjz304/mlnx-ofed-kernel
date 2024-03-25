@@ -1,5 +1,5 @@
-#ifndef _MLNX_LINUX_MMU_NOTIFIER_H
-#define _MLNX_LINUX_MMU_NOTIFIER_H
+#ifndef _COMPAT_LINUX_MMU_NOTIFIER_H
+#define _COMPAT_LINUX_MMU_NOTIFIER_H
 
 #include "../../compat/config.h"
 
@@ -9,9 +9,10 @@
 #define mmu_notifier_call_srcu LINUX_BACKPORT(mmu_notifier_call_srcu)
 extern void mmu_notifier_call_srcu(struct rcu_head *rcu, void (*func)(struct rcu_head *rcu));
 #endif
-#ifndef HAVE_MMU_NOTIFIER_UNREGISTER_NO_RELEASE
-#define mmu_notifier_unregister_no_release LINUX_BACKPORT(mmu_notifier_unregister_no_release)
-extern void mmu_notifier_unregister_no_release(struct mmu_notifier *mn, struct mm_struct *mm);
+
+#ifndef HAVE_MMU_NOTIFIER_SYNCHRONIZE
+#define mmu_notifier_synchronize LINUX_BACKPORT(mmu_notifier_synchronize)
+extern void mmu_notifier_synchronize(void);
 #endif
 
-#endif /* _MLNX_LINUX_MMU_NOTIFIER_H */
+#endif /* _COMPAT_LINUX_MMU_NOTIFIER_H */

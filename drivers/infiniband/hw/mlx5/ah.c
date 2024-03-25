@@ -32,9 +32,28 @@
 
 #include "mlx5_ib.h"
 
-static void create_ib_ah(struct mlx5_ib_dev *dev, struct mlx5_ib_ah *ah,
-			 struct rdma_ah_attr *ah_attr)
+static __be16 mlx5_ah_get_udp_sport(const struct mlx5_ib_dev *dev,
+				  const struct rdma_ah_attr *ah_attr)
 {
+	enum ib_gid_type gid_type = ah_attr->grh.sgid_attr->gid_type;
+	__be16 sport;
+
+	if ((gid_type == IB_GID_TYPE_ROCE_UDP_ENCAP) &&
+	    (rdma_ah_get_ah_flags(ah_attr) & IB_AH_GRH) &&
+	    (ah_attr->grh.flow_label & IB_GRH_FLOWLABEL_MASK))
+		sport = cpu_to_be16(
+			rdma_flow_label_to_udp_sport(ah_attr->grh.flow_label));
+	else
+		sport = mlx5_get_roce_udp_sport_min(dev,
+						    ah_attr->grh.sgid_attr);
+
+	return sport;
+}
+
+static void create_ib_ah(struct mlx5_ib_dev *dev, struct mlx5_ib_ah *ah,
+			 struct rdma_ah_init_attr *init_attr)
+{
+	struct rdma_ah_attr *ah_attr = init_attr->ah_attr;
 	enum ib_gid_type gid_type;
 
 	if (rdma_ah_get_ah_flags(ah_attr) & IB_AH_GRH) {
@@ -52,7 +71,10 @@ static void create_ib_ah(struct mlx5_ib_dev *dev, struct mlx5_ib_ah *ah,
 
 	if (ah_attr->type == RDMA_AH_ATTR_TYPE_ROCE) {
 		u8 tmp_hop_limit = 0;
-		u16 sport = rdma_ah_get_udp_sport(ah_attr);
+		if (init_attr->xmit_slave)
+			ah->xmit_port =
+				mlx5_lag_get_slave_port(dev->mdev,
+							init_attr->xmit_slave);
 		gid_type = ah_attr->grh.sgid_attr->gid_type;
 
 		if ((gid_type != IB_GID_TYPE_IB) &&
@@ -60,13 +82,13 @@ static void create_ib_ah(struct mlx5_ib_dev *dev, struct mlx5_ib_ah *ah,
 			tmp_hop_limit = IPV6_DEFAULT_HOPLIMIT;
 		else
 			tmp_hop_limit = ah_attr->grh.hop_limit;
+
 		ah->av.hop_limit = (dev->ttld[ah_attr->port_num - 1].val) ?
 			dev->ttld[ah_attr->port_num - 1].val : tmp_hop_limit;
+
 		memcpy(ah->av.rmac, ah_attr->roce.dmac,
 		       sizeof(ah_attr->roce.dmac));
-		ah->av.udp_sport = mlx5_valid_roce_udp_sport(sport) ?
-			cpu_to_be16(sport) :
-			mlx5_get_roce_udp_sport_min(dev, ah_attr->grh.sgid_attr);
+		ah->av.udp_sport = mlx5_ah_get_udp_sport(dev, ah_attr);
 		ah->av.stat_rate_sl |= (rdma_ah_get_sl(ah_attr) & 0x7) << 1;
 		if (gid_type == IB_GID_TYPE_ROCE_UDP_ENCAP)
 #define MLX5_ECN_ENABLED BIT(1)
@@ -78,10 +100,11 @@ static void create_ib_ah(struct mlx5_ib_dev *dev, struct mlx5_ib_ah *ah,
 	}
 }
 
-int mlx5_ib_create_ah(struct ib_ah *ibah, struct rdma_ah_attr *ah_attr,
-		      u32 flags, struct ib_udata *udata)
+int mlx5_ib_create_ah(struct ib_ah *ibah, struct rdma_ah_init_attr *init_attr,
+		      struct ib_udata *udata)
 
 {
+	struct rdma_ah_attr *ah_attr = init_attr->ah_attr;
 	struct mlx5_ib_ah *ah = to_mah(ibah);
 	struct mlx5_ib_dev *dev = to_mdev(ibah->device);
 	enum rdma_ah_attr_type ah_type = ah_attr->type;
@@ -93,8 +116,8 @@ int mlx5_ib_create_ah(struct ib_ah *ibah, struct rdma_ah_attr *ah_attr,
 	if (ah_type == RDMA_AH_ATTR_TYPE_ROCE && udata) {
 		int err;
 		struct mlx5_ib_create_ah_resp resp = {};
-		u32 min_resp_len = offsetof(typeof(resp), dmac) +
-				   sizeof(resp.dmac);
+		u32 min_resp_len =
+			offsetofend(struct mlx5_ib_create_ah_resp, dmac);
 
 		if (udata->outlen < min_resp_len)
 			return -EINVAL;
@@ -107,7 +130,7 @@ int mlx5_ib_create_ah(struct ib_ah *ibah, struct rdma_ah_attr *ah_attr,
 			return err;
 	}
 
-	create_ib_ah(dev, ah, ah_attr);
+	create_ib_ah(dev, ah, init_attr);
 	return 0;
 }
 
@@ -133,9 +156,4 @@ int mlx5_ib_query_ah(struct ib_ah *ibah, struct rdma_ah_attr *ah_attr)
 	rdma_ah_set_sl(ah_attr, ah->av.stat_rate_sl & 0xf);
 
 	return 0;
-}
-
-void mlx5_ib_destroy_ah(struct ib_ah *ah, u32 flags)
-{
-	return;
 }

@@ -1,11 +1,11 @@
-#ifndef COMPAT_LINUX_FILTER_H
-#define COMPAT_LINUX_FILTER_H
+#ifndef _COMPAT_LINUX_FILTER_H
+#define _COMPAT_LINUX_FILTER_H
 
 #include "../../compat/config.h"
 
 #include_next <linux/filter.h>
 
-#ifdef HAVE_XDP_BUFF
+#ifdef HAVE_XDP_SUPPORT
 #ifndef HAVE_XDP_FRAME
 struct xdp_frame {
 	void *data;
@@ -56,7 +56,6 @@ struct xdp_frame *convert_to_xdp_frame(struct xdp_buff *xdp)
 	return xdp_frame;
 }
 #endif
-#endif
+#endif /* HAVE_XDP_SUPPORT */
 
-#endif /* COMPAT_LINUX_FILTER_H */
-
+#endif /* _COMPAT_LINUX_FILTER_H */

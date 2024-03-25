@@ -1,6 +1,11 @@
-/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
-#ifndef __LINUX_TC_PED_H
-#define __LINUX_TC_PED_H
+#ifndef _COMPAT_UAPI_LINUX_TC_ACT_TC_PEDIT_H
+#define _COMPAT_UAPI_LINUX_TC_ACT_TC_PEDIT_H
+
+#include "../../../../compat/config.h"
+
+#ifndef CONFIG_COMPAT_TCF_PEDIT_MOD
+#include_next <uapi/linux/tc_act/tc_pedit.h>
+#else
 
 #include <linux/types.h>
 #include <linux/pkt_cls.h>
@@ -69,4 +74,6 @@ struct tc_pedit_sel {
 
 #define tc_pedit tc_pedit_sel
 
-#endif
+#endif /* CONFIG_COMPAT_TCF_PEDIT_MOD */
+
+#endif /* _COMPAT_UAPI_LINUX_TC_ACT_TC_PEDIT_H */

@@ -1,10 +1,16 @@
 /* SPDX-License-Identifier: GPL-2.0 */
+
 #ifndef _RDMA_NETLINK_H
 #define _RDMA_NETLINK_H
 
-
 #include <linux/netlink.h>
 #include <uapi/rdma/rdma_netlink.h>
+
+enum {
+	RDMA_NLDEV_ATTR_EMPTY_STRING = 1,
+	RDMA_NLDEV_ATTR_ENTRY_STRLEN = 16,
+	RDMA_NLDEV_ATTR_CHARDEV_TYPE_SIZE = 32,
+};
 
 struct rdma_nl_cbs {
 	int (*doit)(struct sk_buff *skb, struct nlmsghdr *nlh,
@@ -24,7 +30,7 @@ enum rdma_nl_flags {
  * constant as well and the compiler checks they are the same.
  */
 #define MODULE_ALIAS_RDMA_NETLINK(_index, _val)                                \
-	static inline void __chk_##_index(void)                                \
+	static inline void __maybe_unused __chk_##_index(void)                 \
 	{                                                                      \
 		BUILD_BUG_ON(_index != _val);                                  \
 	}                                                                      \
@@ -114,4 +120,6 @@ void rdma_link_register(struct rdma_link_ops *ops);
 void rdma_link_unregister(struct rdma_link_ops *ops);
 
 #define MODULE_ALIAS_RDMA_LINK(type) MODULE_ALIAS("rdma-link-" type)
+#define MODULE_ALIAS_RDMA_CLIENT(type) MODULE_ALIAS("rdma-client-" type)
+
 #endif /* _RDMA_NETLINK_H */

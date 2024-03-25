@@ -144,8 +144,7 @@
 #ifdef kvcalloc
 	#undef kvcalloc
 #endif
-/* if kernel version < 2.6.37, it's defined in compat as singlethread_workqueue */
-#if defined(alloc_ordered_workqueue) && LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)
+#if defined(alloc_ordered_workqueue)
 	#undef alloc_ordered_workqueue
 #endif
 
@@ -238,9 +237,7 @@ static LIST_HEAD(targeted_modules_list);
 static DEFINE_MUTEX(ignored_func_mutex);
 static DEFINE_MUTEX(targeted_modules_mutex);
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 16)
 static struct kobject *memtrack_obj;
-#endif
 
 struct memtrack_meminfo_t {
 	unsigned long addr;
@@ -327,7 +324,6 @@ static inline const char *memtype_free_str(enum memtrack_memtype_t memtype)
 	}
 }
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 16)
 int find_ignore_func_info(const char *func_name)
 {
 	struct memtrack_ignore_func_info_t *tmp_ignore_func_info_p;
@@ -546,8 +542,6 @@ static struct attribute *attrs[] = {
 static struct attribute_group attr_group = {
 	.attrs = attrs,
 };
-
-#endif
 
 /*
  *  overlap_a_b
@@ -797,10 +791,12 @@ int is_non_trackable_alloc_func(const char *func_name)
 		"tcf_exts_init",
 		"tcf_hashinfo_init",
 		/* sw steering functions */
-		"dr_icm_chunk_ste_init",
 		"dr_icm_chunk_create",
-		/* our backport function for 5.5 only */
-		"devlink_fmsg_binary_put",
+		/* release order0 pages, for old kernels only */
+		"mlx5e_free_xdpsq_desc",
+		/* kTLS resync dump */
+		"tx_sync_info_get",
+		"mlx5e_ktls_tx_handle_resync_dump_comp",
 	};
 	size_t str_str_arr_size = sizeof(str_str_arr)/sizeof(char *);
 	size_t str_str_excep_size = sizeof(str_str_excep_arr)/sizeof(char *);
@@ -833,8 +829,15 @@ int is_non_trackable_free_func(const char *func_name)
 {
 	static const char * const str_cmp_arr[] = {
 		/* sw steering functions */
-		"dr_icm_chunk_ste_cleanup",
-		"dr_icm_chunk_destroy",
+		"mlx5dr_icm_free_chunk",
+		/* external function in mdev module */
+		"create_store",
+		/* functions in mlxdevm.c uses memory allocated by nla_strdup */
+		"mlxdevm_nl_cmd_rate_new_doit",
+		"mlxdevm_nl_cmd_rate_del_doit",
+		"mlxdevm_rate_node_get_doit_locked",
+		"mlxdevm_cmd_rate_set_node",
+		"mlxdevm_cmd_rate_set_leaf",
 	};
 	size_t str_cmp_arr_size = sizeof(str_cmp_arr)/sizeof(char *);
 	int i;
@@ -1086,11 +1089,7 @@ static ssize_t memtrack_read(struct file *filp,
 	if (pos < 0)
 		return -EINVAL;
 
-#ifdef CONFIG_COMPAT_IS_FILE_INODE
 	fname = filp->f_path.dentry->d_name.name;
-#else
-	fname = filp->f_dentry->d_name.name;
-#endif
 
 	memtype = get_rsc_by_name(fname);
 	if (memtype >= MEMTRACK_NUM_OF_MEMTYPES) {
@@ -1119,8 +1118,8 @@ static ssize_t memtrack_read(struct file *filp,
 	}
 }
 
-static const struct file_operations memtrack_proc_fops = {
-	.read = memtrack_read,
+static const struct proc_ops memtrack_proc_ops = {
+	.proc_read = memtrack_read,
 };
 
 static const char *memtrack_proc_entry_name = "mt_memtrack";
@@ -1140,20 +1139,12 @@ static int create_procfs_tree(void)
 
 	for (i = 0, bit_mask = 1; i < MEMTRACK_NUM_OF_MEMTYPES; ++i, bit_mask <<= 1) {
 		if (bit_mask & track_mask) {
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
-			proc_ent = create_proc_entry(rsc_names[i], S_IRUGO, memtrack_tree);
-			if (!proc_ent)
-				goto undo_create_root;
-
-			proc_ent->proc_fops = &memtrack_proc_fops;
-#else
-			proc_ent = proc_create_data(rsc_names[i], S_IRUGO, memtrack_tree, &memtrack_proc_fops, NULL);
+			proc_ent = proc_create_data(rsc_names[i], S_IRUGO, memtrack_tree, &memtrack_proc_ops, NULL);
 			if (!proc_ent) {
 				printk(KERN_INFO "Warning: Cannot create /proc/%s/%s\n",
 				       memtrack_proc_entry_name, rsc_names[i]);
 				goto undo_create_root;
 			}
-#endif
 		}
 	}
 
@@ -1229,7 +1220,6 @@ int memtrack_inject_error(struct module *module_obj,
 	if (!strcmp(module_obj->name, "memtrack"))
 		return 0;
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 16)
 	if (!list_empty(&targeted_modules_list) &&
 	    !find_targeted_module_info(module_obj->name)) {
 		return 0;
@@ -1237,9 +1227,13 @@ int memtrack_inject_error(struct module *module_obj,
 
 	if (find_ignore_func_info(caller_func_name))
 		return 0;
-#endif
+
 	if (inject_freq) {
-		if (!(random32() % inject_freq)) {
+#ifdef HAVE_GET_RANDOM_U32
+		if (!(get_random_u32() % inject_freq)) {
+#else
+		if (!(prandom_u32() % inject_freq)) {
+#endif
 			val = inject_error_record(module_obj->name,
 						  file_name, func_name,
 						  caller_func_name,
@@ -1303,7 +1297,6 @@ int init_module(void)
 		goto undo_cache_create;
 	}
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 16)
 	memtrack_obj = kobject_create_and_add("memtrack", kernel_kobj);
 	if (!memtrack_obj) {
 		printk(KERN_ERR "memtrack::%s: failed to create memtrack kobject\n", __func__);
@@ -1314,18 +1307,15 @@ int init_module(void)
 		printk(KERN_ERR "memtrack::%s: failed to create memtrack sysfs\n", __func__);
 		goto undo_kobject;
 	}
-#endif
 	printk(KERN_INFO "memtrack::%s done.\n", __func__);
 
 	return 0;
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 16)
 undo_kobject:
 	kobject_put(memtrack_obj);
 
 undo_procfs_tree:
 	destroy_procfs_tree();
-#endif
 
 undo_cache_create:
 	for (j = 0; j < i; ++j) {
@@ -1333,12 +1323,7 @@ undo_cache_create:
 			vfree(tracked_objs_arr[j]);
 	}
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 19)
-	if (kmem_cache_destroy(meminfo_cache) != 0)
-		printk(KERN_ERR "Failed on kmem_cache_destroy!\n");
-#else
 	kmem_cache_destroy(meminfo_cache);
-#endif
 	return -1;
 }
 
@@ -1361,9 +1346,7 @@ void cleanup_module(void)
 
 	destroy_procfs_tree();
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 16)
 	kobject_put(memtrack_obj);
-#endif
 
 	/* clean up any hash table left-overs */
 	for (memtype = 0; memtype < MEMTRACK_NUM_OF_MEMTYPES; memtype++) {
@@ -1421,11 +1404,6 @@ void cleanup_module(void)
 		kfree(targeted_module_p);
 	}
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 19)
-	if (kmem_cache_destroy(meminfo_cache) != 0)
-		printk(KERN_ERR "memtrack::cleanup_module: Failed on kmem_cache_destroy!\n");
-#else
 	kmem_cache_destroy(meminfo_cache);
-#endif
 	printk(KERN_INFO "memtrack::cleanup_module done.\n");
 }

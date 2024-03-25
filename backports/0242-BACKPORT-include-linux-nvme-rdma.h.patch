@@ -1,7 +1,7 @@
-From: Israel Rukshin <israelr@mellanox.com>
+From: Valentine Fatiev <valentinef@nvidia.com>
 Subject: [PATCH] BACKPORT: include/linux/nvme-rdma.h
 
-Change-Id: I6af4e33df3d6570289b811601ee7b30cc0514cc9
+Change-Id: I108ce38255ef32bba891a3f6bd2340a47159a82b
 ---
  include/linux/nvme-rdma.h | 6 ++++++
  1 file changed, 6 insertions(+)
@@ -20,7 +20,7 @@ Change-Id: I6af4e33df3d6570289b811601ee7b30cc0514cc9
  #ifndef _LINUX_NVME_RDMA_H
  #define _LINUX_NVME_RDMA_H
  
-@@ -85,3 +90,4 @@ struct nvme_rdma_cm_rej {
+@@ -87,3 +92,4 @@ struct nvme_rdma_cm_rej {
  };
  
  #endif /* _LINUX_NVME_RDMA_H */

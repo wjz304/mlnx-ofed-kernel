@@ -45,6 +45,7 @@ enum mlx5_accel_esp_flags {
 	MLX5_ACCEL_ESP_FLAGS_TRANSPORT         = 1UL << 0,
 	MLX5_ACCEL_ESP_FLAGS_ESN_TRIGGERED     = 1UL << 1,
 	MLX5_ACCEL_ESP_FLAGS_ESN_STATE_OVERLAP = 1UL << 2,
+	MLX5_ACCEL_ESP_FLAGS_FULL_OFFLOAD      = 1UL << 3,
 };
 
 enum mlx5_accel_esp_action {
@@ -76,11 +77,12 @@ struct aes_gcm_keymat {
 struct mlx5_accel_esp_xfrm_attrs {
 	enum mlx5_accel_esp_action action;
 	u32   esn;
-	u32   spi;
+	__be32 spi;
 	u32   seq;
 	u32   tfc_pad;
 	u32   flags;
 	u32   sa_handle;
+	u32   aulen;
 	enum mlx5_accel_esp_replay replay_type;
 	union {
 		struct {
@@ -94,17 +96,27 @@ struct mlx5_accel_esp_xfrm_attrs {
 	} keymat;
 
 	union {
-		__be32		a4;
-		__be32		a6[4];
+		__be32 a4;
+		__be32 a6[4];
 	} saddr;
 
 	union {
-		__be32		a4;
-		__be32		a6[4];
+		__be32 a4;
+		__be32 a6[4];
 	} daddr;
 
-	bool is_ipv6;
-	void *priv;
+	struct {
+		u16 dport;
+		u16 dport_mask;
+		u8 proto;
+	} upspec;
+
+	u8 is_ipv6;
+
+	__u64   soft_packet_limit;
+	__u64   hard_packet_limit;
+
+	__u32   replay_window;
 };
 
 struct mlx5_accel_esp_xfrm {
@@ -125,20 +137,10 @@ enum mlx5_accel_ipsec_cap {
 	MLX5_ACCEL_IPSEC_CAP_RX_NO_TRAILER	= 1 << 5,
 	MLX5_ACCEL_IPSEC_CAP_ESN		= 1 << 6,
 	MLX5_ACCEL_IPSEC_CAP_TX_IV_IS_ESN	= 1 << 7,
+	MLX5_ACCEL_IPSEC_CAP_FULL_OFFLOAD       = 1 << 8,
 };
 
-#ifdef CONFIG_MLX5_IPSEC
-#define MLX5_MAX_AUTH_TAG_BIT_NUM 128
-/* up to 128 Authintaction tag data + 5B (minimum padding, pad len, next hdr) */
-#define MLX5_MAX_IPSEC_TRAILER_SZ (MLX5_MAX_AUTH_TAG_BIT_NUM / BITS_PER_BYTE + 5)
-
-struct mlx5_accel_trailer {
-	u8 trbuff[MLX5_MAX_IPSEC_TRAILER_SZ];
-	u8 trbufflen;
-};
-#endif
-
-#ifdef CONFIG_MLX5_EN_IPSEC
+#ifdef CONFIG_MLX5_ACCEL
 
 u32 mlx5_accel_ipsec_device_caps(struct mlx5_core_dev *mdev);
 
@@ -164,5 +166,5 @@ static inline int
 mlx5_accel_esp_modify_xfrm(struct mlx5_accel_esp_xfrm *xfrm,
 			   const struct mlx5_accel_esp_xfrm_attrs *attrs) { return -EOPNOTSUPP; }
 
-#endif
-#endif
+#endif /* CONFIG_MLX5_ACCEL */
+#endif /* __MLX5_ACCEL_H__ */

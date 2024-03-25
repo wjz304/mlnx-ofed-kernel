@@ -33,8 +33,10 @@
 #include <linux/device.h>
 #include <linux/netdevice.h>
 #include "en.h"
-#include "en_ecn.h"
+#include "en/port.h"
+#include "en_tc.h"
 #include "eswitch.h"
+#include "en_ecn.h"
 #ifdef CONFIG_MLX5_CORE_EN_DCB
 #include "en/port_buffer.h"
 #endif
@@ -44,15 +46,6 @@
 #define MLX5E_100MBPS_TO_KBPS 100000
 #define set_kobj_mode(mdev) mlx5_core_is_pf(mdev) ? S_IWUSR | S_IRUGO : S_IRUGO
 
-#ifdef CONFIG_MLX5_EN_SPECIAL_SQ
-struct netdev_queue_attribute {
-        struct attribute attr;
-        ssize_t (*show)(struct netdev_queue *queue, char *buf);
-        ssize_t (*store)(struct netdev_queue *queue,
-                         const char *buf, size_t len);
-};
-#endif
-
 static ssize_t mlx5e_show_tc_num(struct device *device,
 				 struct device_attribute *attr,
 				 char *buf)
@@ -60,7 +53,6 @@ static ssize_t mlx5e_show_tc_num(struct device *device,
 	struct mlx5e_priv *priv = netdev_priv(to_net_dev(device));
 	struct net_device *netdev = priv->netdev;
 	int len = 0;
-
 	len += sprintf(buf + len,  "%d\n", netdev_get_num_tc(netdev));
 
 	return len;
@@ -72,7 +64,7 @@ static ssize_t mlx5e_store_tc_num(struct device *device,
 {
 	struct mlx5e_priv *priv = netdev_priv(to_net_dev(device));
 	struct net_device *netdev = priv->netdev;
-	struct tc_mqprio_qopt mqprio = { 0 };
+	struct tc_mqprio_qopt_offload mqprio = { 0 };
 	int tc_num;
 	int err = 0;
 
@@ -81,9 +73,13 @@ static ssize_t mlx5e_store_tc_num(struct device *device,
 	if (err != 1)
 		return -EINVAL;
 
+	if (tc_num != MLX5E_MAX_NUM_TC && tc_num != MLX5E_MIN_NUM_TC)
+		return -EINVAL;
+
 	rtnl_lock();
-	mqprio.num_tc = tc_num;
-	mlx5e_setup_tc_mqprio(netdev, &mqprio);
+	netdev_set_num_tc(netdev, tc_num);
+	mqprio.qopt.num_tc = tc_num;
+	mlx5e_setup_tc_mqprio(priv, &mqprio);
 	rtnl_unlock();
 	return count;
 }
@@ -208,7 +204,7 @@ static ssize_t mlx5e_show_lro_timeout(struct device *device,
 
 	rtnl_lock();
 	len += sprintf(buf + len, "Actual timeout: %d\n",
-		       priv->channels.params.lro_timeout);
+		       priv->channels.params.packet_merge.timeout);
 
 	len += sprintf(buf + len, "Supported timeout:");
 
@@ -248,13 +244,13 @@ static ssize_t mlx5e_store_lro_timeout(struct device *device,
 
 	mutex_lock(&priv->state_lock);
 
-	if (priv->channels.params.lro_timeout == lro_timeout) {
+	if (priv->channels.params.packet_merge.timeout == lro_timeout) {
 		err = 0;
 		goto unlock;
 	}
 
-	priv->channels.params.lro_timeout = lro_timeout;
-	err = mlx5e_modify_tirs_lro(priv);
+	priv->channels.params.packet_merge.timeout = lro_timeout;
+	err = mlx5e_modify_tirs_packet_merge(priv);
 
 unlock:
 	mutex_unlock(&priv->state_lock);
@@ -288,20 +284,25 @@ static ssize_t mlx5e_show_hfunc(struct device *device,
 				char *buf)
 {
 	struct mlx5e_priv *priv = netdev_priv(to_net_dev(device));
-	struct mlx5e_rss_params *rss = &priv->rss_params;
-	int len = 0;
+	u8 hfunc;
+	int err, len = 0;
 
 	rtnl_lock();
+	mutex_lock(&priv->state_lock);
+	err = mlx5e_rx_res_rss_get_rxfh(priv->rx_res, 0, NULL, NULL, &hfunc);
+	mutex_unlock(&priv->state_lock);
+	if (err)
+		goto out;
 
 	len += sprintf(buf + len, "Operational hfunc: %s\n",
-		       rss->hfunc == MLX5E_HFUNC_XOR ?
+		       hfunc == MLX5E_HFUNC_XOR ?
 		       "xor" : "toeplitz");
-
 	len += sprintf(buf + len, "Supported hfuncs: xor toeplitz\n");
 
+out:
 	rtnl_unlock();
 
-	return len;
+	return err ? err : len;
 }
 
 static ssize_t mlx5e_store_hfunc(struct device *device,
@@ -309,8 +310,6 @@ static ssize_t mlx5e_store_hfunc(struct device *device,
 				 const char *buf, size_t count)
 {
 	struct mlx5e_priv *priv = netdev_priv(to_net_dev(device));
-	struct mlx5e_rss_params *rss = &priv->rss_params;
-	u32 in[MLX5_ST_SZ_DW(modify_tir_in)] = {0};
 	struct net_device *netdev = priv->netdev;
 	char hfunc[ETH_GSTRING_LEN];
 	u8 ethtool_hfunc;
@@ -330,16 +329,13 @@ static ssize_t mlx5e_store_hfunc(struct device *device,
 
 	rtnl_lock();
 	mutex_lock(&priv->state_lock);
-
-	if (rss->hfunc == ethtool_hfunc)
-		goto unlock;
-
-	rss->hfunc = ethtool_hfunc;
-	mlx5e_sysfs_modify_tirs_hash(priv, in, sizeof(in));
-
-unlock:
+	err = mlx5e_rx_res_rss_set_rxfh(priv->rx_res, 0, NULL, NULL,
+					&ethtool_hfunc);
 	mutex_unlock(&priv->state_lock);
 	rtnl_unlock();
+
+	if (err)
+		return err;
 
 	return count;
 
@@ -355,17 +351,14 @@ static ssize_t mlx5e_show_link_down_reason(struct device *device,
 					    struct device_attribute *attr,
 					    char *buf)
 {
-	u8 status_message[MLX5_FLD_SZ_BYTES(troubleshooting_info_page_layout,
+	char status_message[MLX5_FLD_SZ_BYTES(pddr_troubleshooting_page,
 					    status_message)];
 	struct mlx5e_priv *priv = netdev_priv(to_net_dev(device));
-	u16 monitor_opcode;
+	u16 monitor_opcode = 0;
 	int len = 0;
-	int err;
 
-	err = mlx5_query_pddr_troubleshooting_info(priv->mdev, &monitor_opcode,
-						   status_message);
-	if (err)
-		return err;
+	if (mlx5_query_port_status(priv->mdev, NULL, &monitor_opcode, status_message))
+		return -ENODATA;
 
 	len += sprintf(buf + len, "monitor_opcode: %#x\n", monitor_opcode);
 	len += sprintf(buf + len, "status_message: %s\n", status_message);
@@ -651,7 +644,8 @@ static void mlx5e_fill_attributes(struct mlx5e_priv *priv,
 				  int proto)
 {
 	const char *priority_arr[8] = {"0", "1", "2", "3", "4", "5", "6", "7"};
-	struct mlx5e_ecn_ctx *ecn_ctx = &priv->ecn_ctx[proto];
+	struct mlx5e_resources *res = &priv->mdev->mlx5e_res;
+	struct mlx5e_ecn_ctx *ecn_ctx = &res->compat.ecn_ctx[proto];
 	struct mlx5e_ecn_enable_ctx *ecn_enable_ctx;
 	int i, err;
 
@@ -659,7 +653,7 @@ static void mlx5e_fill_attributes(struct mlx5e_priv *priv,
 				   ecn_ctx->ecn_proto_kobj);
 
 	for (i = 0; i < 8; i++) {
-		ecn_enable_ctx = &priv->ecn_enable_ctx[proto][i];
+		ecn_enable_ctx = &res->compat.ecn_enable_ctx[proto][i];
 		ecn_enable_ctx->priority = i;
 		ecn_enable_ctx->cong_protocol = proto;
 		ecn_enable_ctx->mdev = priv->mdev;
@@ -687,56 +681,6 @@ static void mlx5e_fill_attributes(struct mlx5e_priv *priv,
 }
 
 #ifdef CONFIG_MLX5_ESWITCH
-static ssize_t mlx5e_show_vepa(struct device *device,
-			       struct device_attribute *attr,
-			       char *buf)
-{
-	struct net_device *dev = to_net_dev(device);
-	struct mlx5e_priv *priv = netdev_priv(dev);
-	struct mlx5_core_dev *mdev = priv->mdev;
-	int len = 0;
-	u8 setting;
-	int err;
-
-	err = mlx5_eswitch_get_vepa(mdev->priv.eswitch, &setting);
-	if (err)
-		return err;
-
-	len += sprintf(buf, "%d\n", setting);
-
-	return len;
-}
-
-static ssize_t mlx5e_store_vepa(struct device *device,
-				struct device_attribute *attr,
-				const char *buf, size_t count)
-{
-	struct net_device *dev = to_net_dev(device);
-	struct mlx5e_priv *priv = netdev_priv(dev);
-	struct mlx5_core_dev *mdev = priv->mdev;
-	int udata, err;
-	u8 setting;
-
-	err = sscanf(buf, "%d", &udata);
-	if (err != 1)
-		return -EINVAL;
-
-	if (udata > 1 || udata < 0)
-		return -EINVAL;
-
-	setting = (u8)udata;
-
-	err = mlx5_eswitch_set_vepa(mdev->priv.eswitch, setting);
-	if (err)
-		return err;
-
-	return count;
-}
-
-static DEVICE_ATTR(vepa, S_IRUGO | S_IWUSR,
-		   mlx5e_show_vepa,
-		   mlx5e_store_vepa);
-
 static ssize_t mlx5e_show_vf_roce(struct device *device,
 				  struct device_attribute *attr,
 				  char *buf)
@@ -746,15 +690,22 @@ static ssize_t mlx5e_show_vf_roce(struct device *device,
 	struct mlx5_eswitch *esw = mdev->priv.eswitch;
 	struct mlx5_vport *vport;
 	int len = 0;
+	int num_vfs;
 	bool mode;
 	int err = 0;
-	int i;
+	unsigned long i;
 
-	mlx5_esw_for_each_vf_vport(esw, i, vport, esw->esw_funcs.num_vfs) {
+	/* This is a workaround for RM 2769801 */
+	if (mlx5_core_is_ecpf_esw_manager(esw->dev))
+		num_vfs = esw->esw_funcs.num_vfs;
+	else
+		num_vfs = pci_num_vf(mdev->pdev);
+
+	mlx5_esw_for_each_vf_vport(esw, i, vport, num_vfs) {
 		err = mlx5_eswitch_vport_get_other_hca_cap_roce(esw, vport, &mode);
 		if (err)
 			break;
-		len += sprintf(buf + len, "vf_num %d: %d\n", i - 1, mode);
+		len += sprintf(buf + len, "vf_num %lu: %d\n", i - 1, mode);
 	}
 
 	if (err)
@@ -793,27 +744,28 @@ static ssize_t mlx5e_store_vf_roce(struct device *device,
 static void mlx5e_remove_attributes(struct mlx5e_priv *priv,
 				    int proto)
 {
-	struct mlx5e_ecn_ctx *ecn_ctx = &priv->ecn_ctx[proto];
+	struct mlx5e_ecn_ctx *ecn_ctx = &priv->mdev->mlx5e_res.compat.ecn_ctx[proto];
+	struct mlx5e_resources *res = &priv->mdev->mlx5e_res;
 	struct mlx5e_ecn_enable_ctx *ecn_enable_ctx;
 	int i;
 
 	for (i = 0; i < 8; i++) {
-		ecn_enable_ctx = &priv->ecn_enable_ctx[proto][i];
-		sysfs_remove_file(priv->ecn_ctx[proto].ecn_enable_kobj,
+		ecn_enable_ctx = &res->compat.ecn_enable_ctx[proto][i];
+		sysfs_remove_file(res->compat.ecn_ctx[proto].ecn_enable_kobj,
 				  &ecn_enable_ctx->enable.attr);
 	}
 
-	kobject_put(priv->ecn_ctx[proto].ecn_enable_kobj);
+	kobject_put(res->compat.ecn_ctx[proto].ecn_enable_kobj);
 
 	switch (proto) {
 	case MLX5E_CON_PROTOCOL_802_1_RP:
 		return;
 	case MLX5E_CON_PROTOCOL_R_ROCE_RP:
-		mlx5e_remove_rp_attributes(priv->ecn_ctx[proto].ecn_proto_kobj,
+		mlx5e_remove_rp_attributes(res->compat.ecn_ctx[proto].ecn_proto_kobj,
 					   &ecn_ctx->ecn_attr.rp_attr);
 		break;
 	case MLX5E_CON_PROTOCOL_R_ROCE_NP:
-		mlx5e_remove_np_attributes(priv->ecn_ctx[proto].ecn_proto_kobj,
+		mlx5e_remove_np_attributes(res->compat.ecn_ctx[proto].ecn_proto_kobj,
 					   &ecn_ctx->ecn_attr.np_attr);
 		break;
 	}
@@ -1105,8 +1057,12 @@ static ssize_t name##_show(struct device *d,				\
 {									\
 	struct net_device *dev = to_net_dev(d);				\
 	struct mlx5e_priv *priv = netdev_priv(dev);			\
-	struct mlx5e_pport_stats *pstats = &priv->stats.pport;		\
+	struct mlx5e_pport_stats *pstats;				\
 									\
+	mutex_lock(&priv->state_lock);					\
+	mlx5e_stats_update(priv);					\
+	mutex_unlock(&priv->state_lock);				\
+	pstats = &priv->stats.pport;					\
 	return sprintf(buf, "%llu\n",					\
 			PPORT_802_3_GET(pstats, cnt));			\
 }									\
@@ -1170,10 +1126,6 @@ static int update_settings_sysfs(struct net_device *dev,
 		err = sysfs_add_file_to_group(&dev->dev.kobj,
 					      &dev_attr_vf_roce.attr,
 					      "settings");
-
-		err = sysfs_add_file_to_group(&dev->dev.kobj,
-					      &dev_attr_vepa.attr,
-					      "settings");
 	}
 #endif
 
@@ -1187,18 +1139,386 @@ static int update_settings_sysfs(struct net_device *dev,
 	return err;
 }
 
+#if IS_ENABLED(CONFIG_MLX5_CLS_ACT)
+struct prio_hp_attributes {
+	struct attribute attr;
+	ssize_t (*show)(struct mlx5_prio_hp *, struct prio_hp_attributes *,
+			char *buf);
+	ssize_t (*store)(struct mlx5_prio_hp *, struct prio_hp_attributes *,
+			 const char *buf, size_t count);
+};
+
+static ssize_t prio_hp_attr_show(struct kobject *kobj,
+				 struct attribute *attr, char *buf)
+{
+	struct prio_hp_attributes *ga =
+		container_of(attr, struct prio_hp_attributes, attr);
+	struct mlx5_prio_hp *g = container_of(kobj, struct mlx5_prio_hp, kobj);
+
+	if (!ga->show)
+		return -EIO;
+
+	return ga->show(g, ga, buf);
+}
+
+static ssize_t prio_hp_attr_store(struct kobject *kobj,
+				  struct attribute *attr,
+				  const char *buf, size_t size)
+{
+	struct prio_hp_attributes *ga =
+		container_of(attr, struct prio_hp_attributes, attr);
+	struct mlx5_prio_hp *g = container_of(kobj, struct mlx5_prio_hp, kobj);
+
+	if (!ga->store)
+		return -EIO;
+
+	return ga->store(g, ga, buf, size);
+}
+
+static const struct sysfs_ops prio_hp_ops = {
+	.show = prio_hp_attr_show,
+	.store = prio_hp_attr_store,
+};
+
+static ssize_t rate_store(struct mlx5_prio_hp *g,
+			  struct prio_hp_attributes *oa,
+			  const char *buf,
+			  size_t count)
+{
+	struct mlx5e_priv *priv = g->priv;
+	struct mlx5_core_dev *mdev = priv->mdev;
+	int user_rate, rate;
+	int err;
+
+	if (sscanf(buf, "%d", &user_rate) != 1)
+		return -EINVAL;
+
+	if (user_rate == g->rate)
+		/* nothing to do */
+		return count;
+
+	if (!mlx5_rl_is_supported(mdev)) {
+		netdev_err(priv->netdev, "Rate limiting is not supported on this device\n");
+		return -EINVAL;
+	}
+
+	/* rate is given in Mb/sec, HW config is in Kb/sec */
+	rate = user_rate << 10;
+
+	/* Check whether rate in valid range, 0 is always valid */
+	if (rate && !mlx5_rl_is_in_range(mdev, rate)) {
+		netdev_err(priv->netdev, "TX rate %u, is not in range\n", rate);
+		return -ERANGE;
+	}
+
+	mutex_lock(&priv->state_lock);
+	if (test_bit(MLX5E_STATE_OPENED, &priv->state)) {
+		err = mlx5e_set_prio_hairpin_rate(priv, g->prio, rate);
+		if (err) {
+			mutex_unlock(&priv->state_lock);
+
+			return err;
+		}
+	}
+
+	g->rate = user_rate;
+	mutex_unlock(&priv->state_lock);
+
+	return count;
+}
+
+static ssize_t rate_show(struct mlx5_prio_hp *g, struct prio_hp_attributes *oa,
+			 char *buf)
+{
+	return sprintf(buf, "%d\n", g->rate);
+}
+
+#define PRIO_HP_ATTR(_name) struct prio_hp_attributes prio_hp_attr_##_name = \
+	__ATTR(_name, 0644, _name##_show, _name##_store)
+PRIO_HP_ATTR(rate);
+
+static struct attribute *prio_hp_attrs[] = {
+	&prio_hp_attr_rate.attr,
+	NULL
+};
+
+static struct kobj_type prio_hp_sysfs = {
+	.sysfs_ops     = &prio_hp_ops,
+	.default_attrs = prio_hp_attrs
+};
+
+int create_prio_hp_sysfs(struct mlx5e_priv *priv, int prio)
+{
+	struct mlx5e_tc_table *tc = &priv->fs.tc;
+	struct mlx5_prio_hp *prio_hp = tc->prio_hp;
+	int err;
+
+	err = kobject_init_and_add(&prio_hp[prio].kobj, &prio_hp_sysfs, tc->hp_config,
+				   "%d", prio);
+	if (err) {
+		netdev_err(priv->netdev, "can't create hp queues per q sysfs %d, err %d\n",
+			   prio, err);
+		return err;
+	}
+
+	kobject_uevent(&prio_hp[prio].kobj, KOBJ_ADD);
+
+	return 0;
+}
+
+static ssize_t prio_hp_num_store(struct device *device, struct device_attribute *attr,
+				 const char *buf, size_t count)
+{
+	struct mlx5e_priv *priv = netdev_priv(to_net_dev(device));
+	struct mlx5e_tc_table *tc = &priv->fs.tc;
+	struct net_device *peer_dev;
+	char ifname[IFNAMSIZ];
+	int num_hp;
+	int err;
+
+	err = sscanf(buf, "%d %15s", &num_hp, ifname);
+	if (err != 2)
+		return -EINVAL;
+
+	if (num_hp < 0 || num_hp > MLX5E_MAX_HP_PRIO)
+		return -EINVAL;
+
+	rtnl_lock();
+	mutex_lock(&priv->state_lock);
+
+	peer_dev = __dev_get_by_name(dev_net(priv->netdev), ifname);
+	if (!peer_dev)
+		return -EINVAL;
+
+	if (num_hp && !tc->num_prio_hp) {
+		err = mlx5e_prio_hairpin_mode_enable(priv, num_hp, peer_dev);
+		if (err)
+			goto err_config;
+	} else if (!num_hp && tc->num_prio_hp) {
+		err = mlx5e_prio_hairpin_mode_disable(priv);
+		if (err)
+			goto err_config;
+	} else {
+		err = -EINVAL;
+		goto err_config;
+	}
+
+	mutex_unlock(&priv->state_lock);
+	rtnl_unlock();
+
+	return count;
+
+err_config:
+	mutex_unlock(&priv->state_lock);
+	rtnl_unlock();
+	return err;
+}
+
+static ssize_t prio_hp_num_show(struct device *device, struct device_attribute *attr,
+				char *buf)
+{
+	struct mlx5e_priv *priv = netdev_priv(to_net_dev(device));
+	struct mlx5e_tc_table *tc = &priv->fs.tc;
+	ssize_t result;
+
+	mutex_lock(&priv->state_lock);
+	result = sprintf(buf, "%d\n", tc->num_prio_hp);
+	mutex_unlock(&priv->state_lock);
+
+	return result;
+}
+
+static ssize_t hp_oob_cnt_mode_store(struct device *device, struct device_attribute *attr,
+				     const char *buf, size_t count)
+{
+	struct mlx5e_priv *priv = netdev_priv(to_net_dev(device));
+	struct mlx5e_tc_table *tc = &priv->fs.tc;
+	struct net_device *peer_dev;
+	char ifname[IFNAMSIZ];
+	char mode[5];
+	int err;
+
+	err = sscanf(buf, "%s %15s", mode, ifname);
+	if (err != 2)
+		return -EINVAL;
+
+	if (strcmp(mode, "on") && strcmp(mode, "off"))
+		return -EINVAL;
+
+	rtnl_lock();
+	mutex_lock(&priv->state_lock);
+
+	peer_dev = __dev_get_by_name(dev_net(priv->netdev), ifname);
+	if (!peer_dev)
+		return -EINVAL;
+
+	if (!strcmp(mode, "on") && !tc->hp_oob) {
+		err = mlx5e_hairpin_oob_cnt_enable(priv, peer_dev);
+		if (err)
+			goto err_config;
+	} else if (!strcmp(mode, "off") && tc->hp_oob) {
+		err = mlx5e_hairpin_oob_cnt_disable(priv);
+		if (err)
+			goto err_config;
+	} else {
+		err = -EINVAL;
+		goto err_config;
+	}
+
+	mutex_unlock(&priv->state_lock);
+	rtnl_unlock();
+
+	return count;
+
+err_config:
+	mutex_unlock(&priv->state_lock);
+	rtnl_unlock();
+	return err;
+}
+
+static ssize_t hp_oob_cnt_mode_show(struct device *device, struct device_attribute *attr,
+				    char *buf)
+{
+	struct mlx5e_priv *priv = netdev_priv(to_net_dev(device));
+	struct mlx5e_tc_table *tc = &priv->fs.tc;
+	ssize_t result;
+
+	mutex_lock(&priv->state_lock);
+	result = sprintf(buf, "%s\n", tc->hp_oob ? "on" : "off");
+	mutex_unlock(&priv->state_lock);
+
+	return result;
+}
+
+static ssize_t hp_oob_cnt_show(struct device *device, struct device_attribute *attr,
+			       char *buf)
+{
+	struct mlx5e_priv *priv = netdev_priv(to_net_dev(device));
+	ssize_t result;
+	u64 oob_cnt;
+
+	mutex_lock(&priv->state_lock);
+	mlx5e_hairpin_oob_cnt_get(priv, &oob_cnt);
+	result = sprintf(buf, "%llu\n", oob_cnt);
+	mutex_unlock(&priv->state_lock);
+
+	return result;
+}
+
+/* Limiting max packet pacing burst size configuration using
+ * a typical 1514 Byte MTU size.
+ */
+#define MLX5E_MAX_HP_PP_BURST_MTUS 30
+#define MLX5E_MAX_HP_PP_BURST_SIZE (MLX5E_MAX_HP_PP_BURST_MTUS * 1514)
+static ssize_t pp_burst_size_store(struct device *device, struct device_attribute *attr,
+				   const char *buf, size_t count)
+{
+	struct mlx5e_priv *priv = netdev_priv(to_net_dev(device));
+	struct mlx5e_tc_table *tc = &priv->fs.tc;
+	int burst_size;
+	int err;
+
+	if (!MLX5_CAP_QOS(priv->mdev, packet_pacing_burst_bound)) {
+		netdev_warn(priv->netdev, "Packet pacing burst size config is not supported by the device\n");
+		return -EOPNOTSUPP;
+	}
+
+	err = sscanf(buf, "%d", &burst_size);
+	if (err != 1)
+		return -EINVAL;
+
+	if (burst_size < 0 || burst_size > MLX5E_MAX_HP_PP_BURST_SIZE)
+		return -EINVAL;
+
+	rtnl_lock();
+	mutex_lock(&priv->state_lock);
+
+	tc->max_pp_burst_size = burst_size;
+
+	mutex_unlock(&priv->state_lock);
+	rtnl_unlock();
+
+	return count;
+}
+
+static ssize_t pp_burst_size_show(struct device *device, struct device_attribute *attr,
+				  char *buf)
+{
+	struct mlx5e_priv *priv = netdev_priv(to_net_dev(device));
+	struct mlx5e_tc_table *tc = &priv->fs.tc;
+	ssize_t result;
+
+	mutex_lock(&priv->state_lock);
+	result = sprintf(buf, "%d\n", tc->max_pp_burst_size);
+	mutex_unlock(&priv->state_lock);
+
+	return result;
+}
+
+static DEVICE_ATTR(num_prio_hp, S_IRUGO | S_IWUSR,
+		   prio_hp_num_show, prio_hp_num_store);
+static DEVICE_ATTR(hp_pp_burst_size, S_IRUGO | S_IWUSR,
+		   pp_burst_size_show, pp_burst_size_store);
+static DEVICE_ATTR(hp_oob_cnt_mode, S_IRUGO | S_IWUSR,
+		   hp_oob_cnt_mode_show, hp_oob_cnt_mode_store);
+static DEVICE_ATTR_RO(hp_oob_cnt);
+
+static struct device_attribute *mlx5_class_attributes[] = {
+	&dev_attr_num_prio_hp,
+	&dev_attr_hp_pp_burst_size,
+	&dev_attr_hp_oob_cnt_mode,
+	&dev_attr_hp_oob_cnt,
+};
+
+int hp_sysfs_init(struct mlx5e_priv *priv)
+{
+	struct device *device = &priv->netdev->dev;
+	int i, err;
+
+	for (i = 0; i < ARRAY_SIZE(mlx5_class_attributes); i++) {
+		err = device_create_file(device, mlx5_class_attributes[i]);
+		if (err)
+			return err;
+	}
+
+	return 0;
+}
+
+void hp_sysfs_cleanup(struct mlx5e_priv *priv)
+{
+	struct device *device = &priv->netdev->dev;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(mlx5_class_attributes); i++)
+		device_remove_file(device, mlx5_class_attributes[i]);
+}
+
+#else
+
+int hp_sysfs_init(struct mlx5e_priv *priv)
+{ return 0; }
+
+void hp_sysfs_cleanup(struct mlx5e_priv *priv)
+{}
+
+#endif /*CONFIG_MLX5_CLS_ACT*/
+
 int mlx5e_sysfs_create(struct net_device *dev)
 {
 	struct mlx5e_priv *priv = netdev_priv(dev);
+	struct mlx5e_resources *res = &priv->mdev->mlx5e_res;
 	int err = 0;
 	int i;
 
-	priv->ecn_root_kobj = kobject_create_and_add("ecn", &dev->dev.kobj);
+	if (mlx5_core_is_sf(priv->mdev))
+		return 0;
+
+	res->compat.ecn_root_kobj = kobject_create_and_add("ecn", &dev->dev.kobj);
 
 	for (i = 1; i < MLX5E_CONG_PROTOCOL_NUM; i++) {
-		priv->ecn_ctx[i].ecn_proto_kobj = kobject_create_and_add(
-					     mlx5e_get_cong_protocol(i),
-					     priv->ecn_root_kobj);
+		res->compat.ecn_ctx[i].ecn_proto_kobj =
+			kobject_create_and_add(mlx5e_get_cong_protocol(i),
+					       res->compat.ecn_root_kobj);
 		mlx5e_fill_attributes(priv, i);
 	}
 
@@ -1219,12 +1539,10 @@ int mlx5e_sysfs_create(struct net_device *dev)
 		goto remove_qos_group;
 
 	err = sysfs_create_group(&dev->dev.kobj, &debug_group);
-
 	if (err)
 		goto remove_qos_group;
 
 	err = sysfs_create_group(&dev->dev.kobj, &phy_stat_group);
-
 	if (err)
 		goto remove_debug_group;
 
@@ -1233,8 +1551,16 @@ int mlx5e_sysfs_create(struct net_device *dev)
 	if (err)
 		goto remove_phy_stat_group;
 
+	err = hp_sysfs_init(priv);
+	if (err)
+		goto remove_rx_page_cache_group;
+
+	mlx5_eswitch_compat_sysfs_init(dev);
+
 	return 0;
 
+remove_rx_page_cache_group:
+	sysfs_remove_group(&dev->dev.kobj, &rx_page_cache_group);
 remove_phy_stat_group:
 	sysfs_remove_group(&dev->dev.kobj, &phy_stat_group);
 remove_debug_group:
@@ -1246,10 +1572,11 @@ remove_settings_group:
 remove_attributes:
 	for (i = 1; i < MLX5E_CONG_PROTOCOL_NUM; i++) {
 		mlx5e_remove_attributes(priv, i);
-		kobject_put(priv->ecn_ctx[i].ecn_proto_kobj);
+		kobject_put(res->compat.ecn_ctx[i].ecn_proto_kobj);
 	}
 
-	kobject_put(priv->ecn_root_kobj);
+	kobject_put(res->compat.ecn_root_kobj);
+	res->compat.ecn_root_kobj = NULL;
 
 	return err;
 }
@@ -1257,174 +1584,29 @@ remove_attributes:
 void mlx5e_sysfs_remove(struct net_device *dev)
 {
 	struct mlx5e_priv *priv = netdev_priv(dev);
+	struct mlx5e_resources *res = &priv->mdev->mlx5e_res;
 	int i;
+
+	if (mlx5_core_is_sf(priv->mdev))
+		return;
+
+	if (!res->compat.ecn_root_kobj)
+		return;
+
+	mlx5_eswitch_compat_sysfs_cleanup(dev);
 
 	sysfs_remove_group(&dev->dev.kobj, &qos_group);
 	sysfs_remove_group(&dev->dev.kobj, &debug_group);
 	sysfs_remove_group(&dev->dev.kobj, &settings_group);
 	sysfs_remove_group(&dev->dev.kobj, &phy_stat_group);
 	sysfs_remove_group(&dev->dev.kobj, &rx_page_cache_group);
+	hp_sysfs_cleanup(priv);
 
 	for (i = 1; i < MLX5E_CONG_PROTOCOL_NUM; i++) {
 		mlx5e_remove_attributes(priv, i);
-		kobject_put(priv->ecn_ctx[i].ecn_proto_kobj);
+		kobject_put(res->compat.ecn_ctx[i].ecn_proto_kobj);
 	}
 
-	kobject_put(priv->ecn_root_kobj);
+	kobject_put(res->compat.ecn_root_kobj);
+	res->compat.ecn_root_kobj = NULL;
 }
-
-#ifdef CONFIG_MLX5_EN_SPECIAL_SQ
-enum {
-	ATTR_DST_IP,
-	ATTR_DST_PORT,
-};
-
-static ssize_t mlx5e_flow_param_show(struct netdev_queue *queue,
-				     char *buf, int type)
-{
-	struct net_device *netdev = queue->dev;
-	struct mlx5e_priv *priv = netdev_priv(netdev);
-	struct mlx5e_txqsq *sq = priv->txq2sq[queue - netdev->_tx];
-	int len;
-
-	switch (type) {
-	case ATTR_DST_IP:
-		len = sprintf(buf, "0x%8x\n", ntohl(sq->flow_map.dst_ip));
-		break;
-	case ATTR_DST_PORT:
-		len = sprintf(buf, "%d\n", ntohs(sq->flow_map.dst_port));
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	return len;
-}
-
-static ssize_t mlx5e_flow_param_store(struct netdev_queue *queue,
-				      const char *buf, size_t len, int type)
-{
-	struct net_device *netdev = queue->dev;
-	struct mlx5e_priv *priv = netdev_priv(netdev);
-	unsigned int queue_index = queue - netdev->_tx;
-	struct mlx5e_txqsq *sq = priv->txq2sq[queue_index];
-	int err = 0;
-	u32 key;
-
-	switch (type) {
-	case ATTR_DST_IP:
-		err  = kstrtou32(buf, 16, &sq->flow_map.dst_ip);
-		if (err < 0)
-			return err;
-		sq->flow_map.dst_ip = htonl(sq->flow_map.dst_ip);
-		break;
-	case ATTR_DST_PORT:
-		err  = kstrtou16(buf, 0, &sq->flow_map.dst_port);
-		if (err < 0)
-			return err;
-		sq->flow_map.dst_port = htons(sq->flow_map.dst_port);
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	/* Each queue can only apear once in the hash table */
-	hash_del_rcu(&sq->flow_map.hlist);
-	sq->flow_map.queue_index = queue_index;
-
-	if (sq->flow_map.dst_ip != 0 || sq->flow_map.dst_port != 0) {
-		/* hash and add to hash table */
-		key = sq->flow_map.dst_ip ^ sq->flow_map.dst_port;
-		hash_add_rcu(priv->flow_map_hash, &sq->flow_map.hlist, key);
-	}
-
-	return len;
-}
-
-static ssize_t mlx5e_dst_port_store(struct netdev_queue *queue,
-				    const char *buf, size_t len)
-{
-	return mlx5e_flow_param_store(queue, buf, len, ATTR_DST_PORT);
-}
-
-static ssize_t mlx5e_dst_port_show(struct netdev_queue *queue,
-				   char *buf)
-{
-	return mlx5e_flow_param_show(queue, buf, ATTR_DST_PORT);
-}
-
-static ssize_t mlx5e_dst_ip_store(struct netdev_queue *queue,
-				  const char *buf, size_t len)
-{
-	return mlx5e_flow_param_store(queue, buf, len, ATTR_DST_IP);
-}
-
-static ssize_t mlx5e_dst_ip_show(struct netdev_queue *queue,
-				 char *buf)
-{
-	return mlx5e_flow_param_show(queue, buf, ATTR_DST_IP);
-}
-
-static struct netdev_queue_attribute dst_port = {
-	.attr  = {.name = "dst_port",
-		  .mode = (S_IWUSR | S_IRUGO) },
-	.show  = mlx5e_dst_port_show,
-	.store = mlx5e_dst_port_store,
-};
-
-static struct netdev_queue_attribute dst_ip = {
-	.attr  = {.name = "dst_ip",
-		  .mode = (S_IWUSR | S_IRUGO) },
-	.show  = mlx5e_dst_ip_show,
-	.store = mlx5e_dst_ip_store,
-};
-
-static struct attribute *mlx5e_txmap_attrs[] = {
-	&dst_port.attr,
-	&dst_ip.attr,
-	NULL
-};
-
-static struct attribute_group mlx5e_txmap_attr = {
-	.name = "flow_map",
-	.attrs = mlx5e_txmap_attrs
-};
-
-int mlx5e_rl_init_sysfs(struct net_device *netdev, struct mlx5e_params params)
-{
-	struct netdev_queue *txq;
-	int q_ix;
-	int err;
-	int i;
-
-	for (i = 0; i < params.num_rl_txqs; i++) {
-		q_ix = i + params.num_channels * params.num_tc;
-		txq = netdev_get_tx_queue(netdev, q_ix);
-		err = sysfs_create_group(&txq->kobj, &mlx5e_txmap_attr);
-		if (err)
-			goto err;
-	}
-	return 0;
-err:
-	for (--i; i >= 0; i--) {
-		q_ix = i + params.num_channels * params.num_tc;
-		txq = netdev_get_tx_queue(netdev, q_ix);
-		sysfs_remove_group(&txq->kobj, &mlx5e_txmap_attr);
-	}
-	return err;
-}
-
-void mlx5e_rl_remove_sysfs(struct mlx5e_priv *priv)
-{
-	struct netdev_queue *txq;
-	int q_ix;
-	int i;
-
-	for (i = 0; i < priv->channels.params.num_rl_txqs; i++) {
-		q_ix = i + priv->channels.params.num_channels *
-					priv->channels.params.num_tc;
-		txq = netdev_get_tx_queue(priv->netdev, q_ix);
-		sysfs_remove_group(&txq->kobj, &mlx5e_txmap_attr);
-	}
-}
-#endif /*CONFIG_MLX5_EN_SPECIAL_SQ*/

@@ -7,9 +7,7 @@
 #include_next <linux/pm_qos.h>
 
 #if !defined(HAVE_PM_QOS_UPDATE_USER_LATENCY_TOLERANCE_EXPORTED)
-#if defined(HAVE_DEV_PM_QOS_RESUME_LATENCY) && \
-    defined(HAVE_DEV_PM_QOS_LATENCY_TOLERANCE) && \
-    defined(HAVE_PM_QOS_LATENCY_TOLERANCE_NO_CONSTRAINT)
+#ifdef HAVE_DEV_PM_QOS_RESUME_LATENCY
 #define dev_pm_qos_drop_user_request LINUX_BACKPORT(dev_pm_qos_drop_user_request)
 static inline void dev_pm_qos_drop_user_request(struct device *dev,
 						enum dev_pm_qos_req_type type)
@@ -17,18 +15,20 @@ static inline void dev_pm_qos_drop_user_request(struct device *dev,
 	struct dev_pm_qos_request *req = NULL;
 
 	switch(type) {
-	case DEV_PM_QOS_RESUME_LATENCY:
-		req = dev->power.qos->resume_latency_req;
-		dev->power.qos->resume_latency_req = NULL;
-		break;
-	case DEV_PM_QOS_LATENCY_TOLERANCE:
-		req = dev->power.qos->latency_tolerance_req;
-		dev->power.qos->latency_tolerance_req = NULL;
-		break;
-	case DEV_PM_QOS_FLAGS:
-		req = dev->power.qos->flags_req;
-		dev->power.qos->flags_req = NULL;
-		break;
+		case DEV_PM_QOS_RESUME_LATENCY:
+			req = dev->power.qos->resume_latency_req;
+			dev->power.qos->resume_latency_req = NULL;
+			break;
+		case DEV_PM_QOS_LATENCY_TOLERANCE:
+			req = dev->power.qos->latency_tolerance_req;
+			dev->power.qos->latency_tolerance_req = NULL;
+			break;
+		case DEV_PM_QOS_FLAGS:
+			req = dev->power.qos->flags_req;
+			dev->power.qos->flags_req = NULL;
+			break;
+		default:
+			return;
 	}
 	dev_pm_qos_remove_request(req);
 	kfree(req);

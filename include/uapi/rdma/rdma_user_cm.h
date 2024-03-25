@@ -164,6 +164,8 @@ struct rdma_ucm_query_route_resp {
 	__u32 num_paths;
 	__u8 port_num;
 	__u8 reserved[3];
+	__u32 ibdev_index;
+	__u32 reserved1;
 };
 
 struct rdma_ucm_query_addr_resp {
@@ -175,6 +177,8 @@ struct rdma_ucm_query_addr_resp {
 	__u16 dst_size;
 	struct __kernel_sockaddr_storage src_addr;
 	struct __kernel_sockaddr_storage dst_addr;
+	__u32 ibdev_index;
+	__u32 reserved1;
 };
 
 struct rdma_ucm_query_path_resp {
@@ -234,7 +238,8 @@ struct rdma_ucm_accept {
 struct rdma_ucm_reject {
 	__u32 id;
 	__u8  private_data_len;
-	__u8  reserved[3];
+	__u8  reason;
+	__u8  reserved[2];
 	__u8  private_data[RDMA_MAX_PRIVATE_DATA];
 };
 

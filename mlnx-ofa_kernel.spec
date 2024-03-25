@@ -31,7 +31,7 @@
 
 %global WITH_SYSTEMD %(if ( test -d "%{_unitdir}" > /dev/null); then echo -n '1'; else echo -n '0'; fi)
 
-%{!?configure_options: %global configure_options --with-core-mod --with-user_mad-mod --with-user_access-mod --with-addr_trans-mod --with-mlx4-mod --with-mlx4_en-mod --with-mlx5-mod --with-mlxfw-mod --with-ipoib-mod}
+%{!?configure_options: %global configure_options --with-core-mod --with-user_mad-mod --with-user_access-mod --with-addr_trans-mod --with-mlx5-mod --with-mlxfw-mod --with-ipoib-mod}
 
 %global MEMTRACK %(if ( echo %{configure_options} | grep "with-memtrack" > /dev/null ); then echo -n '1'; else echo -n '0'; fi)
 %global MADEYE %(if ( echo %{configure_options} | grep "with-madeye-mod" > /dev/null ); then echo -n '1'; else echo -n '0'; fi)
@@ -40,21 +40,16 @@
 %global POWERKVM %(if (grep -qiE "powerkvm" /etc/issue /etc/*release* 2>/dev/null); then echo -n '1'; else echo -n '0'; fi)
 %global BLUENIX %(if (grep -qiE "Bluenix" /etc/issue /etc/*release* 2>/dev/null); then echo -n '1'; else echo -n '0'; fi)
 %global XENSERVER65 %(if (grep -qiE "XenServer.*6\.5" /etc/issue /etc/*release* 2>/dev/null); then echo -n '1'; else echo -n '0'; fi)
-# Force python3 on RHEL8, fedora3x, SLES15 and similar:
-%global RHEL8 0%{?rhel} >= 8
-%global FEDORA3X 0%{?fedora} >= 30
-%global SLES15 0%{?suse_version} >= 1500
-%global PYTHON3 %{RHEL8} || %{FEDORA3X} || %{SLES15}
-
-# Workaround: To be removed when mlnx_tune has python3 support:
-# mlnx_tune is a python2 script. Avoid generating dependencies
-# from it in some distributions to avoid dragging in a python2
-# dependency
-%if (!%{KMP}) && %{RHEL8}
-%global __requires_exclude_from mlnx_tune
-%endif
 
 %global IS_RHEL_VENDOR "%{_vendor}" == "redhat" || ("%{_vendor}" == "bclinux") || ("%{_vendor}" == "openEuler")
+%global KMOD_PREAMBLE "%{_vendor}" != "openEuler"
+
+# MarinerOS 1.0 sets -fPIE in the hardening cflags
+# (in the gcc specs file).
+# This seems to break only this package and not other kernel packages.
+%if "%{_vendor}" == "mariner"
+%global _hardened_cflags %{nil}
+%endif
 
 %{!?KVERSION: %global KVERSION %(uname -r)}
 %global kernel_version %{KVERSION}
@@ -67,9 +62,7 @@
 # Kernel module packages to be included into kernel-ib
 %global build_ipoib %(if ( echo %{configure_options} | grep "with-ipoib-mod" > /dev/null ); then echo -n '1'; else echo -n '0'; fi)
 %global build_oiscsi %(if ( echo %{configure_options} | grep "with-iscsi-mod" > /dev/null ); then echo -n '1'; else echo -n '0'; fi)
-%global build_mlx4 %(if ( echo %{configure_options} | grep "with-mlx4-mod" > /dev/null ); then echo -n '1'; else echo -n '0'; fi)
 %global build_mlx5 %(if ( echo %{configure_options} | grep "with-mlx5-mod" > /dev/null ); then echo -n '1'; else echo -n '0'; fi)
-%global build_mlx4_en %(if ( echo %{configure_options} | grep "with-mlx4_en-mod" > /dev/null ); then echo -n '1'; else echo -n '0'; fi)
 
 %{!?LIB_MOD_DIR: %global LIB_MOD_DIR /lib/modules/%{KVERSION}/updates}
 
@@ -78,19 +71,13 @@
 %{!?KERNEL_SOURCES: %global KERNEL_SOURCES /lib/modules/%{KVERSION}/source}
 
 %{!?_name: %global _name mlnx-ofa_kernel}
-%{!?_version: %global _version 4.9}
-%{!?_release: %global _release OFED.4.9.7.1.0.1}
+%{!?_version: %global _version 5.8}
+%{!?_release: %global _release OFED.5.8.4.1.5.1}
 %global _kmp_rel %{_release}%{?_kmp_build_num}%{?_dist}
 
 %global utils_pname %{_name}
 %global devel_pname %{_name}-devel
 %global non_kmp_pname %{_name}-modules
-
-%if %{PYTHON3}
-%global mlnx_python_env    export MLNX_PYTHON_EXECUTABLE=%{_bindir}/python3
-%else
-%global mlnx_python_env    :
-%endif
 
 Summary: Infiniband HCA Driver
 Name: %{_name}
@@ -103,14 +90,6 @@ Source: %{_name}-%{_version}.tgz
 BuildRoot: %{?build_root:%{build_root}}%{!?build_root:/var/tmp/OFED}
 Vendor: Mellanox Technologies
 Obsoletes: kernel-ib
-Obsoletes: compat-rdma
-Obsoletes: rdma
-Provides: rdma
-Obsoletes: rdma-core < 41mlnx1-1
-Provides: rdma-core = 41mlnx1-1
-Obsoletes: rdma-core-devel < 41mlnx1-1
-Provides: rdma-core-devel = 41mlnx1-1
-Provides: rdma-core-devel%{?_isa} = 41mlnx1-1
 Obsoletes: mlnx-en
 Obsoletes: mlnx_en
 Obsoletes: mlnx-en-utils
@@ -121,6 +100,7 @@ Obsoletes: mlnx-en-kmp-trace
 Obsoletes: mlnx-en-doc
 Obsoletes: mlnx-en-debuginfo
 Obsoletes: mlnx-en-sources
+Requires: mlnx-tools >= 5.2.0
 Requires: coreutils
 Requires: pciutils
 Requires: grep
@@ -134,7 +114,7 @@ BuildRequires: /usr/bin/perl
 %description 
 InfiniBand "verbs", Access Layer  and ULPs.
 Utilities rpm.
-The driver sources are located at: http://www.mellanox.com/downloads/ofed/mlnx-ofa_kernel-4.9-7.1.0.tgz
+The driver sources are located at: http://www.mellanox.com/downloads/ofed/mlnx-ofa_kernel-5.8-4.1.5.tgz
 
 
 # build KMP rpms?
@@ -148,30 +128,18 @@ The driver sources are located at: http://www.mellanox.com/downloads/ofed/mlnx-o
 %config(noreplace) %{_sysconfdir}/depmod.d/zz01-%{_name}-*.conf
 %endif
 EOF)
-%(echo "Requires: %{utils_pname}" > %{_builddir}/preamble)
 %(echo "Obsoletes: kmod-mlnx-rdma-rxe, mlnx-rdma-rxe-kmp" >> %{_builddir}/preamble)
-%kernel_module_package -f %{_builddir}/kmp.files -p %{_builddir}/preamble -r %{_kmp_rel}
+%if %KMOD_PREAMBLE
+%kernel_module_package -f %{_builddir}/kmp.files -r %{_kmp_rel} -p %{_builddir}/preamble
+%else
+%kernel_module_package -f %{_builddir}/kmp.files -r %{_kmp_rel}
+%endif
 %else # not KMP
 %global kernel_source() %{K_SRC}
 %global kernel_release() %{KVERSION}
 %global flavors_to_build default
 %package -n %{non_kmp_pname}
-Requires: %{utils_pname}
-Requires: coreutils
-Requires: pciutils
-Requires: grep
-Requires: procps
-Requires: module-init-tools
-Requires: lsof
 Obsoletes: kernel-ib
-Obsoletes: compat-rdma
-Obsoletes: rdma
-Provides: rdma
-Obsoletes: rdma-core < 41mlnx1-1
-Provides: rdma-core = 41mlnx1-1
-Obsoletes: rdma-core-devel < 41mlnx1-1
-Provides: rdma-core-devel = 41mlnx1-1
-Provides: rdma-core-devel%{?_isa} = 41mlnx1-1
 Obsoletes: mlnx-en
 Obsoletes: mlnx_en
 Obsoletes: mlnx-en-utils
@@ -190,22 +158,19 @@ Group: System Environment/Libraries
 %description -n %{non_kmp_pname}
 Core, HW and ULPs kernel modules
 Non-KMP format kernel modules rpm.
-The driver sources are located at: http://www.mellanox.com/downloads/ofed/mlnx-ofa_kernel-4.9-7.1.0.tgz
+The driver sources are located at: http://www.mellanox.com/downloads/ofed/mlnx-ofa_kernel-5.8-4.1.5.tgz
 %endif #end if "%{KMP}" == "1"
 
 %package -n %{devel_pname}
 Version: %{_version}
 # build KMP rpms?
+%if "%{KMP}" == "1"
 Release: %{_release}%{?_dist}
+%else
+Release: %{_release}.kver.%{krelver}
+%endif
 Obsoletes: kernel-ib-devel
-Obsoletes: compat-rdma-devel
 Obsoletes: kernel-ib
-Obsoletes: compat-rdma
-Obsoletes: rdma
-Provides: rdma
-Obsoletes: rdma-core-devel < 41mlnx1-1
-Provides: rdma-core-devel = 41mlnx1-1
-Provides: rdma-core-devel%{?_isa} = 41mlnx1-1
 Obsoletes: mlnx-en
 Obsoletes: mlnx_en
 Obsoletes: mlnx-en-utils
@@ -217,13 +182,24 @@ Obsoletes: mlnx-en-doc
 Obsoletes: mlnx-en-debuginfo
 Obsoletes: mlnx-en-sources
 Requires: coreutils
-Requires: %{utils_pname}
 Requires: pciutils
+Requires(post): %{_sbindir}/update-alternatives
+Requires(postun): %{_sbindir}/update-alternatives
 Summary: Infiniband Driver and ULPs kernel modules sources
 Group: System Environment/Libraries
 %description -n %{devel_pname}
 Core, HW and ULPs kernel modules sources
-The driver sources are located at: http://www.mellanox.com/downloads/ofed/mlnx-ofa_kernel-4.9-7.1.0.tgz
+The driver sources are located at: http://www.mellanox.com/downloads/ofed/mlnx-ofa_kernel-5.8-4.1.5.tgz
+
+%package source
+Summary: Source of the MLNX_OFED main kernel driver
+Group: System Environment/Libraries
+%description source
+Source of the mlnx-ofa_kernel modules.
+
+You should probably only install this package if you want to view the
+sourecs of driver. Use the -devel package if you want to build other
+drivers against it.
 
 #
 # setup module sign scripts if paths to the keys are given
@@ -263,11 +239,6 @@ The driver sources are located at: http://www.mellanox.com/downloads/ofed/mlnx-o
 %global __find_requires %{nil}
 %endif
 
-%if "%{_vendor}" == "wrs" || "%{_vendor}" == "bluenix"
-%global __python_provides %{nil}
-%global __python_requires %{nil}
-%endif
-
 # set modules dir
 %if %{IS_RHEL_VENDOR}
 %if 0%{?fedora}
@@ -288,16 +259,12 @@ The driver sources are located at: http://www.mellanox.com/downloads/ofed/mlnx-o
 set -- *
 mkdir source
 mv "$@" source/
-%if %{PYTHON3}
-sed -s -i -e '1s|python\>|python3|' `grep -rl '^#!.*python' source/ofed_scripts`
-%endif
 mkdir obj
 
 %build
 export EXTRA_CFLAGS='-DVERSION=\"%version\"'
 export INSTALL_MOD_DIR=%{install_mod_dir}
 export CONF_OPTIONS="%{configure_options}"
-%{mlnx_python_env}
 for flavor in %flavors_to_build; do
 	export KSRC=%{kernel_source $flavor}
 	export KVERSION=%{kernel_release $KSRC}
@@ -313,14 +280,12 @@ for flavor in %flavors_to_build; do
 done
 
 %install
-touch ofed-files
 export RECORD_PY_FILES=1
 export INSTALL_MOD_PATH=%{buildroot}
 export INSTALL_MOD_DIR=%{install_mod_dir}
 export NAME=%{name}
 export VERSION=%{version}
 export PREFIX=%{_prefix}
-%{mlnx_python_env}
 for flavor in %flavors_to_build; do 
 	export KSRC=%{kernel_source $flavor}
 	export KVERSION=%{kernel_release $KSRC}
@@ -349,10 +314,6 @@ for flavor in %flavors_to_build; do
 	cd -
 done
 
-if [[ "$(ls %{buildroot}/%{_bindir}/tc_wrap.py* 2>/dev/null)" != "" ]]; then
-	echo '%{_bindir}/tc_wrap.py*' >> ofed-files
-fi
-
 # Set the module(s) to be executable, so that they will be stripped when packaged.
 find %{buildroot} \( -type f -name '*.ko' -o -name '*ko.gz' \) -exec %{__chmod} u+x \{\} \;
 
@@ -372,20 +333,14 @@ done
 %endif
 
 # copy sources
-mkdir -p %{buildroot}/%{_prefix}/src
-cp -ar %{_builddir}/$NAME-$VERSION/source %{buildroot}/%{_prefix}/src/ofa_kernel-$VERSION
-cd %{buildroot}/%{_prefix}/src/
-ln -snf ofa_kernel-$VERSION mlnx-ofa_kernel-$VERSION
-cd -
-cp -ar %{_builddir}/src/$NAME %{buildroot}/%{_prefix}/src/ofa_kernel
+mkdir -p %{buildroot}/%{_prefix}/src/ofa_kernel-%{version}
+mkdir -p %{buildroot}/%{_prefix}/src/ofa_kernel/%{_arch}
+cp -a %{_builddir}/%{name}-%{version}/source %{buildroot}/%{_prefix}/src/ofa_kernel-%{version}/source
+ln -s ofa_kernel-%{version}/source %{buildroot}/%{_prefix}/src/mlnx-ofa_kernel-%{version}
+cp -a %{_builddir}/src/%{name}/* %{buildroot}/%{_prefix}/src/ofa_kernel/%{_arch}/%{KVERSION}
 # Fix path of BACKPORT_INCLUDES
-sed -i -e "s@=-I.*backport_includes@=-I/usr/src/ofa_kernel-$VERSION/backport_includes@" %{buildroot}/%{_prefix}/src/ofa_kernel/*/configure.mk.kernel || true
+sed -i -e "s@=-I.*backport_includes@=-I/usr/src/ofa_kernel-$VERSION/backport_includes@" %{buildroot}/%{_prefix}/src/ofa_kernel/%{_arch}/%{KVERSION}/configure.mk.kernel || true
 rm -rf %{_builddir}/src
-%ifarch ppc64
-if [ ! -d "%{buildroot}/%{_prefix}/src/ofa_kernel/default" ]; then
-    ln -snf /%{_prefix}/src/ofa_kernel/ppc64 %{buildroot}/%{_prefix}/src/ofa_kernel/default
-fi
-%endif
 
 INFO=${RPM_BUILD_ROOT}/etc/infiniband/info
 /bin/rm -f ${INFO}
@@ -409,16 +364,6 @@ install -d %{buildroot}%{_unitdir}
 install -d %{buildroot}/etc/systemd/system
 install -m 0644 %{_builddir}/$NAME-$VERSION/source/ofed_scripts/openibd.service %{buildroot}%{_unitdir}
 install -m 0644 %{_builddir}/$NAME-$VERSION/source/ofed_scripts/mlnx_interface_mgr\@.service %{buildroot}/etc/systemd/system
-echo 'DRIVERS=="*mlx*", SUBSYSTEM=="net", ACTION=="add",RUN+="/usr/bin/systemctl --no-block start mlnx_interface_mgr@$name.service"' >> %{buildroot}/etc/udev/rules.d/90-ib.rules
-echo 'DRIVERS=="*mlx*", SUBSYSTEM=="net", ACTION=="remove",RUN+="/usr/bin/systemctl stop mlnx_interface_mgr@$name.service"' >> %{buildroot}/etc/udev/rules.d/90-ib.rules
-echo '# For IPoIB Pkeys' >> %{buildroot}/etc/udev/rules.d/90-ib.rules
-echo 'KERNEL=="ib[0-9]*\.*|*nfiniband[0-9]*\.*", DRIVERS=="", SUBSYSTEM=="net", ACTION=="add",RUN+="/usr/bin/systemctl --no-block start mlnx_interface_mgr@$name.service"' >> %{buildroot}/etc/udev/rules.d/90-ib.rules
-echo 'KERNEL=="ib[0-9]*\.*|*nfiniband[0-9]*\.*", DRIVERS=="", SUBSYSTEM=="net", ACTION=="remove",RUN+="/usr/bin/systemctl stop mlnx_interface_mgr@$name.service"' >> %{buildroot}/etc/udev/rules.d/90-ib.rules
-%else
-# no systemd support
-echo 'DRIVERS=="*mlx*", SUBSYSTEM=="net", ACTION=="add", RUN+="/bin/mlnx_interface_mgr.sh $env{INTERFACE} <&- >/dev/null 2>&1 &"' >> %{buildroot}/etc/udev/rules.d/90-ib.rules
-echo '# For IPoIB Pkeys' >> %{buildroot}/etc/udev/rules.d/90-ib.rules
-echo 'KERNEL=="ib[0-9]*\.*|*nfiniband[0-9]*\.*", DRIVERS=="", SUBSYSTEM=="net", ACTION=="add", RUN+="/bin/mlnx_interface_mgr.sh $env{INTERFACE} <&- >/dev/null 2>&1 &"' >> %{buildroot}/etc/udev/rules.d/90-ib.rules
 %endif
 
 install -d %{buildroot}/bin
@@ -435,9 +380,6 @@ install -m 0755 %{_builddir}/$NAME-$VERSION/source/ofed_scripts/net-interfaces %
 # Install ibroute utilities
 # TBD: move these utilities into standalone package
 install -d %{buildroot}%{_sbindir}
-install -d %{buildroot}%{_defaultdocdir}/ib2ib
-install -m 0755 %{_builddir}/$NAME-$VERSION/source/ofed_scripts/ib2ib/ib2ib*  %{buildroot}%{_sbindir}
-install -m 0644 %{_builddir}/$NAME-$VERSION/source/ofed_scripts/ib2ib/README %{buildroot}%{_defaultdocdir}/ib2ib
 
 # update /etc/init.d/openibd header
 is_euler=`grep 'NAME=".*Euler' /etc/os-release 2>/dev/null || :`
@@ -460,7 +402,7 @@ perl -i -ne 'if (m@^#!/bin/bash@) {
                  }' %{buildroot}/etc/init.d/openibd
 fi
 
-if [ -f /etc/SuSE-release ] || [ -f /etc/SUSE-brand ]; then
+if grep -qwE 'suse|SLES' /etc/os-release 2>/dev/null; then
     local_fs='$local_fs'
     openiscsi=''
     %if %{build_oiscsi}
@@ -492,14 +434,6 @@ case $(uname -m) in
 esac
 %endif
 
-%if "%{XENSERVER65}" == "1"
-	# mlx4_core fails to load on xenserver 6.5 with the following error:
-	# mlx4_core 0000:01:00.0: Failed to map MCG context memory, aborting
-	# mlx4_core: probe of 0000:01:00.0 failed with error -12
-	# This happens only when DMFS is used (module parameter log_num_mgm_entry < 0).
-	echo "options mlx4_core log_num_mgm_entry_size=10" >> %{buildroot}/etc/modprobe.d/mlnx.conf
-%endif
-
 %clean
 rm -rf %{buildroot}
 
@@ -528,7 +462,8 @@ fi
 if [ $1 -eq 1 ]; then # 1 : This package is being installed
 #############################################################################################################
 is_euler=`grep 'NAME=".*Euler' /etc/os-release 2>/dev/null || :`
-if [[ -f /etc/redhat-release || -f /etc/rocks-release || "$is_euler" != '' ]]; then
+is_kylin=`grep 'NAME=".*Kylin' /etc/os-release 2>/dev/null || :`
+if [[ -f /etc/redhat-release || -f /etc/rocks-release || -f /etc/UnionTech-release || -f /etc/ctyunos-release || "$is_euler" != '' || "$is_kylin" != '' ]]; then
         /sbin/chkconfig openibd off >/dev/null 2>&1 || true
         /usr/bin/systemctl disable openibd >/dev/null  2>&1 || true
         /sbin/chkconfig --del openibd >/dev/null 2>&1 || true
@@ -541,7 +476,7 @@ if [[ -f /etc/redhat-release || -f /etc/rocks-release || "$is_euler" != '' ]]; t
 %endif
 fi
 
-if [ -f /etc/SuSE-release ] || [ -f /etc/SUSE-brand ]; then
+if grep -qwE 'suse|SLES' /etc/os-release 2>/dev/null; then
         /sbin/chkconfig openibd off >/dev/null  2>&1 || true
         /usr/bin/systemctl disable openibd >/dev/null  2>&1 || true
         /sbin/insserv -r openibd >/dev/null 2>&1 || true
@@ -617,13 +552,14 @@ fi # 1 : closed
 
 %preun -n %{utils_pname}
 is_euler=`grep 'NAME=".*Euler' /etc/os-release 2>/dev/null || :`
+is_kylin=`grep 'NAME=".*Kylin' /etc/os-release 2>/dev/null || :`
 if [ $1 = 0 ]; then  # 1 : Erase, not upgrade
-          if [[ -f /etc/redhat-release || -f /etc/rocks-release || "$is_euler" != '' ]]; then
+          if [[ -f /etc/redhat-release || -f /etc/rocks-release || -f /etc/UnionTech-release || "$is_euler" != '' || "$is_kylin" != '' ]]; then
                 /sbin/chkconfig openibd off >/dev/null 2>&1 || true
                 /usr/bin/systemctl disable openibd >/dev/null  2>&1 || true
                 /sbin/chkconfig --del openibd  >/dev/null 2>&1 || true
           fi
-          if [ -f /etc/SuSE-release ] || [ -f /etc/SUSE-brand ]; then
+	  if grep -qwE 'suse|SLES' /etc/os-release 2>/dev/null; then
                 /sbin/chkconfig openibd off >/dev/null 2>&1 || true
                 /usr/bin/systemctl disable openibd >/dev/null  2>&1 || true
                 /sbin/insserv -r openibd >/dev/null 2>&1 || true
@@ -660,8 +596,50 @@ fi
 
 #end of post uninstall
 
-%files -n %{utils_pname} -f ofed-files
+%post -n %{devel_pname}
+if [ -d "%{_prefix}/src/ofa_kernel/default" -a $1 -gt 1 ]; then
+	touch %{_prefix}/src/ofa_kernel/%{_arch}/%{KVERSION}.missing_link
+	# Will run update-alternatives in posttrans
+else
+	update-alternatives --install \
+		%{_prefix}/src/ofa_kernel/default \
+		ofa_kernel_headers \
+		%{_prefix}/src/ofa_kernel/%{_arch}/%{KVERSION} \
+		20
+fi
+
+%posttrans -n %{devel_pname}
+symlink="%{_prefix}/src/ofa_kernel/default"
+# Should only be used for upgrading from pre-5.5-0.2.6.0 packages:
+# At the time of upgrade there was still a directory, so postpone
+# generating the alternative symlink to that point:
+for flag_file in %{_prefix}/src/ofa_kernel/*/*.missing_link; do
+	dir=${flag_file%.missing_link}
+	if [ ! -d "$dir" ]; then
+		# Directory is no longer there. Nothing left to handle
+		rm -f "$flag_file"
+		continue
+	fi
+	if [ -d "$symlink" ]; then
+		echo "%{devel_pname}-%{version}: $symlink is still a non-empty directory. Deleting in preparation for a symlink."
+		rm -rf "$symlink"
+	fi
+	update-alternatives --install \
+		"$symlink" \
+		ofa_kernel_headers \
+		"$dir" \
+		20
+	rm -f "$flag_file"
+done
+
+%postun -n %{devel_pname}
+update-alternatives --remove \
+	ofa_kernel_headers \
+	%{_prefix}/src/ofa_kernel/%{_arch}/%{KVERSION} \
+
+%files -n %{utils_pname}
 %defattr(-,root,root,-)
+%doc source/ofed_scripts/82-net-setup-link.rules source/ofed_scripts/vf-net-link-name.sh
 %if "%{KMP}" == "1"
 %if %{IS_RHEL_VENDOR}
 %endif # end rh
@@ -670,29 +648,21 @@ fi
 %config(noreplace) /etc/infiniband/openib.conf
 %config(noreplace) /etc/infiniband/mlx5.conf
 /etc/infiniband/info
-/etc/infiniband/vf-net-link-name.sh
 /etc/init.d/openibd
 %if "%{WITH_SYSTEMD}" == "1"
 %{_unitdir}/openibd.service
 /etc/systemd/system/mlnx_interface_mgr@.service
 %endif
-/sbin/sysctl_perf_tuning
-/sbin/mlnx_bf_configure
-/sbin/mlnx-sf
-/usr/sbin/show_gids
-/usr/sbin/compat_gid_gen
-/usr/sbin/cma_roce_mode
-/usr/sbin/cma_roce_tos
+/lib/udev/sf-rep-netdev-rename
+/lib/udev/auxdev-sf-netdev-rename
 /usr/sbin/setup_mr_cache.sh
 /usr/sbin/odp_stat.sh
-/usr/sbin/show_counters
-%dir %{_defaultdocdir}/ib2ib
-%{_defaultdocdir}/ib2ib/*
+%_datadir/mlnx_ofed/mlnx_bf_assign_ct_cores.sh
 %config(noreplace) /etc/modprobe.d/mlnx.conf
 %config(noreplace) /etc/modprobe.d/mlnx-bf.conf
 %{_sbindir}/*
-%config(noreplace) /etc/udev/rules.d/90-ib.rules
-%config(noreplace) /etc/udev/rules.d/82-net-setup-link.rules
+/lib/udev/rules.d/83-mlnx-sf-name.rules
+/lib/udev/rules.d/90-ib.rules
 /bin/mlnx_interface_mgr.sh
 /bin/mlnx_conf_mgr.sh
 %if "%{WINDRIVER}" == "1" || "%{BLUENIX}" == "1"
@@ -701,12 +671,8 @@ fi
 %if %{build_ipoib}
 %config(noreplace) /etc/modprobe.d/ib_ipoib.conf
 %endif
-%if %{build_mlx4} || %{build_mlx5}
-%{_bindir}/ibdev2netdev
-%endif
-%if %{build_mlx4_en}
-/sbin/connectx_port_config
-%config(noreplace) /etc/infiniband/connectx.conf
+%if %{build_mlx5}
+%{_sbindir}/ibdev2netdev
 %endif
 
 %if "%{KMP}" != "1"
@@ -721,7 +687,12 @@ fi
 
 %files -n %{devel_pname}
 %defattr(-,root,root,-)
-%{_prefix}/src
+%{_prefix}/src/ofa_kernel/%{_arch}/%{KVERSION}
+
+%files source
+%defattr(-,root,root,-)
+%{_prefix}/src/ofa_kernel-%version/source
+%{_prefix}/src/mlnx-ofa_kernel-%version
 
 %changelog
 * Thu Jun 18 2015 Alaa Hleihel <alaa@mellanox.com>

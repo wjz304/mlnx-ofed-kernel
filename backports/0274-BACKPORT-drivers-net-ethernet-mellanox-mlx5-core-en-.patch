@@ -1,69 +1,111 @@
-From: Mikhael Goikhman <migo@mellanox.com>
-Subject: [PATCH] BACKPORT: drivers/net/ethernet/mellanox/mlx5/core/en/health.c
+From: Valentine Fatiev <valentinef@nvidia.com>
+Subject: [PATCH] BACKPORT:
+ drivers/net/ethernet/mellanox/mlx5/core/en/tc/meter.c
 
-Change-Id: Ia25c5f21f10bb1c373e4e59a8f1f435bcf609983
+Change-Id: I280d0e9b1881708285a3e56d5688daf6a752cdb9
 ---
- .../net/ethernet/mellanox/mlx5/core/en/health.c    | 14 +++++++++++++-
- 1 file changed, 13 insertions(+), 1 deletion(-)
+ .../ethernet/mellanox/mlx5/core/en/tc/meter.c | 24 +++++++++++++++++++
+ 1 file changed, 24 insertions(+)
 
---- a/drivers/net/ethernet/mellanox/mlx5/core/en/health.c
-+++ b/drivers/net/ethernet/mellanox/mlx5/core/en/health.c
-@@ -5,6 +5,7 @@
- #include "lib/eq.h"
- #include "lib/mlx5.h"
+--- a/drivers/net/ethernet/mellanox/mlx5/core/en/tc/meter.c
++++ b/drivers/net/ethernet/mellanox/mlx5/core/en/tc/meter.c
+@@ -4,8 +4,14 @@
+ #include <linux/math64.h>
+ #include "en/aso.h"
+ #include "meter.h"
++#if IS_ENABLED(CONFIG_MLX5_CLS_ACT)
+ #include "en/tc_priv.h"
++#elif defined(CONFIG_MLX5_ESWITCH)
++#include "en_tc.h"
++#endif
++#if IS_ENABLED(CONFIG_MLX5_CLS_ACT)
+ #include "en/tc/post_act.h"
++#endif
  
-+#ifdef HAVE_DEVLINK_HEALTH_REPORT_SUPPORT
- int mlx5e_reporter_named_obj_nest_start(struct devlink_fmsg *fmsg, char *name)
- {
- 	int err;
-@@ -96,6 +97,7 @@ int mlx5e_reporter_cq_common_diagnose(st
+ #define START_COLOR_SHIFT 28
+ #define METER_MODE_SHIFT 24
+@@ -13,6 +19,10 @@
+ #define CBS_MAN_SHIFT 16
+ #define CIR_EXP_SHIFT 8
  
- 	return 0;
- }
-+#endif /* HAVE_DEVLINK_HEALTH_REPORT_SUPPORT */
- 
- int mlx5e_health_create_reporters(struct mlx5e_priv *priv)
- {
-@@ -120,12 +122,14 @@ void mlx5e_health_destroy_reporters(stru
- 
- void mlx5e_health_channels_update(struct mlx5e_priv *priv)
- {
-+#ifdef HAVE_DEVLINK_HEALTH_REPORTER_STATE_UPDATE
- 	if (priv->tx_reporter)
- 		devlink_health_reporter_state_update(priv->tx_reporter,
- 						     DEVLINK_HEALTH_REPORTER_STATE_HEALTHY);
- 	if (priv->rx_reporter)
- 		devlink_health_reporter_state_update(priv->rx_reporter,
- 						     DEVLINK_HEALTH_REPORTER_STATE_HEALTHY);
-+#endif /* HAVE_DEVLINK_HEALTH_REPORTER_STATE_UPDATE */
- }
- 
- int mlx5e_health_sq_to_ready(struct mlx5e_channel *channel, u32 sqn)
-@@ -198,14 +202,20 @@ int mlx5e_health_report(struct mlx5e_pri
- 			struct devlink_health_reporter *reporter, char *err_str,
- 			struct mlx5e_err_ctx *err_ctx)
- {
--	netdev_err(priv->netdev, err_str);
-+	/* In kernels below 2.6.36, netdev_err required at least 3 params */
-+	netdev_err(priv->netdev, "%s", err_str);
- 
- 	if (!reporter)
- 		return err_ctx->recover(err_ctx->ctx);
- 
-+#ifdef HAVE_DEVLINK_HEALTH_REPORT_SUPPORT
- 	return devlink_health_report(reporter, err_str, err_ctx);
-+#else
-+	return 0;
-+#endif /* HAVE_DEVLINK_HEALTH_REPORT_SUPPORT */
- }
- 
-+#ifdef HAVE_DEVLINK_HEALTH_REPORT_SUPPORT
- #define MLX5_HEALTH_DEVLINK_MAX_SIZE 1024
- static int mlx5e_health_rsc_fmsg_binary(struct devlink_fmsg *fmsg,
- 					const void *value, u32 value_len)
-@@ -309,3 +319,5 @@ int mlx5e_health_queue_dump(struct mlx5e
- 
- 	return devlink_fmsg_obj_nest_end(fmsg);
- }
-+#endif /* HAVE_DEVLINK_HEALTH_REPORT_SUPPORT */
++#ifndef BITS_TO_BYTES
++#define BITS_TO_BYTES(nr) DIV_ROUND_UP(nr, BITS_PER_BYTE)
++#endif
 +
+ /* cir = 8*(10^9)*cir_mantissa/(2^cir_exponent)) bits/s */
+ #define CONST_CIR 8000000000ULL
+ #define CALC_CIR(m, e)  ((CONST_CIR * (m)) >> (e))
+@@ -373,8 +383,10 @@ mlx5e_tc_meter_get(struct mlx5_core_dev
+ 	struct mlx5e_flow_meters *flow_meters;
+ 	struct mlx5e_flow_meter_handle *meter;
+ 
++#if IS_ENABLED(CONFIG_MLX5_CLS_ACT)
+ 	flow_meters = mlx5e_get_flow_meters(mdev);
+ 	if (!flow_meters)
++#endif
+ 		return ERR_PTR(-EOPNOTSUPP);
+ 
+ 	meter = __mlx5e_tc_meter_get(flow_meters, params->index);
+@@ -445,12 +457,16 @@ int
+ mlx5e_tc_meter_update(struct mlx5e_flow_meter_handle *meter,
+ 		      struct mlx5e_flow_meter_params *params)
+ {
++#if IS_ENABLED(CONFIG_MLX5_CLS_ACT)
+ 	struct mlx5_core_dev *mdev = meter->flow_meters->mdev;
++#endif
+ 	struct mlx5e_flow_meters *flow_meters;
+ 	int err;
+ 
++#if IS_ENABLED(CONFIG_MLX5_CLS_ACT)
+ 	flow_meters = mlx5e_get_flow_meters(mdev);
+ 	if (!flow_meters)
++#endif
+ 		return -EOPNOTSUPP;
+ 
+ 	mutex_lock(&flow_meters->sync_lock);
+@@ -466,8 +482,10 @@ mlx5e_tc_meter_replace(struct mlx5_core_
+ 	struct mlx5e_flow_meter_handle *meter;
+ 	int err;
+ 
++#if IS_ENABLED(CONFIG_MLX5_CLS_ACT)
+ 	flow_meters = mlx5e_get_flow_meters(mdev);
+ 	if (!flow_meters)
++#endif
+ 		return ERR_PTR(-EOPNOTSUPP);
+ 
+ 	mutex_lock(&flow_meters->sync_lock);
+@@ -515,11 +533,13 @@ mlx5e_flow_meters_init(struct mlx5e_priv
+ 	if (!flow_meters)
+ 		return NULL;
+ 
++#if IS_ENABLED(CONFIG_MLX5_CLS_ACT)
+ 	if (IS_ERR_OR_NULL(post_act)) {
+ 		netdev_dbg(priv->netdev,
+ 			   "flow meter offload is not supported, post action is missing\n");
+ 		goto errout;
+ 	}
++#endif
+ 
+ 	flow_meters->aso = mlx5e_aso_get(priv);
+ 	if (!flow_meters->aso) {
+@@ -549,7 +569,9 @@ mlx5e_flow_meters_cleanup(struct mlx5e_f
+ 	if (!flow_meters)
+ 		return;
+ 
++#if IS_ENABLED(CONFIG_MLX5_CLS_ACT)
+ 	mlx5e_aso_put(flow_meters->aso->priv);
++#endif
+ 	kfree(flow_meters);
+ }
+ 
+@@ -792,8 +814,10 @@ mlx5e_alloc_flow_meter(struct mlx5_core_
+ 	struct mlx5e_flow_meters *flow_meters;
+ 	struct mlx5e_flow_meter_handle *meter;
+ 
++#if IS_ENABLED(CONFIG_MLX5_CLS_ACT)
+ 	flow_meters = mlx5e_get_flow_meters(dev);
+ 	if (!flow_meters)
++#endif
+ 		return ERR_PTR(-EOPNOTSUPP);
+ 
+ 	mutex_lock(&flow_meters->sync_lock);

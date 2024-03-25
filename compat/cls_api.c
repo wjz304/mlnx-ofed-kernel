@@ -20,13 +20,14 @@
 #include <net/tc_act/tc_pedit.h>
 #include <net/tc_act/tc_csum.h>
 #include <net/tc_act/tc_skbedit.h>
-#ifdef HAVE_MINIFLOW
-#include <net/tc_act/tc_ct.h>
-#endif
 #include <net/tc_act/tc_tunnel_key.h>
+#ifdef HAVE_NET_PSAMPLE_H
+#include <net/tc_act/tc_sample.h>
+#endif
 #ifdef HAVE_IS_TCF_POLICE
 #include <net/tc_act/tc_police.h>
 #endif
+#include <net/tc_act/tc_ct.h>
 
 
 #if !defined(HAVE_IS_TCF_TUNNEL) && defined(HAVE_TCF_TUNNEL_INFO)
@@ -121,10 +122,6 @@ int tc_setup_flow_action(struct flow_action *flow_action,
 		} else if (is_tcf_tunnel_release(act)) {
 			entry->id = FLOW_ACTION_TUNNEL_DECAP;
 #endif
-#ifdef HAVE_MINIFLOW
-		} else if (is_tcf_ct(act)) {
-			entry->id = FLOW_ACTION_CT;
-#endif
 #ifdef HAVE_TCF_PEDIT_TCFP_KEYS_EX
 		} else if (is_tcf_pedit(act)) {
 			int k;
@@ -157,13 +154,25 @@ int tc_setup_flow_action(struct flow_action *flow_action,
 #ifdef HAVE_IS_TCF_POLICE
 		} else if (is_tcf_police(act)) {
 			entry->id = FLOW_ACTION_POLICE;
-#ifdef HAVE_TCF_POLICE_BURST
-			entry->police.burst = tcf_police_burst(act);
-#else
 			entry->police.burst = tcf_police_tcfp_burst(act);
-#endif
 			entry->police.rate_bytes_ps =
 				tcf_police_rate_bytes_ps(act);
+#endif
+#ifdef CONFIG_COMPAT_ACT_CT
+		} else if (is_tcf_ct(act)) {
+			entry->id = FLOW_ACTION_CT;
+			entry->ct.action = tcf_ct_action(act);
+			entry->ct.zone = tcf_ct_zone(act);
+			entry->ct.flow_table = tcf_ct_ft(act);
+#endif
+#ifdef HAVE_NET_PSAMPLE_H
+		} else if (is_tcf_sample(act)) {
+			entry->id = FLOW_ACTION_SAMPLE;
+			entry->sample.trunc_size = tcf_sample_trunc_size(act);
+			entry->sample.truncate = tcf_sample_truncate(act);
+			entry->sample.rate = tcf_sample_rate(act);
+			entry->sample.psample_group =
+				tcf_sample_psample_group(act);
 #endif
 		} else {
 			goto err_out;

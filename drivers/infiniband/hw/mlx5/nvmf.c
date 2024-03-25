@@ -35,11 +35,9 @@
 #include <linux/mlx5/driver.h>
 #include "srq.h"
 #include <rdma/ib_verbs.h>
-#include <rdma/ib_verbs_exp.h>
+#include <rdma/ib_verbs_nvmf.h>
 #include <linux/mlx5/nvmf.h>
-#include <linux/mlx5/cmd.h>
 #include <linux/mlx5/qp.h>
-
 #include "mlx5_ib.h"
 
 void mlx5_ib_internal_fill_nvmf_caps(struct mlx5_ib_dev *dev)
@@ -83,6 +81,8 @@ void mlx5_ib_internal_fill_nvmf_caps(struct mlx5_ib_dev *dev)
 	caps->min_cmd_size = MLX5_CAP_NVMF(mdev, min_ioccsz);
 	caps->max_cmd_size = MLX5_CAP_NVMF(mdev, max_ioccsz);
 	caps->max_data_offset = MLX5_CAP_NVMF(mdev, max_icdoff);
+	caps->passthrough_sqe_rw_service =
+		MLX5_CAP_NVMF(mdev, passthrough_sqe_rw_service);
 	/* log_min_cmd_timeout = 0 meens use default timeout from HCA */
 	if (MLX5_CAP_NVMF(mdev, log_min_cmd_timeout))
 		caps->min_cmd_timeout_us = 1 << MLX5_CAP_NVMF(mdev, log_min_cmd_timeout);
@@ -116,7 +116,7 @@ static void set_nvmf_backend_ctrl_attrs(struct ib_nvmf_backend_ctrl_init_attr *a
 }
 
 static void mlx5_ib_nvmf_backend_ctrl_event(struct mlx5_core_nvmf_be_ctrl *ctrl,
-					    int event_type,
+					    int event_type, int event_subtype,
 					    int error_type)
 {
 	struct ib_nvmf_ctrl *ibctrl = &to_mibctrl(ctrl)->ibctrl;
@@ -128,21 +128,34 @@ static void mlx5_ib_nvmf_backend_ctrl_event(struct mlx5_core_nvmf_be_ctrl *ctrl,
 		return;
 	}
 
-	if (ibctrl->event_handler) {
-		event.device = ibctrl->srq->device;
-		switch (error_type) {
-		case MLX5_XRQ_ERROR_TYPE_BACKEND_CONTROLLER_ERROR:
-			event.event = IB_EXP_EVENT_XRQ_NVMF_BACKEND_CTRL_ERR;
+	if (!ibctrl->event_handler)
+		return;
+
+	event.device = ibctrl->srq->device;
+	switch (error_type) {
+	case MLX5_XRQ_ERROR_TYPE_BACKEND_CONTROLLER_ERROR:
+		switch (event_subtype) {
+		case MLX5_XRQ_SUBTYPE_BACKEND_CONTROLLER_PCI_ERROR:
+			event.event = IB_EVENT_XRQ_NVMF_BACKEND_CTRL_PCI_ERR;
+			break;
+		case MLX5_XRQ_SUBTYPE_BACKEND_CONTROLLER_TO_ERROR:
+			event.event = IB_EVENT_XRQ_NVMF_BACKEND_CTRL_TO_ERR;
 			break;
 		default:
 			mlx5_ib_warn(dev,
-				     "Unexpected event error type %d on CTRL %06x\n",
-				     error_type, ibctrl->id);
+				     "Unexpected event subtype %d on CTRL %06x\n",
+				     event_subtype, ibctrl->id);
 			return;
 		}
-
-		ibctrl->event_handler(&event, ibctrl->be_context);
+		break;
+	default:
+		mlx5_ib_warn(dev,
+			     "Unexpected event error type %d on CTRL %06x\n",
+			     error_type, ibctrl->id);
+		return;
 	}
+
+	ibctrl->event_handler(&event, ibctrl->be_context);
 }
 
 struct ib_nvmf_ctrl *mlx5_ib_create_nvmf_backend_ctrl(struct ib_srq *srq,
@@ -276,6 +289,9 @@ int mlx5_ib_query_nvmf_ns(struct ib_nvmf_ns *ns,
 		ns_attr->num_flush_cmd = mns->mns.counters.num_flush_cmd;
 		ns_attr->num_error_cmd = mns->mns.counters.num_error_cmd;
 		ns_attr->num_backend_error_cmd = mns->mns.counters.num_backend_error_cmd;
+		ns_attr->last_read_latency = mns->mns.counters.last_read_latency;
+		ns_attr->last_write_latency = mns->mns.counters.last_write_latency;
+		ns_attr->queue_depth = mns->mns.counters.queue_depth;
 	}
 
 	return ret;
@@ -515,6 +531,20 @@ int mlx5_core_query_nvmf_ns(struct mlx5_core_dev *dev,
 					      ns_ctx.num_error_cmd_low);
 	ns->counters.num_backend_error_cmd = MLX5_GET(query_nvmf_namespace_out, out,
 						      ns_ctx.num_backend_error_cmd_low);
+	if (MLX5_CAP_NVMF(dev, last_req_latency)) {
+		ns->counters.last_read_latency = MLX5_GET(query_nvmf_namespace_out, out,
+							  ns_ctx.last_read_req_latency);
+		ns->counters.last_write_latency = MLX5_GET(query_nvmf_namespace_out, out,
+							   ns_ctx.last_write_req_latency);
+	} else {
+		ns->counters.last_read_latency = 0;
+		ns->counters.last_write_latency = 0;
+	}
+	if (MLX5_CAP_NVMF(dev, current_q_depth))
+		ns->counters.queue_depth = MLX5_GET(query_nvmf_namespace_out, out,
+						    ns_ctx.current_q_depth);
+	else
+		ns->counters.queue_depth = 0;
 
 	return 0;
 }

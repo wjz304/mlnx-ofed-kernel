@@ -7,7 +7,9 @@
 # subdir-ccflags-y will be set by the toplevel Makefile.
 ifneq (,$(findstring $(ARCH),i386 x86_64))
   ifndef CONFIG_RETPOLINE
-    CFLAGS_RETPOLINE=-mindirect-branch=thunk-inline -mindirect-branch-register -DRETPOLINE_MLNX
+    ifneq (,$(shell awk 'BEGIN {if ($(VERSION).$(PATCHLEVEL) < 4.15) {print 1}}' </dev/null))
+      CFLAGS_RETPOLINE=-mindirect-branch=thunk-inline -mindirect-branch-register -DRETPOLINE_MLNX
+    endif
   endif
 endif
 
@@ -15,6 +17,10 @@ endif
 ifneq (,$(CFLAGS_RETPOLINE))
   do_retpoline = $(call cc-option-yn, -mindirect-branch-register)
   subdir-ccflags-$(do_retpoline) += $(CFLAGS_RETPOLINE)
+endif
+
+ifeq ($(CONFIG_GPU_DIRECT_STORAGE),y)
+ccflags-y				+= -DCONFIG_NVFS
 endif
 
 obj-$(CONFIG_SUNRPC_XPRT_RDMA) += rpcrdma.o
@@ -34,6 +40,11 @@ rpcrdma-y := transport.o rpc_rdma.o verbs.o \
 	frwr_ops.o \
 	svc_rdma.o svc_rdma_backchannel.o svc_rdma_transport.o \
 	svc_rdma_sendto.o svc_rdma_recvfrom.o svc_rdma_rw.o \
-	module.o
+	svc_rdma_pcl.o module.o
+
+ifeq ($(CONFIG_GPU_DIRECT_STORAGE),y)
+rpcrdma-y += nvfs_rpc_rdma.o
+endif
+
 rpcrdma-$(CONFIG_SUNRPC_BACKCHANNEL) += backchannel.o
 endif

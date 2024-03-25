@@ -36,15 +36,6 @@
 #include <linux/mlx5/driver.h>
 #include <linux/mlx5/device.h>
 
-#define MLX5_VPORT_PF_PLACEHOLDER		(1u)
-#define MLX5_VPORT_UPLINK_PLACEHOLDER		(1u)
-#define MLX5_VPORT_ECPF_PLACEHOLDER(mdev)	(mlx5_ecpf_vport_exists(mdev) || \
-						 mlx5_core_is_ecpf_esw_manager(mdev))
-
-#define MLX5_SPECIAL_VPORTS(mdev) (MLX5_VPORT_PF_PLACEHOLDER +		\
-				   MLX5_VPORT_UPLINK_PLACEHOLDER +	\
-				   MLX5_VPORT_ECPF_PLACEHOLDER(mdev))
-
 #define MLX5_VPORT_MANAGER(mdev)					\
 	(MLX5_CAP_GEN(mdev, vport_group_manager) &&			\
 	 (MLX5_CAP_GEN(mdev, port_type) == MLX5_CAP_PORT_TYPE_ETH) &&	\
@@ -68,18 +59,15 @@ u8 mlx5_query_vport_state(struct mlx5_core_dev *mdev, u8 opmod, u16 vport);
 int mlx5_modify_vport_admin_state(struct mlx5_core_dev *mdev, u8 opmod,
 				  u16 vport, u8 other_vport, u8 state);
 int mlx5_query_nic_vport_mac_address(struct mlx5_core_dev *mdev,
-				     u16 vport, u8 *addr);
-int mlx5_query_other_nic_vport_mac_address(struct mlx5_core_dev *mdev,
-					   u16 vport, u8 *addr);
+				     u16 vport, bool other, u8 *addr);
+int mlx5_query_mac_address(struct mlx5_core_dev *mdev, u8 *addr);
 int mlx5_query_nic_vport_min_inline(struct mlx5_core_dev *mdev,
 				    u16 vport, u8 *min_inline);
 void mlx5_query_min_inline(struct mlx5_core_dev *mdev, u8 *min_inline);
 int mlx5_modify_nic_vport_min_inline(struct mlx5_core_dev *mdev,
 				     u16 vport, u8 min_inline);
 int mlx5_modify_nic_vport_mac_address(struct mlx5_core_dev *dev,
-				      u16 vport, u8 *addr);
-int mlx5_modify_other_nic_vport_mac_address(struct mlx5_core_dev *dev,
-					    u16 vport, u8 *addr);
+				      u16 vport, const u8 *addr);
 int mlx5_query_nic_vport_mtu(struct mlx5_core_dev *mdev, u16 *mtu);
 int mlx5_modify_nic_vport_mtu(struct mlx5_core_dev *mdev, u16 mtu);
 int mlx5_query_nic_vport_system_image_guid(struct mlx5_core_dev *mdev,
@@ -88,8 +76,6 @@ int mlx5_query_nic_vport_node_guid(struct mlx5_core_dev *mdev, u32 vport,
 				   u64 *node_guid);
 int mlx5_modify_nic_vport_node_guid(struct mlx5_core_dev *mdev,
 				    u16 vport, u64 node_guid);
-int mlx5_modify_other_nic_vport_node_guid(struct mlx5_core_dev *mdev,
-					  u16 vport, u64 node_guid);
 int mlx5_query_nic_vport_qkey_viol_cntr(struct mlx5_core_dev *mdev,
 					u16 *qkey_viol_cntr);
 int mlx5_query_hca_vport_gid(struct mlx5_core_dev *dev, u8 other_vport,
@@ -136,8 +122,7 @@ int mlx5_query_vport_down_stats(struct mlx5_core_dev *mdev, u16 vport,
 				u8 other_vport, u64 *rx_discard_vport_down,
 				u64 *tx_discard_vport_down);
 int mlx5_core_query_vport_counter(struct mlx5_core_dev *dev, u8 other_vport,
-				  int vf, u8 port_num, void *out,
-				  size_t out_sz);
+				  int vf, u8 port_num, void *out);
 int mlx5_core_modify_hca_vport_context(struct mlx5_core_dev *dev,
 				       u8 other_vport, u8 port_num,
 				       int vf,

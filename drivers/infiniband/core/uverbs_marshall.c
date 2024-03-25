@@ -66,18 +66,14 @@ void ib_copy_ah_attr_to_user(struct ib_device *device,
 	struct rdma_ah_attr *src = ah_attr;
 	struct rdma_ah_attr conv_ah;
 
-	memset(&dst->grh.reserved, 0, sizeof(dst->grh.reserved));
+	memset(&dst->grh, 0, sizeof(dst->grh));
 
 	if ((ah_attr->type == RDMA_AH_ATTR_TYPE_OPA) &&
 	    (rdma_ah_get_dlid(ah_attr) > be16_to_cpu(IB_LID_PERMISSIVE)) &&
 	    (!rdma_ah_conv_opa_to_ib(device, &conv_ah, ah_attr)))
 		src = &conv_ah;
 
-	if (src->grh.sgid_attr &&
-	    (src->grh.sgid_attr->gid_type == IB_GID_TYPE_ROCE_UDP_ENCAP))
-		dst->dlid	   = rdma_ah_get_udp_sport(src);
-	else
-		dst->dlid	   = rdma_ah_get_dlid(src);
+	dst->dlid		   = rdma_ah_get_dlid(src);
 	dst->sl			   = rdma_ah_get_sl(src);
 	dst->src_path_bits	   = rdma_ah_get_path_bits(src);
 	dst->static_rate	   = rdma_ah_get_static_rate(src);

@@ -33,6 +33,7 @@
 #include <linux/proc_fs.h>
 #include <linux/mlx5/driver.h>
 #include "mlx5_core.h"
+#include "lib/pci_vsc.h"
 
 #define MLX5_PROTECTED_CR_SPCAE_DOMAIN 0x6
 #define MLX5_PROTECTED_CR_SCAN_CRSPACE 0x7
@@ -162,17 +163,16 @@ static int mlx5_crdump_open(struct inode *inode, struct file *file)
 		return ret;
 
 	seq = file->private_data;
-	seq->private = PDE_DATA(inode);
+	seq->private = pde_data(inode);
 
 	return 0;
 }
 
-static const struct file_operations mlx5_crdump_fops = {
-	.owner   = THIS_MODULE,
-	.open    = mlx5_crdump_open,
-	.read    = seq_read,
-	.llseek  = seq_lseek,
-	.release = seq_release
+static const struct proc_ops  mlx5_crdump_ops = {
+	.proc_open    = mlx5_crdump_open,
+	.proc_read    = seq_read,
+	.proc_lseek  = seq_lseek,
+	.proc_release = seq_release
 };
 
 int mlx5_cr_protected_capture(struct mlx5_core_dev *dev)
@@ -189,14 +189,21 @@ int mlx5_cr_protected_capture(struct mlx5_core_dev *dev)
 	if (ret)
 		return ret;
 
+	/* Verify no other PF is running cr-dump or sw reset */
+	ret = mlx5_vsc_sem_set_space(dev, MLX5_SEMAPHORE_SW_RESET, MLX5_VSC_LOCK);
+	if (ret) {
+		mlx5_core_warn(dev, "Failed to lock SW reset semaphore\n");
+		goto unlock;
+	}
+
 	ret = mlx5_pciconf_set_protected_addr_space(dev, &total_len);
 	if (ret)
-		goto unlock;
+		goto unlock_sw_reset_sem;
 
 	cr_data = kcalloc(total_len, sizeof(u8), GFP_KERNEL);
 	if (!cr_data) {
 		ret = -ENOMEM;
-		goto unlock;
+		goto unlock_sw_reset_sem;
 	}
 	if (priv->health.crdump->space == MLX5_PROTECTED_CR_SCAN_CRSPACE)
 		ret = mlx5_block_op_pciconf_fast(dev, (u32 *)cr_data, total_len);
@@ -219,6 +226,8 @@ int mlx5_cr_protected_capture(struct mlx5_core_dev *dev)
 free_mem:
 	if (ret)
 		kfree(cr_data);
+unlock_sw_reset_sem:
+	mlx5_vsc_sem_set_space(dev, MLX5_SEMAPHORE_SW_RESET, MLX5_VSC_UNLOCK);
 unlock:
 	mlx5_pciconf_cap9_sem(dev, UNLOCK);
 	return ret;
@@ -282,7 +291,7 @@ int mlx5_crdump_init(struct mlx5_core_dev *dev)
 
 	if (mlx5_crdump_dir)
 		if (!proc_create_data(pci_name(dev->pdev), S_IRUGO,
-				      mlx5_crdump_dir, &mlx5_crdump_fops,
+				      mlx5_crdump_dir, &mlx5_crdump_ops,
 				      crdump)) {
 			pr_warn("failed creating proc file\n");
 			goto clean_mem;

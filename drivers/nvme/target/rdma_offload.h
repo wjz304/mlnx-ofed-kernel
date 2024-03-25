@@ -22,12 +22,12 @@
 #include "nvmet.h"
 
 #define NVMET_DYNAMIC_STAGING_BUFFER_PAGE_SIZE_MB 1
-#define NVMET_DEFAULT_CMD_TIMEOUT_USEC 30000000
 
 struct nvmet_rdma_xrq;
 struct nvmet_rdma_device;
 struct nvmet_rdma_cmd;
 struct nvmet_rdma_queue queue;
+struct nvmet_rdma_srq;
 
 enum nvmet_rdma_offload_ns_counter {
 	NVMET_RDMA_OFFLOAD_NS_READ_CMDS,
@@ -51,6 +51,7 @@ struct nvmet_rdma_backend_ctrl {
 	struct work_struct	  release_work;
 	/* Restart the nvme queue for future usage */
 	bool			  restart;
+	struct nvmet_offload_ctx  offload_ctx;
 };
 
 struct nvmet_rdma_offload_ctx {
@@ -87,10 +88,9 @@ struct nvmet_rdma_xrq {
 	struct list_head		be_ctrls_list;
 	int				nr_be_ctrls;
 	struct mutex			be_mutex;
-	struct ib_srq			*ofl_srq;
-	struct ib_cq			*cq;
-	struct nvmet_rdma_cmd		*ofl_srq_cmds;
+	struct nvmet_rdma_srq		*ofl_srq;
 	size_t				ofl_srq_size;
+	struct ib_cq			*cq;
 	struct nvmet_rdma_staging_buf	*st;
 	struct kref			ref;
 	struct list_head		entry;
@@ -122,6 +122,8 @@ static u64 nvmet_rdma_offload_ns_write_inline_cmds(struct nvmet_ns *ns);
 static u64 nvmet_rdma_offload_ns_flush_cmds(struct nvmet_ns *ns);
 static u64 nvmet_rdma_offload_ns_error_cmds(struct nvmet_ns *ns);
 static u64 nvmet_rdma_offload_ns_backend_error_cmds(struct nvmet_ns *ns);
+static void nvmet_rdma_offload_query_counters(void *ctx,
+					struct nvmet_ns_counters *counters);
 static int nvmet_rdma_init_st_pool(struct nvmet_rdma_staging_buf_pool *pool,
 				   unsigned long long mem_start,
 				   unsigned int mem_size,

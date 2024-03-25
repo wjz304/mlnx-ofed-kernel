@@ -1,5 +1,7 @@
-#ifndef __COMPAT_ETHTOOL_H
-#define __COMPAT_ETHTOOL_H
+#ifndef _COMPAT_LINUX_ETHTOOL_H
+#define _COMPAT_LINUX_ETHTOOL_H
+
+#include "../../compat/config.h"
 
 #include_next <linux/ethtool.h>
 
@@ -10,7 +12,32 @@
 #endif
 #ifndef ETH_MODULE_SFF_8436_MAX_LEN
 #define ETH_MODULE_SFF_8636_MAX_LEN     640
-#define ETH_MODULE_SFF_8436_MAX_LEN     640 
+#define ETH_MODULE_SFF_8436_MAX_LEN     640
+#endif
+
+#ifndef HAVE_ETHTOOL_PAUSE_STATS
+struct ethtool_pause_stats {
+	u64 tx_pause_frames;
+	u64 rx_pause_frames;
+};
+#endif
+#ifndef HAVE_ETHTOOL_RMON_HIST_RANGE
+struct ethtool_rmon_hist_range {
+	u16 low;
+	u16 high;
+};
+
+#define ETHTOOL_RMON_HIST_MAX   10
+struct ethtool_rmon_stats {
+	u64 undersize_pkts;
+	u64 oversize_pkts;
+	u64 fragments;
+	u64 jabbers;
+
+	u64 hist[ETHTOOL_RMON_HIST_MAX];
+	u64 hist_tx[ETHTOOL_RMON_HIST_MAX];
+};
+
 #endif
 
 #ifndef ETHTOOL_FEC_NONE
@@ -20,6 +47,7 @@ enum ethtool_fec_config_bits {
 	ETHTOOL_FEC_OFF_BIT,
 	ETHTOOL_FEC_RS_BIT,
 	ETHTOOL_FEC_BASER_BIT,
+	ETHTOOL_FEC_LLRS_BIT,
 };
 
 struct ethtool_fecparam {
@@ -35,8 +63,22 @@ struct ethtool_fecparam {
 #define ETHTOOL_FEC_OFF                 (1 << ETHTOOL_FEC_OFF_BIT)
 #define ETHTOOL_FEC_RS                  (1 << ETHTOOL_FEC_RS_BIT)
 #define ETHTOOL_FEC_BASER               (1 << ETHTOOL_FEC_BASER_BIT)
+#define ETHTOOL_FEC_LLRS                (1 << ETHTOOL_FEC_LLRS_BIT)
 
-#endif
+#else /* ETHTOOL_FEC_NONE */
+
+/* check whether ethtool_fec_config_bits is defined, but without LLRS bit */
+#ifndef ETHTOOL_FEC_LLRS
+#define ETHTOOL_FEC_LLRS_BIT		(ETHTOOL_FEC_BASER_BIT + 1)
+#define ETHTOOL_FEC_LLRS		(1 << ETHTOOL_FEC_LLRS_BIT)
+/* if SPEED_200000 missing, ETHTOOL_LINK_MODE_FEC_LLRS_BIT is defined below */
+#ifdef SPEED_200000
+#define ETHTOOL_LINK_MODE_FEC_LLRS_BIT 74
+#endif /* SPEED_200000 */
+#endif /* ETHTOOL_FEC_LLRS */
+
+#endif /* ETHTOOL_FEC_NONE */
+
 #ifndef ETH_MODULE_SFF_8472
 #define ETH_MODULE_SFF_8472		0x2
 #define ETH_MODULE_SFF_8472_LEN		512
@@ -128,7 +170,41 @@ struct ethtool_fecparam {
 #define ETHTOOL_LINK_MODE_200000baseLR4_ER4_FR4_Full_BIT 64
 #define ETHTOOL_LINK_MODE_200000baseDR4_Full_BIT 65
 #define ETHTOOL_LINK_MODE_200000baseCR4_Full_BIT 66
+#define ETHTOOL_LINK_MODE_100baseT1_Full_BIT 67
+#define ETHTOOL_LINK_MODE_1000baseT1_Full_BIT 68
+#define ETHTOOL_LINK_MODE_400000baseKR8_Full_BIT 69
+#define ETHTOOL_LINK_MODE_400000baseSR8_Full_BIT 70
+#define ETHTOOL_LINK_MODE_400000baseLR8_ER8_FR8_Full_BIT 71
+#define ETHTOOL_LINK_MODE_400000baseDR8_Full_BIT 72
+#define ETHTOOL_LINK_MODE_400000baseCR8_Full_BIT 73
+/* must be last entry */
+#define ETHTOOL_LINK_MODE_FEC_LLRS_BIT 74
 #endif
+
+#ifndef ETHTOOL_LINK_MODE_400000baseCR4_Full_BIT
+#define ETHTOOL_LINK_MODE_FEC_LLRS_BIT                    74
+#define ETHTOOL_LINK_MODE_100000baseKR_Full_BIT           75
+#define ETHTOOL_LINK_MODE_100000baseSR_Full_BIT           76
+#define ETHTOOL_LINK_MODE_100000baseLR_ER_FR_Full_BIT     77
+#define ETHTOOL_LINK_MODE_100000baseCR_Full_BIT           78
+#define ETHTOOL_LINK_MODE_100000baseDR_Full_BIT           79
+#define ETHTOOL_LINK_MODE_200000baseKR2_Full_BIT          80
+#define ETHTOOL_LINK_MODE_200000baseSR2_Full_BIT          81
+#define ETHTOOL_LINK_MODE_200000baseLR2_ER2_FR2_Full_BIT  82
+#define ETHTOOL_LINK_MODE_200000baseDR2_Full_BIT          83
+#define ETHTOOL_LINK_MODE_200000baseCR2_Full_BIT          84
+#define ETHTOOL_LINK_MODE_400000baseKR4_Full_BIT          85
+#define ETHTOOL_LINK_MODE_400000baseSR4_Full_BIT          86
+#define ETHTOOL_LINK_MODE_400000baseLR4_ER4_FR4_Full_BIT  87
+#define ETHTOOL_LINK_MODE_400000baseDR4_Full_BIT          88
+#define ETHTOOL_LINK_MODE_400000baseCR4_Full_BIT          89
+#endif
+
+#ifndef ETHTOOL_LINK_MODE_100baseFX_Half_BIT
+#define ETHTOOL_LINK_MODE_100baseFX_Half_BIT 90
+#define ETHTOOL_LINK_MODE_100baseFX_Full_BIT 91
+#endif
+
 #define SUPPORTED_100000baseCR4_Full 0
 #define ADVERTISED_100000baseCR4_Full 0
 #define SUPPORTED_100000baseSR4_Full 0
@@ -193,4 +269,4 @@ struct ethtool_fecparam {
 #define ETHTOOL_PFC_PREVENTION_TOUT	3
 #endif
 
-#endif
+#endif /* _COMPAT_LINUX_ETHTOOL_H */

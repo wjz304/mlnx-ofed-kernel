@@ -4,17 +4,16 @@
  * Copyright (C) 2004 - 2009 Ivo van Doorn <IvDoorn@gmail.com>
  */
 
-#ifndef _LINUX_BITFIELD_H
-#define _LINUX_BITFIELD_H
+#ifndef _COMPAT_LINUX_BITFIELD_H
+#define _COMAPAT_LINUX_BITFIELD_H
 
 #include "../../compat/config.h"
 
+#ifdef HAVE_BITFIELD_H
+#include_next <linux/bitfield.h>
+#else
 #include <linux/build_bug.h>
 #include <asm/byteorder.h>
-
-#ifndef __compiletime_error
-#define __compiletime_error(message)
-#endif
 
 /*
  * Bitfield access macros
@@ -62,6 +61,19 @@
 	})
 
 /**
+ * FIELD_MAX() - produce the maximum value representable by a field
+ * @_mask: shifted mask defining the field's length and position
+ *
+ * FIELD_MAX() returns the maximum value that can be held in the field
+ * specified by @_mask.
+ */
+#define FIELD_MAX(_mask)						\
+	({								\
+		__BF_FIELD_CHECK(_mask, 0ULL, 0ULL, "FIELD_MAX: ");	\
+		(typeof(_mask))((_mask) >> __bf_shf(_mask));		\
+	})
+
+/**
  * FIELD_FIT() - check if value fits in the field
  * @_mask: shifted mask defining the field's length and position
  * @_val:  value to test against the field
@@ -70,7 +82,7 @@
  */
 #define FIELD_FIT(_mask, _val)						\
 	({								\
-		__BF_FIELD_CHECK(_mask, 0ULL, _val, "FIELD_FIT: ");	\
+		__BF_FIELD_CHECK(_mask, 0ULL, 0ULL, "FIELD_FIT: ");	\
 		!((((typeof(_mask))_val) << __bf_shf(_mask)) & ~(_mask)); \
 	})
 
@@ -116,6 +128,7 @@ static __always_inline u64 field_mask(u64 field)
 {
 	return field / field_multiplier(field);
 }
+#define field_max(field)	((typeof(field))field_mask(field))
 #define ____MAKE_OP(type,base,to,from)					\
 static __always_inline __##type type##_encode_bits(base v, base field)	\
 {									\
@@ -148,4 +161,5 @@ __MAKE_OP(64)
 #undef __MAKE_OP
 #undef ____MAKE_OP
 
-#endif
+#endif /* HAVE_BITFIELD_H */
+#endif /* _COMPAT_LINUX_BITFIELD_H */

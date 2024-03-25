@@ -1,5 +1,5 @@
-#ifndef _MLNX_LINUX_REFCOUNT_H
-#define _MLNX_LINUX_REFCOUNT_H
+#ifndef _COMPAT_LINUX_REFCOUNT_H
+#define _COMPAT_LINUX_REFCOUNT_H
 
 #include "../../compat/config.h"
 
@@ -31,7 +31,18 @@ refcount_dec_and_mutex_lock(refcount_t *r, struct mutex *lock)
 	return true;
 }
 
+static inline bool
+refcount_dec_and_lock(refcount_t *r, spinlock_t *lock)
+{
+	spin_lock(lock);
+	if (!refcount_dec_and_test(r)) {
+		spin_unlock(lock);
+		return false;
+	}
+
+	return true;
+}
+
 #endif /* HAVE_REFCOUNT */
 
-
-#endif /* _MLNX_LINUX_REFCOUNT_H */
+#endif /* _COMPAT_LINUX_REFCOUNT_H */
