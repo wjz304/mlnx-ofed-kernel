@@ -18,7 +18,7 @@ Change-Id: I0e792f9a76dec4854edd9f61f8b3c7db36593f8d
  struct mlx5_ib_event_work {
  	struct work_struct	work;
  	union {
-@@ -2039,6 +2042,12 @@ static void mlx5_ib_dealloc_ucontext(str
+@@ -2063,6 +2066,12 @@ static void mlx5_ib_dealloc_ucontext(str
  	struct mlx5_ib_dev *dev = to_mdev(ibcontext->device);
  	struct mlx5_bfreg_info *bfregi;
  
@@ -31,7 +31,7 @@ Change-Id: I0e792f9a76dec4854edd9f61f8b3c7db36593f8d
  	bfregi = &context->bfregi;
  	mlx5_ib_dealloc_transport_domain(dev, context->tdn, context->devx_uid);
  
-@@ -2093,9 +2102,11 @@ static int get_extended_index(unsigned l
+@@ -2117,9 +2126,11 @@ static int get_extended_index(unsigned l
  }
  
  
@@ -43,7 +43,7 @@ Change-Id: I0e792f9a76dec4854edd9f61f8b3c7db36593f8d
  
  static inline char *mmap_cmd2str(enum mlx5_ib_mmap_cmd cmd)
  {
-@@ -2126,7 +2137,11 @@ static int mlx5_ib_mmap_clock_info_page(
+@@ -2150,7 +2161,11 @@ static int mlx5_ib_mmap_clock_info_page(
  
  	if (vma->vm_flags & (VM_WRITE | VM_EXEC))
  		return -EPERM;
@@ -55,7 +55,7 @@ Change-Id: I0e792f9a76dec4854edd9f61f8b3c7db36593f8d
  
  	if (!dev->mdev->clock_info)
  		return -EOPNOTSUPP;
-@@ -2339,6 +2354,7 @@ static int mlx5_ib_mmap(struct ib_uconte
+@@ -2363,6 +2378,7 @@ static int mlx5_ib_mmap(struct ib_uconte
  		if (!dev->wc_support)
  			return -EPERM;
  		fallthrough;
@@ -63,7 +63,7 @@ Change-Id: I0e792f9a76dec4854edd9f61f8b3c7db36593f8d
  	case MLX5_IB_MMAP_NC_PAGE:
  	case MLX5_IB_MMAP_REGULAR_PAGE:
  		return uar_mmap(dev, command, vma, context);
-@@ -2352,7 +2368,11 @@ static int mlx5_ib_mmap(struct ib_uconte
+@@ -2376,7 +2392,11 @@ static int mlx5_ib_mmap(struct ib_uconte
  
  		if (vma->vm_flags & VM_WRITE)
  			return -EPERM;
@@ -75,7 +75,7 @@ Change-Id: I0e792f9a76dec4854edd9f61f8b3c7db36593f8d
  
  		/* Don't expose to user-space information it shouldn't have */
  		if (PAGE_SIZE > 4096)
-@@ -3053,6 +3073,7 @@ static void mlx5_eth_lag_cleanup(struct
+@@ -3077,6 +3097,7 @@ static void mlx5_eth_lag_cleanup(struct
  	}
  }
  
@@ -83,7 +83,7 @@ Change-Id: I0e792f9a76dec4854edd9f61f8b3c7db36593f8d
  static void mlx5_netdev_notifier_register(struct mlx5_roce *roce,
  					  struct net_device *netdev)
  {
-@@ -3112,6 +3133,30 @@ static void mlx5_mdev_netdev_untrack(str
+@@ -3136,6 +3157,30 @@ static void mlx5_mdev_netdev_untrack(str
  	mlx5_netdev_notifier_unregister(roce);
  }
  
@@ -114,7 +114,7 @@ Change-Id: I0e792f9a76dec4854edd9f61f8b3c7db36593f8d
  static int mlx5_enable_eth(struct mlx5_ib_dev *dev)
  {
  	int err;
-@@ -3216,7 +3261,11 @@ static void mlx5_ib_unbind_slave_port(st
+@@ -3240,7 +3285,11 @@ static void mlx5_ib_unbind_slave_port(st
  	if (mpi->mdev_events.notifier_call)
  		mlx5_notifier_unregister(mpi->mdev, &mpi->mdev_events);
  	mpi->mdev_events.notifier_call = NULL;
@@ -126,7 +126,7 @@ Change-Id: I0e792f9a76dec4854edd9f61f8b3c7db36593f8d
  	spin_lock(&port->mp.mpi_lock);
  
  	comps = mpi->mdev_refcnt;
-@@ -3274,7 +3323,16 @@ static bool mlx5_ib_bind_slave_port(stru
+@@ -3298,7 +3347,16 @@ static bool mlx5_ib_bind_slave_port(stru
  	if (err)
  		goto unbind;
  
@@ -143,7 +143,7 @@ Change-Id: I0e792f9a76dec4854edd9f61f8b3c7db36593f8d
  
  	mpi->mdev_events.notifier_call = mlx5_ib_event_slave_port;
  	mlx5_notifier_register(mpi->mdev, &mpi->mdev_events);
-@@ -3681,7 +3739,9 @@ static const struct uapi_definition mlx5
+@@ -3705,7 +3763,9 @@ static const struct uapi_definition mlx5
  static void mlx5_ib_stage_init_cleanup(struct mlx5_ib_dev *dev)
  {
  	mlx5_ib_cleanup_multiport_master(dev);
@@ -153,7 +153,7 @@ Change-Id: I0e792f9a76dec4854edd9f61f8b3c7db36593f8d
  	mutex_destroy(&dev->cap_mask_mutex);
  	WARN_ON(!xa_empty(&dev->sig_mrs));
  	WARN_ON(!bitmap_empty(dev->dm.memic_alloc_pages, MLX5_MAX_MEMIC_PAGES));
-@@ -3789,7 +3849,9 @@ static const struct ib_device_ops mlx5_i
+@@ -3813,7 +3873,9 @@ static const struct ib_device_ops mlx5_i
  	.destroy_qp = mlx5_ib_destroy_qp,
  	.destroy_srq = mlx5_ib_destroy_srq,
  	.detach_mcast = mlx5_ib_mcg_detach,
@@ -163,7 +163,7 @@ Change-Id: I0e792f9a76dec4854edd9f61f8b3c7db36593f8d
  	.drain_rq = mlx5_ib_drain_rq,
  	.drain_sq = mlx5_ib_drain_sq,
  	.device_group = &mlx5_attr_group,
-@@ -3819,7 +3881,9 @@ static const struct ib_device_ops mlx5_i
+@@ -3843,7 +3905,9 @@ static const struct ib_device_ops mlx5_i
  	.query_srq = mlx5_ib_query_srq,
  	.query_ucontext = mlx5_ib_query_ucontext,
  	.reg_user_mr = mlx5_ib_reg_user_mr,
@@ -173,7 +173,7 @@ Change-Id: I0e792f9a76dec4854edd9f61f8b3c7db36593f8d
  	.req_notify_cq = mlx5_ib_arm_cq,
  	.rereg_user_mr = mlx5_ib_rereg_user_mr,
  	.resize_cq = mlx5_ib_resize_cq,
-@@ -3850,9 +3914,11 @@ static const struct ib_device_ops mlx5_i
+@@ -3874,9 +3938,11 @@ static const struct ib_device_ops mlx5_i
  
  static const struct ib_device_ops mlx5_ib_dev_sriov_ops = {
  	.get_vf_config = mlx5_ib_get_vf_config,
@@ -186,7 +186,7 @@ Change-Id: I0e792f9a76dec4854edd9f61f8b3c7db36593f8d
  	.set_vf_link_state = mlx5_ib_set_vf_link_state,
  };
  
-@@ -4012,7 +4078,13 @@ static int mlx5_ib_roce_init(struct mlx5
+@@ -4036,7 +4102,13 @@ static int mlx5_ib_roce_init(struct mlx5
  		port_num = mlx5_core_native_port_num(dev->mdev) - 1;
  
  		/* Register only for native ports */
@@ -200,7 +200,7 @@ Change-Id: I0e792f9a76dec4854edd9f61f8b3c7db36593f8d
  
  		err = mlx5_enable_eth(dev);
  		if (err)
-@@ -4021,7 +4093,11 @@ static int mlx5_ib_roce_init(struct mlx5
+@@ -4045,7 +4117,11 @@ static int mlx5_ib_roce_init(struct mlx5
  
  	return 0;
  cleanup:
@@ -212,7 +212,7 @@ Change-Id: I0e792f9a76dec4854edd9f61f8b3c7db36593f8d
  	return err;
  }
  
-@@ -4039,7 +4115,11 @@ static void mlx5_ib_roce_cleanup(struct
+@@ -4063,7 +4139,11 @@ static void mlx5_ib_roce_cleanup(struct
  		mlx5_disable_eth(dev);
  
  		port_num = mlx5_core_native_port_num(dev->mdev) - 1;

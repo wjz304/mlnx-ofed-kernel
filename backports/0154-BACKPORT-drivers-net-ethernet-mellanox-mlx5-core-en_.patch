@@ -4,8 +4,8 @@ Subject: [PATCH] BACKPORT:
 
 Change-Id: Icb4f891822ce9c0ebe5328c9b3998d4039f154c5
 ---
- .../mellanox/mlx5/core/en_accel/ipsec.c       | 154 ++++++++++++++++--
- 1 file changed, 137 insertions(+), 17 deletions(-)
+ .../mellanox/mlx5/core/en_accel/ipsec.c       | 155 ++++++++++++++++--
+ 1 file changed, 137 insertions(+), 18 deletions(-)
 
 --- a/drivers/net/ethernet/mellanox/mlx5/core/en_accel/ipsec.c
 +++ b/drivers/net/ethernet/mellanox/mlx5/core/en_accel/ipsec.c
@@ -366,20 +366,23 @@ Change-Id: Icb4f891822ce9c0ebe5328c9b3998d4039f154c5
  static void mlx5e_xfrm_update_curlft(struct xfrm_state *x)
  {
  	struct mlx5e_ipsec_sa_entry *sa_entry = to_ipsec_sa_entry(x);
-@@ -973,16 +1068,18 @@ static void mlx5e_xfrm_update_curlft(str
- 	lockdep_assert(lockdep_is_held(&x->lock) ||
- 		       lockdep_is_held(&dev_net(x->xso.real_dev)->xfrm.xfrm_cfg_mutex));
+@@ -975,11 +1070,10 @@ static void mlx5e_xfrm_update_curlft(str
+ 		       lockdep_is_held(&dev_net(x->xso.real_dev)->xfrm.xfrm_cfg_mutex) ||
+ 		       lockdep_is_held(&dev_net(x->xso.real_dev)->xfrm.xfrm_state_lock));
  
 -	/* cmi: XFRM_DEV_OFFLOAD_FLAG_ACQ is not defined in base kernel, will fix in backports
 +#ifdef HAVE_XFRM_DEV_OFFLOAD_FLAG_ACQ
  	if (x->xso.flags & XFRM_DEV_OFFLOAD_FLAG_ACQ)
  		return;
 -	 */
+-
 +#endif
- 
- 	mlx5_fc_query_cached(ipsec_rule->fc, &bytes, &packets, &lastuse);
- 	x->curlft.packets += packets;
- 	x->curlft.bytes += bytes;
+ 	if (sa_entry->attrs.dir == XFRM_DEV_OFFLOAD_IN) {
+ 		mlx5_fc_query_cached(ipsec_rule->auth.fc, &bytes, &packets, &lastuse);
+ 		x->stats.integrity_failed += packets;
+@@ -1002,7 +1096,9 @@ static void mlx5e_xfrm_update_curlft(str
+ 		XFRM_ADD_STATS(net, LINUX_MIB_XFRMINSTATESEQERROR, packets);
+ 	}
  }
 +#endif
  
@@ -387,7 +390,7 @@ Change-Id: Icb4f891822ce9c0ebe5328c9b3998d4039f154c5
  static int mlx5e_xfrm_validate_policy(struct mlx5_core_dev *mdev,
  				      struct xfrm_policy *x,
  				      struct netlink_ext_ack *extack)
-@@ -1000,11 +1097,13 @@ static int mlx5e_xfrm_validate_policy(st
+@@ -1020,11 +1116,13 @@ static int mlx5e_xfrm_validate_policy(st
  		return -EINVAL;
  	}
  
@@ -401,7 +404,7 @@ Change-Id: Icb4f891822ce9c0ebe5328c9b3998d4039f154c5
  
  	if (!x->xfrm_vec[0].reqid && sel->proto == IPPROTO_IP &&
  	    addr6_all_zero(sel->saddr.a6) && addr6_all_zero(sel->daddr.a6)) {
-@@ -1012,10 +1111,12 @@ static int mlx5e_xfrm_validate_policy(st
+@@ -1032,10 +1130,12 @@ static int mlx5e_xfrm_validate_policy(st
  		return -EINVAL;
  	}
  
@@ -414,7 +417,7 @@ Change-Id: Icb4f891822ce9c0ebe5328c9b3998d4039f154c5
  
  	if (x->selector.proto != IPPROTO_IP &&
  	    x->selector.proto != IPPROTO_UDP &&
-@@ -1044,7 +1145,9 @@ static int mlx5e_xfrm_validate_policy(st
+@@ -1064,7 +1164,9 @@ static int mlx5e_xfrm_validate_policy(st
  
  	return 0;
  }
@@ -424,7 +427,7 @@ Change-Id: Icb4f891822ce9c0ebe5328c9b3998d4039f154c5
  static void
  mlx5e_ipsec_build_accel_pol_attrs(struct mlx5e_ipsec_pol_entry *pol_entry,
  				  struct mlx5_accel_pol_xfrm_attrs *attrs)
-@@ -1069,14 +1172,24 @@ mlx5e_ipsec_build_accel_pol_attrs(struct
+@@ -1089,14 +1191,24 @@ mlx5e_ipsec_build_accel_pol_attrs(struct
  	attrs->upspec.proto = sel->proto;
  	attrs->prio = x->priority;
  }
@@ -451,7 +454,7 @@ Change-Id: Icb4f891822ce9c0ebe5328c9b3998d4039f154c5
  
  	priv = netdev_priv(netdev);
  	if (!priv->ipsec) {
-@@ -1130,18 +1243,25 @@ static void mlx5e_xfrm_free_policy(struc
+@@ -1150,18 +1262,25 @@ static void mlx5e_xfrm_free_policy(struc
  
  	kfree(pol_entry);
  }

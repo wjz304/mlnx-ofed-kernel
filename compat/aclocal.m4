@@ -2754,6 +2754,21 @@ AC_DEFUN([LINUX_CONFIG_COMPAT],
 		AC_MSG_RESULT(no)
 	])
 
+	AC_MSG_CHECKING([if devlink_fmsg_u8_pair_put returns int])
+	MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <net/devlink.h>
+	],[
+		int err = devlink_fmsg_u8_pair_put(NULL, "test", 0);
+
+		return 0;
+	],[
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_INT_DEVLINK_FMSG_U8_PAIR, 1,
+			  [devlink_fmsg_u8_pair_put returns int])
+	],[
+		AC_MSG_RESULT(no)
+	])
+
 	AC_MSG_CHECKING([if struct devlink_port_ops had port_fn_ipsec_crypto_get])
 	MLNX_BG_LB_LINUX_TRY_COMPILE([
 		#include <net/devlink.h>
@@ -3996,8 +4011,8 @@ AC_DEFUN([LINUX_CONFIG_COMPAT],
 
 		err = devlink_health_report(r, NULL, NULL);
 
-		err = devlink_fmsg_arr_pair_nest_start(fmsg, "name");
-		err = devlink_fmsg_arr_pair_nest_end(fmsg);
+		devlink_fmsg_arr_pair_nest_start(fmsg, "name");
+		devlink_fmsg_arr_pair_nest_end(fmsg);
 
 		return 0;
 	],[
@@ -4038,9 +4053,33 @@ AC_DEFUN([LINUX_CONFIG_COMPAT],
 		int value;
 
 		err =  devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
 	],[
 		AC_MSG_RESULT(yes)
-		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32, 1,
+		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_INT, 1,
+			  [devlink_fmsg_binary_pair_put exists])
+	],[
+		AC_MSG_RESULT(no)
+	])
+
+	AC_MSG_CHECKING([if devlink has devlink_fmsg_binary_pair_put])
+	MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <net/devlink.h>
+
+		/* Only interested in function with arg u32 and not u16 */
+		/* See upstream commit e2cde864a1d3e3626bfc8fa088fbc82b04ce66ed */
+		void devlink_fmsg_binary_pair_put(struct devlink_fmsg *fmsg, const char *name, const void *value, u32 value_len);
+	],[
+		struct devlink_fmsg *fmsg;
+		int value;
+
+		devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
+	],[
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_VOID, 1,
 			  [devlink_fmsg_binary_pair_put exists])
 	],[
 		AC_MSG_RESULT(no)
@@ -10709,6 +10748,21 @@ AC_DEFUN([LINUX_CONFIG_COMPAT],
        		 AC_MSG_RESULT(no)
 	 ])
 
+	AC_MSG_CHECKING([if filter.h has xdp_do_flush_map])
+	MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <linux/filter.h>
+	],[
+		xdp_do_flush_map();
+
+		return 0;
+	],[
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_XDP_DO_FLUSH_MAP, 1,
+			  [filter.h has xdp_do_flush_map])
+	],[
+		AC_MSG_RESULT(no)
+	])
+
 
 	AC_MSG_CHECKING([if filter.h has bpf_warn_invalid_xdp_action get 3 params])
 	MLNX_BG_LB_LINUX_TRY_COMPILE([
@@ -15198,6 +15252,25 @@ AC_DEFUN([LINUX_CONFIG_COMPAT],
 		AC_MSG_RESULT(no)
 	])
 
+	AC_MSG_CHECKING([if linux/overflow.h has size_add size_mul size_sub])
+	MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <linux/overflow.h>
+	],[
+		size_t a = 5;
+		size_t b = 6;
+
+		if ( size_add(a,b) && size_mul(a,b) && size_sub(a,b) )
+			return 0;
+
+		return 0;
+	],[
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_SIZE_MUL_SUB_ADD, 1,
+			  [linux/overflow.h has size_add size_mul size_sub])
+	],[
+		AC_MSG_RESULT(no)
+	])
+
 	AC_MSG_CHECKING([if linux/rtnetlink.h has net_rwsem])
 	MLNX_BG_LB_LINUX_TRY_COMPILE([
 		#include <linux/rtnetlink.h>
@@ -16934,6 +17007,45 @@ AC_DEFUN([LINUX_CONFIG_COMPAT],
 	],[
 		AC_MSG_RESULT(no)
 	])
+
+	AC_MSG_CHECKING([if struct svc_serv has sv_cb_list])
+	MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <linux/sunrpc/svc.h>
+	],[
+		struct svc_serv serv;
+		struct lwq      list;
+
+		serv.sv_cb_list = list;
+
+		return 0;
+	],[
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LWQ, 1,
+			[struct svc_serv has sv_cb_list])
+	],[
+		MLNX_BG_LB_LINUX_TRY_COMPILE([
+			#include <linux/sunrpc/svc.h>
+		],[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		],[
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		],[
+			AC_MSG_RESULT(no)
+		])
+	])
+
+	LB_CHECK_SYMBOL_EXPORT([svc_pool_wake_idle_thread],
+		[net/sunrpc/svc.c],
+		[AC_DEFINE(HAVE_SVC_POOL_WAKE_IDLE_THREAD, 1,
+			[svc_pool_wake_idle_thread is exported by the kernel])],
+	[])
 
 	AC_MSG_CHECKING([if *send_request has 'struct rpc_rqst *req' as a param])
 	MLNX_BG_LB_LINUX_TRY_COMPILE([
@@ -19573,19 +19685,6 @@ AC_DEFUN([LINUX_CONFIG_COMPAT],
 		AC_MSG_RESULT(no)
 	])
 
-	AC_MSG_CHECKING([if linux/nvme-auth.h exists])
-	MLNX_BG_LB_LINUX_TRY_COMPILE([
-		#include <linux/nvme-auth.h>
-	],[
-		return 0;
-	],[
-		AC_MSG_RESULT(yes)
-		MLNX_AC_DEFINE(HAVE_NVME_AUTH_H, 1,
-			[nvme-auth.h is defined])
-	],[
-		AC_MSG_RESULT(no)
-	])
-
 	AC_MSG_CHECKING([if linux/t10-pi.h has ext_pi_ref_tag])
 	MLNX_BG_LB_LINUX_TRY_COMPILE([
 		#include <linux/t10-pi.h>
@@ -20385,6 +20484,36 @@ AC_DEFUN([LINUX_CONFIG_COMPAT],
 		AC_MSG_RESULT(yes)
 		MLNX_AC_DEFINE(HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING, 1,
 			[linux/aer.h has pci_enable_pcie_error_reporting])
+	],[
+		AC_MSG_RESULT(no)
+	])
+
+	AC_MSG_CHECKING([if struct io_uring_cmd has cookie])
+	MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <linux/io_uring.h>
+	],[
+		struct io_uring_cmd x = {
+			.cookie = NULL,
+		};
+		return 0;
+	],[
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_IO_URING_CMD_COOKIE, 1,
+				[struct io_uring_cmd has cookie])
+	],[
+		AC_MSG_RESULT(no)
+	])
+
+	AC_MSG_CHECKING([if nvme_auth_transform_key returns u8])
+	MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <linux/nvme-auth.h>
+	],[
+		u8 *x = nvme_auth_transform_key(NULL, NULL);
+		return 0;
+	],[
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_NVME_AUTH_TRANSFORM_KEY_U8, 1,
+				[nvme_auth_transform_key returns u8])
 	],[
 		AC_MSG_RESULT(no)
 	])

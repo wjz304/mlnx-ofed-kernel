@@ -3275,8 +3275,10 @@ int mlx5e_open_locked(struct net_device *netdev)
 	set_bit(MLX5E_STATE_OPENED, &priv->state);
 
 	err = mlx5e_open_channels(priv, &priv->channels);
-	if (err)
+	if (err) {
+		netdev_err(netdev, "Failed to open channels (%d)\n", err);
 		goto err_clear_state_opened_flag;
+	}
 
 	err = priv->profile->update_rx(priv);
 	if (err)

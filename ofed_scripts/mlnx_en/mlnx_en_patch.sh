@@ -569,13 +569,13 @@ check_complex_defines()
 		unset_complex_define_to_config_h HAVE_GUP_MUST_UNSHARE_GET_3_PARAMS
 	fi
 
-# Define HAVE_PAGE_POOL_RELEASE_PAGE from other flags
-	if check_compat_config_h_var HAVE_PAGE_POOL_RELEASE_PAGE_IN_PAGE_POOL_H ||
-		check_compat_config_h_var HAVE_PAGE_POOL_RELEASE_PAGE_IN_TYPES_H
+# Define HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32 from other flags
+	if check_compat_config_h_var HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_VOID ||
+	   check_compat_config_h_var HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_INT
 	then
-		set_complex_define_to_config_h HAVE_PAGE_POOL_RELEASE_PAGE
+		set_complex_define_to_config_h HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32
 	else
-		unset_complex_define_to_config_h HAVE_PAGE_POOL_RELEASE_PAGE
+		unset_complex_define_to_config_h HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32
 	fi
 }
 

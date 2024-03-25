@@ -17,7 +17,7 @@ Signed-off-by: Dana Benbasat <dbenbasat@nvidia.com>
 +#undef CONFIG_NVME_MULTIPATH
 +#endif
 +
-+#ifndef HAVE_NVME_AUTH_H
++#ifndef HAVE_NVME_AUTH_TRANSFORM_KEY_U8
 +#undef CONFIG_NVME_AUTH
 +#endif
 +
@@ -337,7 +337,7 @@ Signed-off-by: Dana Benbasat <dbenbasat@nvidia.com>
  		unsigned long arg);
  long nvme_dev_ioctl(struct file *file, unsigned int cmd,
  		unsigned long arg);
-+#ifdef HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL
++#if defined(HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL) && defined(HAVE_IO_URING_CMD_COOKIE)
  int nvme_ns_chr_uring_cmd_iopoll(struct io_uring_cmd *ioucmd,
  		struct io_comp_batch *iob, unsigned int poll_flags);
  int nvme_ns_head_chr_uring_cmd_iopoll(struct io_uring_cmd *ioucmd,

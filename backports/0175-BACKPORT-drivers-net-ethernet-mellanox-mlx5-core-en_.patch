@@ -196,7 +196,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  }
  
  static const struct counter_desc q_stats_desc[] = {
-@@ -879,6 +935,7 @@ static MLX5E_DECLARE_STATS_GRP_OP_UPDATE
+@@ -900,6 +956,7 @@ static MLX5E_DECLARE_STATS_GRP_OP_UPDATE
  		MLX5_BYTE_OFF(ppcnt_reg,		\
  			      counter_set.set.c##_high)))
  
@@ -204,7 +204,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  static int mlx5e_stats_get_ieee(struct mlx5_core_dev *mdev,
  				u32 *ppcnt_ieee_802_3)
  {
-@@ -893,7 +950,9 @@ static int mlx5e_stats_get_ieee(struct m
+@@ -914,7 +971,9 @@ static int mlx5e_stats_get_ieee(struct m
  	return mlx5_core_access_reg(mdev, in, sz, ppcnt_ieee_802_3,
  				    sz, MLX5_REG_PPCNT, 0, 0);
  }
@@ -214,7 +214,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  void mlx5e_stats_pause_get(struct mlx5e_priv *priv,
  			   struct ethtool_pause_stats *pause_stats)
  {
-@@ -912,7 +971,9 @@ void mlx5e_stats_pause_get(struct mlx5e_
+@@ -933,7 +992,9 @@ void mlx5e_stats_pause_get(struct mlx5e_
  				      eth_802_3_cntrs_grp_data_layout,
  				      a_pause_mac_ctrl_frames_received);
  }
@@ -224,7 +224,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  void mlx5e_stats_eth_phy_get(struct mlx5e_priv *priv,
  			     struct ethtool_eth_phy_stats *phy_stats)
  {
-@@ -980,6 +1041,61 @@ void mlx5e_stats_eth_ctrl_get(struct mlx
+@@ -1001,6 +1062,61 @@ void mlx5e_stats_eth_ctrl_get(struct mlx
  				      a_unsupported_opcodes_received);
  }
  
@@ -286,7 +286,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  #define PPORT_2863_OFF(c) \
  	MLX5_BYTE_OFF(ppcnt_reg, \
  		      counter_set.eth_2863_cntrs_grp_data_layout.c##_high)
-@@ -1091,59 +1207,6 @@ static MLX5E_DECLARE_STATS_GRP_OP_UPDATE
+@@ -1112,59 +1228,6 @@ static MLX5E_DECLARE_STATS_GRP_OP_UPDATE
  	mlx5_core_access_reg(mdev, in, sz, out, sz, MLX5_REG_PPCNT, 0, 0);
  }
  
@@ -346,7 +346,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  #define PPORT_PHY_STATISTICAL_OFF(c) \
  	MLX5_BYTE_OFF(ppcnt_reg, \
  		      counter_set.phys_layer_statistical_cntrs.c##_high)
-@@ -1251,6 +1314,7 @@ static MLX5E_DECLARE_STATS_GRP_OP_UPDATE
+@@ -1272,6 +1335,7 @@ static MLX5E_DECLARE_STATS_GRP_OP_UPDATE
  	mlx5_core_access_reg(mdev, in, sz, out, sz, MLX5_REG_PPCNT, 0, 0);
  }
  
@@ -354,7 +354,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  void mlx5e_get_link_ext_stats(struct net_device *dev,
  			      struct ethtool_link_ext_stats *stats)
  {
-@@ -1267,7 +1331,9 @@ void mlx5e_get_link_ext_stats(struct net
+@@ -1288,7 +1352,9 @@ void mlx5e_get_link_ext_stats(struct net
  	stats->link_down_events = MLX5_GET(ppcnt_reg, out,
  					   counter_set.phys_layer_cntrs.link_down_events);
  }
@@ -364,7 +364,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  static int fec_num_lanes(struct mlx5_core_dev *dev)
  {
  	u32 out[MLX5_ST_SZ_DW(pmlp_reg)] = {};
-@@ -1384,6 +1450,7 @@ void mlx5e_stats_fec_get(struct mlx5e_pr
+@@ -1405,6 +1471,7 @@ void mlx5e_stats_fec_get(struct mlx5e_pr
  	fec_set_corrected_bits_total(priv, fec_stats);
  	fec_set_block_stats(priv, fec_stats);
  }
@@ -372,7 +372,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  
  #define PPORT_ETH_EXT_OFF(c) \
  	MLX5_BYTE_OFF(ppcnt_reg, \
-@@ -1970,8 +2037,10 @@ static const struct counter_desc rq_stat
+@@ -1991,8 +2058,10 @@ static const struct counter_desc rq_stat
  	{ MLX5E_DECLARE_RX_STAT(struct mlx5e_rq_stats, csum_unnecessary) },
  	{ MLX5E_DECLARE_RX_STAT(struct mlx5e_rq_stats, csum_unnecessary_inner) },
  	{ MLX5E_DECLARE_RX_STAT(struct mlx5e_rq_stats, csum_none) },
@@ -383,7 +383,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  	{ MLX5E_DECLARE_RX_STAT(struct mlx5e_rq_stats, lro_packets) },
  	{ MLX5E_DECLARE_RX_STAT(struct mlx5e_rq_stats, lro_bytes) },
  	{ MLX5E_DECLARE_RX_STAT(struct mlx5e_rq_stats, gro_packets) },
-@@ -1986,8 +2055,10 @@ static const struct counter_desc rq_stat
+@@ -2007,8 +2076,10 @@ static const struct counter_desc rq_stat
  	{ MLX5E_DECLARE_RX_STAT(struct mlx5e_rq_stats, mpwqe_filler_strides) },
  	{ MLX5E_DECLARE_RX_STAT(struct mlx5e_rq_stats, oversize_pkts_sw_drop) },
  	{ MLX5E_DECLARE_RX_STAT(struct mlx5e_rq_stats, buff_alloc_err) },
@@ -394,7 +394,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  	{ MLX5E_DECLARE_RX_STAT(struct mlx5e_rq_stats, cache_reuse) },
  	{ MLX5E_DECLARE_RX_STAT(struct mlx5e_rq_stats, cache_full) },
  	{ MLX5E_DECLARE_RX_STAT(struct mlx5e_rq_stats, cache_empty) },
-@@ -2056,10 +2127,15 @@ static const struct counter_desc sq_stat
+@@ -2077,10 +2148,15 @@ static const struct counter_desc sq_stat
  	{ MLX5E_DECLARE_TX_STAT(struct mlx5e_sq_stats, xmit_more) },
  	{ MLX5E_DECLARE_TX_STAT(struct mlx5e_sq_stats, recover) },
  	{ MLX5E_DECLARE_TX_STAT(struct mlx5e_sq_stats, cqes) },
@@ -410,7 +410,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  static const struct counter_desc rq_xdpsq_stats_desc[] = {
  	{ MLX5E_DECLARE_RQ_XDPSQ_STAT(struct mlx5e_xdpsq_stats, xmit) },
  	{ MLX5E_DECLARE_RQ_XDPSQ_STAT(struct mlx5e_xdpsq_stats, mpwqe) },
-@@ -2079,7 +2155,9 @@ static const struct counter_desc xdpsq_s
+@@ -2100,7 +2176,9 @@ static const struct counter_desc xdpsq_s
  	{ MLX5E_DECLARE_XDPSQ_STAT(struct mlx5e_xdpsq_stats, err) },
  	{ MLX5E_DECLARE_XDPSQ_STAT(struct mlx5e_xdpsq_stats, cqes) },
  };
@@ -420,7 +420,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  static const struct counter_desc xskrq_stats_desc[] = {
  	{ MLX5E_DECLARE_XSKRQ_STAT(struct mlx5e_rq_stats, packets) },
  	{ MLX5E_DECLARE_XSKRQ_STAT(struct mlx5e_rq_stats, bytes) },
-@@ -2110,6 +2188,7 @@ static const struct counter_desc xsksq_s
+@@ -2131,6 +2209,7 @@ static const struct counter_desc xsksq_s
  	{ MLX5E_DECLARE_XSKSQ_STAT(struct mlx5e_xdpsq_stats, err) },
  	{ MLX5E_DECLARE_XSKSQ_STAT(struct mlx5e_xdpsq_stats, cqes) },
  };
@@ -428,7 +428,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  
  static const struct counter_desc ch_stats_desc[] = {
  	{ MLX5E_DECLARE_CH_STAT(struct mlx5e_ch_stats, events) },
-@@ -2163,8 +2242,10 @@ static const struct counter_desc ptp_rq_
+@@ -2184,8 +2263,10 @@ static const struct counter_desc ptp_rq_
  	{ MLX5E_DECLARE_PTP_RQ_STAT(struct mlx5e_rq_stats, csum_unnecessary) },
  	{ MLX5E_DECLARE_PTP_RQ_STAT(struct mlx5e_rq_stats, csum_unnecessary_inner) },
  	{ MLX5E_DECLARE_PTP_RQ_STAT(struct mlx5e_rq_stats, csum_none) },
@@ -439,7 +439,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  	{ MLX5E_DECLARE_PTP_RQ_STAT(struct mlx5e_rq_stats, lro_packets) },
  	{ MLX5E_DECLARE_PTP_RQ_STAT(struct mlx5e_rq_stats, lro_bytes) },
  	{ MLX5E_DECLARE_PTP_RQ_STAT(struct mlx5e_rq_stats, ecn_mark) },
-@@ -2224,10 +2305,14 @@ static const struct counter_desc qos_sq_
+@@ -2245,10 +2326,14 @@ static const struct counter_desc qos_sq_
  
  #define NUM_RQ_STATS			ARRAY_SIZE(rq_stats_desc)
  #define NUM_SQ_STATS			ARRAY_SIZE(sq_stats_desc)
@@ -456,7 +456,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  #define NUM_CH_STATS			ARRAY_SIZE(ch_stats_desc)
  #define NUM_PTP_SQ_STATS		ARRAY_SIZE(ptp_sq_stats_desc)
  #define NUM_PTP_CH_STATS		ARRAY_SIZE(ptp_ch_stats_desc)
-@@ -2366,16 +2451,23 @@ static MLX5E_DECLARE_STATS_GRP_OP_NUM_ST
+@@ -2387,16 +2472,23 @@ static MLX5E_DECLARE_STATS_GRP_OP_NUM_ST
  
  	return (NUM_RQ_STATS * max_nch) +
  	       (NUM_CH_STATS * max_nch) +
@@ -485,7 +485,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  	int max_nch = priv->stats_nch;
  	int i, j, tc;
  
-@@ -2388,12 +2480,17 @@ static MLX5E_DECLARE_STATS_GRP_OP_FILL_S
+@@ -2409,12 +2501,17 @@ static MLX5E_DECLARE_STATS_GRP_OP_FILL_S
  		for (j = 0; j < NUM_RQ_STATS; j++)
  			sprintf(data + (idx++) * ETH_GSTRING_LEN,
  				rq_stats_desc[j].format, i);
@@ -506,7 +506,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  	}
  
  	for (tc = 0; tc < priv->max_opened_tc; tc++)
-@@ -2404,12 +2501,16 @@ static MLX5E_DECLARE_STATS_GRP_OP_FILL_S
+@@ -2425,12 +2522,16 @@ static MLX5E_DECLARE_STATS_GRP_OP_FILL_S
  					i + tc * max_nch);
  
  	for (i = 0; i < max_nch; i++) {
@@ -523,7 +523,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  	}
  
  	return idx;
-@@ -2417,7 +2518,9 @@ static MLX5E_DECLARE_STATS_GRP_OP_FILL_S
+@@ -2438,7 +2539,9 @@ static MLX5E_DECLARE_STATS_GRP_OP_FILL_S
  
  static MLX5E_DECLARE_STATS_GRP_OP_FILL_STATS(channels)
  {
@@ -533,7 +533,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  	int max_nch = priv->stats_nch;
  	int i, j, tc;
  
-@@ -2432,14 +2535,18 @@ static MLX5E_DECLARE_STATS_GRP_OP_FILL_S
+@@ -2453,14 +2556,18 @@ static MLX5E_DECLARE_STATS_GRP_OP_FILL_S
  			data[idx++] =
  				MLX5E_READ_CTR64_CPU(&priv->channel_stats[i]->rq,
  						     rq_stats_desc, j);
@@ -552,7 +552,7 @@ Change-Id: Idd3ba78b742358341b35ecdf66f0c03c6c57b375
  	}
  
  	for (tc = 0; tc < priv->max_opened_tc; tc++)
-@@ -2450,14 +2557,18 @@ static MLX5E_DECLARE_STATS_GRP_OP_FILL_S
+@@ -2471,14 +2578,18 @@ static MLX5E_DECLARE_STATS_GRP_OP_FILL_S
  							     sq_stats_desc, j);
  
  	for (i = 0; i < max_nch; i++) {

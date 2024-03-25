@@ -3,8 +3,8 @@ Subject: [PATCH] BACKPORT: drivers/nvme/host/tcp.c
 
 Change-Id: I947d2fac11ccc3e3b2fcfafaa47fe7e4c10c8a7d
 ---
- drivers/nvme/host/tcp.c | 223 ++++++++++++++++++++++++++++++++++++++--
- 1 file changed, 216 insertions(+), 7 deletions(-)
+ drivers/nvme/host/tcp.c | 221 ++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 215 insertions(+), 6 deletions(-)
 
 --- a/drivers/nvme/host/tcp.c
 +++ b/drivers/nvme/host/tcp.c
@@ -455,7 +455,7 @@ Change-Id: I947d2fac11ccc3e3b2fcfafaa47fe7e4c10c8a7d
  
  static blk_status_t nvme_tcp_queue_rq(struct blk_mq_hw_ctx *hctx,
  		const struct blk_mq_queue_data *bd)
-@@ -2446,9 +2612,14 @@ static blk_status_t nvme_tcp_queue_rq(st
+@@ -2446,8 +2612,13 @@ static blk_status_t nvme_tcp_queue_rq(st
  	return BLK_STS_OK;
  }
  
@@ -465,12 +465,10 @@ Change-Id: I947d2fac11ccc3e3b2fcfafaa47fe7e4c10c8a7d
  static void nvme_tcp_map_queues(struct blk_mq_tag_set *set)
 +#endif
  {
--	struct nvme_tcp_ctrl *ctrl = to_tcp_ctrl(set->driver_data);
 +#ifdef HAVE_BLK_MQ_HCTX_TYPE
-+	struct nvme_tcp_ctrl *ctrl = set->driver_data;
+ 	struct nvme_tcp_ctrl *ctrl = to_tcp_ctrl(set->driver_data);
  	struct nvmf_ctrl_options *opts = ctrl->ctrl.opts;
  
- 	if (opts->nr_write_queues && ctrl->io_queues[HCTX_TYPE_READ]) {
 @@ -2487,9 +2658,25 @@ static void nvme_tcp_map_queues(struct b
  		ctrl->io_queues[HCTX_TYPE_DEFAULT],
  		ctrl->io_queues[HCTX_TYPE_READ],

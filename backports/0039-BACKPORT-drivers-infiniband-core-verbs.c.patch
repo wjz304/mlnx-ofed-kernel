@@ -3,8 +3,8 @@ Subject: [PATCH] BACKPORT: drivers/infiniband/core/verbs.c
 
 Change-Id: I3f4346f6141a3aac360f951a14fcd3f84bd72c74
 ---
- drivers/infiniband/core/verbs.c | 46 +++++++++++++++++++++++++++++++++
- 1 file changed, 46 insertions(+)
+ drivers/infiniband/core/verbs.c | 48 ++++++++++++++++++++++++++++++++-
+ 1 file changed, 47 insertions(+), 1 deletion(-)
 
 --- a/drivers/infiniband/core/verbs.c
 +++ b/drivers/infiniband/core/verbs.c
@@ -22,8 +22,9 @@ Change-Id: I3f4346f6141a3aac360f951a14fcd3f84bd72c74
  	int rc;
  	u32 netdev_speed;
  	struct net_device *netdev;
+-	struct ethtool_link_ksettings lksettings = {};
 +#ifdef HAVE___ETHTOOL_GET_LINK_KSETTINGS
- 	struct ethtool_link_ksettings lksettings;
++       struct ethtool_link_ksettings lksettings = {};
 +#else
 +	struct ethtool_cmd lksettings;
 +#endif

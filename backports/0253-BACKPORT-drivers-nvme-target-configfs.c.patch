@@ -13,7 +13,7 @@ Change-Id: Iced33095abed702616645b53da24b24f27f7df97
   * Copyright (c) 2015-2016 HGST, a Western Digital Company.
   */
 +
-+#ifndef HAVE_NVME_AUTH_H
++#ifndef HAVE_NVME_AUTH_TRANSFORM_KEY_U8
 +#undef CONFIG_NVME_TARGET_AUTH
 +#endif
 +

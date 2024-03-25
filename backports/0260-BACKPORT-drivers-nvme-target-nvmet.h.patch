@@ -12,7 +12,7 @@ Change-Id: I8c2b7c3af6d381e253ff6aab71f363553116d1d2
  #ifndef _NVMET_H
  #define _NVMET_H
  
-+#ifndef HAVE_NVME_AUTH_H
++#ifndef HAVE_NVME_AUTH_TRANSFORM_KEY_U8
 +#undef CONFIG_NVME_TARGET_AUTH
 +#endif
 +

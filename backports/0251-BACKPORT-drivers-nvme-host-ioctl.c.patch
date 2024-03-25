@@ -4,7 +4,7 @@ Subject: [PATCH] BACKPORT: drivers/nvme/host/ioctl.c
 Change-Id: I903826da68809529a8f9b41d4e4ad8d06ede3db5
 Signed-off-by: Dana Benbasat <dbenbasat@nvidia.com>
 ---
- drivers/nvme/host/ioctl.c | 311 +++++++++++++++++++++++++++++++++++++++++++---
+ drivers/nvme/host/ioctl.c | 311 ++++++++++++++++++++++++++++++++++++--
  1 file changed, 296 insertions(+), 15 deletions(-)
 
 --- a/drivers/nvme/host/ioctl.c
@@ -428,7 +428,7 @@ Signed-off-by: Dana Benbasat <dbenbasat@nvidia.com>
  {
  	struct io_uring_cmd *ioucmd = req->end_io_data;
  	struct nvme_uring_cmd_pdu *pdu = nvme_uring_cmd_pdu(ioucmd);
-+#ifdef HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL
++#if defined(HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL) && defined(HAVE_IO_URING_CMD_COOKIE)
  	void *cookie = READ_ONCE(ioucmd->cookie);
 +#endif
  
@@ -438,7 +438,7 @@ Signed-off-by: Dana Benbasat <dbenbasat@nvidia.com>
  		pdu->nvme_status = nvme_req(req)->status;
  	pdu->u.result = le64_to_cpu(nvme_req(req)->result.u64);
  
-+#ifdef HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL
++#if defined(HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL) && defined(HAVE_IO_URING_CMD_COOKIE)
  	/*
  	 * For iopoll, complete it directly.
  	 * Otherwise, move the completion to task work.
@@ -469,14 +469,14 @@ Signed-off-by: Dana Benbasat <dbenbasat@nvidia.com>
  {
  	struct io_uring_cmd *ioucmd = req->end_io_data;
  	struct nvme_uring_cmd_pdu *pdu = nvme_uring_cmd_pdu(ioucmd);
-+#ifdef HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL
++#if defined(HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL) && defined(HAVE_IO_URING_CMD_COOKIE)
  	void *cookie = READ_ONCE(ioucmd->cookie);
 +#endif
  
  	req->bio = pdu->bio;
  	pdu->req = req;
  
-+#ifdef HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL
++#if defined(HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL) && defined(HAVE_IO_URING_CMD_COOKIE)
  	/*
  	 * For iopoll, complete it directly.
  	 * Otherwise, move the completion to task work.
@@ -535,7 +535,7 @@ Signed-off-by: Dana Benbasat <dbenbasat@nvidia.com>
  		rq_flags |= REQ_NOWAIT;
  		blk_flags = BLK_MQ_REQ_NOWAIT;
  	}
-+#ifdef HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL
++#if defined(HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL) && defined(HAVE_IO_URING_CMD_COOKIE)
  	if (issue_flags & IO_URING_F_IOPOLL)
  		rq_flags |= REQ_POLLED;
  
@@ -563,7 +563,7 @@ Signed-off-by: Dana Benbasat <dbenbasat@nvidia.com>
  			return ret;
  	}
 -
-+#ifdef HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL
++#if defined(HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL) && defined(HAVE_IO_URING_CMD_COOKIE)
  	if (issue_flags & IO_URING_F_IOPOLL && rq_flags & REQ_POLLED) {
  		if (unlikely(!req->bio)) {
  			/* we can't poll this, so alloc regular req instead */
@@ -663,7 +663,7 @@ Signed-off-by: Dana Benbasat <dbenbasat@nvidia.com>
  static int nvme_uring_cmd_checks(unsigned int issue_flags)
  {
 -
-+#ifndef HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL
++#if !defined(HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL) || !defined(HAVE_IO_URING_CMD_COOKIE)
 +	/* IOPOLL not supported yet */
 +	if (issue_flags & IO_URING_F_IOPOLL)
 +		return -EOPNOTSUPP;
@@ -677,7 +677,7 @@ Signed-off-by: Dana Benbasat <dbenbasat@nvidia.com>
  }
 +#endif
  
-+#ifdef HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL
++#if defined(HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL) && defined(HAVE_IO_URING_CMD_COOKIE)
  int nvme_ns_chr_uring_cmd_iopoll(struct io_uring_cmd *ioucmd,
  				 struct io_comp_batch *iob,
  				 unsigned int poll_flags)
@@ -733,7 +733,7 @@ Signed-off-by: Dana Benbasat <dbenbasat@nvidia.com>
  	return ret;
  }
  
-+#ifdef HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL
++#if defined(HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL) && defined(HAVE_IO_URING_CMD_COOKIE)
  int nvme_ns_head_chr_uring_cmd_iopoll(struct io_uring_cmd *ioucmd,
  				      struct io_comp_batch *iob,
  				      unsigned int poll_flags)
@@ -749,7 +749,7 @@ Signed-off-by: Dana Benbasat <dbenbasat@nvidia.com>
  	struct nvme_ctrl *ctrl = ioucmd->file->private_data;
  	int ret;
  
-+#ifdef HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL
++#if defined(HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL) && defined(HAVE_IO_URING_CMD_COOKIE)
  	/* IOPOLL not supported yet */
  	if (issue_flags & IO_URING_F_IOPOLL)
  		return -EOPNOTSUPP;

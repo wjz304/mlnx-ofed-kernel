@@ -170,7 +170,7 @@ Change-Id: If942915ca27548e0671bc9f7465c23fb1ed07871
  	/* balances device_initialize() */
  	put_device(&port->sm_dev);
  	put_device(&port->dev);
-@@ -1456,6 +1501,15 @@ static int __init ib_umad_init(void)
+@@ -1458,6 +1503,15 @@ static int __init ib_umad_init(void)
  		goto out_chrdev;
  	}
  

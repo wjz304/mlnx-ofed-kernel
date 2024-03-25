@@ -758,7 +758,7 @@ m4_if([$1], [v7],
 AC_SUBST([am__tar])
 AC_SUBST([am__untar])
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:5: -1- AC_DEFUN([LB_CHECK_FILE], [AS_VAR_PUSHDEF([lb_File], [lb_cv_file_$1])dnl
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:5: -1- AC_DEFUN([LB_CHECK_FILE], [AS_VAR_PUSHDEF([lb_File], [lb_cv_file_$1])dnl
 AC_CACHE_CHECK([for $1], lb_File,
 [if test -r "$1"; then
     AS_VAR_SET(lb_File, yes)
@@ -768,17 +768,17 @@ fi])
 AS_IF([test AS_VAR_GET(lb_File) = yes], [$2], [$3])[]dnl
 AS_VAR_POPDEF([lb_File])dnl
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:21: -1- AC_DEFUN([SET_XEN_INCLUDES], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:21: -1- AC_DEFUN([SET_XEN_INCLUDES], [
 XEN_INCLUDES=
 LB_LINUX_CONFIG([XEN],[XEN_INCLUDES="-I$LINUX/arch/x86/include/mach-xen"],[])
 LB_LINUX_CONFIG_VALUE([XEN_INTERFACE_VERSION],[XEN_INCLUDES="$XEN_INCLUDES -D__XEN_INTERFACE_VERSION__=$res"],[XEN_INCLUDES="$XEN_INCLUDES -D__XEN_INTERFACE_VERSION__=$res"])
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:33: -1- AC_DEFUN([LB_LINUX_VERSION], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:33: -1- AC_DEFUN([LB_LINUX_VERSION], [
 KMODEXT=".ko"
 AC_SUBST(KMODEXT)
 
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:45: -1- AC_DEFUN([LB_LINUX_RELEASE], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:45: -1- AC_DEFUN([LB_LINUX_RELEASE], [
 LINUXRELEASE=$(LB_LINUX_MAKE_OUTPUT([kernelrelease]))
 if test x$LINUXRELEASE = x ; then
 	# Workaround for some kernel 6.3 RCs:
@@ -832,7 +832,7 @@ LB_LINUX_TRY_COMPILE([
 LB_LINUX_CONFIG([SUSE_KERNEL],[SUSE_KERNEL="yes"],[])
 
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:102: -1- AC_DEFUN([LB_ARG_REPLACE_PATH], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:102: -1- AC_DEFUN([LB_ARG_REPLACE_PATH], [
 	new_configure_args=
 	eval "set x $ac_configure_args"
 	shift
@@ -851,14 +851,14 @@ m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_
 	done
 	ac_configure_args=$new_configure_args
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:123: -1- AC_DEFUN([__LB_ARG_CANON_PATH], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:123: -1- AC_DEFUN([__LB_ARG_CANON_PATH], [
 	[$3]=$(readlink -f $with_$2)
 	LB_ARG_REPLACE_PATH([$1], $[$3])
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:130: -1- AC_DEFUN([LB_ARG_CANON_PATH], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:130: -1- AC_DEFUN([LB_ARG_CANON_PATH], [
 	__LB_ARG_CANON_PATH([$1], m4_translit([$1], [-.], [__]), [$2])
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:140: -1- AC_DEFUN([LB_LINUX_PATH], [# prep some default values
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:140: -1- AC_DEFUN([LB_LINUX_PATH], [# prep some default values
 for DEFAULT_LINUX in /lib/modules/$(uname -r)/{source,build} /usr/src/linux; do
 	if readlink -q -e $DEFAULT_LINUX; then
 		break
@@ -973,7 +973,7 @@ LB_LINUX_TRY_COMPILE([],[],[
 
 LB_LINUX_RELEASE
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:260: -1- AC_DEFUN([LB_LINUX_SYMVERFILE], [AC_MSG_CHECKING([name of module symbol version file])
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:260: -1- AC_DEFUN([LB_LINUX_SYMVERFILE], [AC_MSG_CHECKING([name of module symbol version file])
 	if grep -q Modules.symvers $LINUX/scripts/Makefile.modpost ; then
 		SYMVERFILE=Modules.symvers
 	else
@@ -982,7 +982,7 @@ m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_
 	AC_MSG_RESULT($SYMVERFILE)
 	AC_SUBST(SYMVERFILE)
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:276: -1- AC_DEFUN([LB_LINUX_CROSS], [AC_MSG_CHECKING([for cross compilation])
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:276: -1- AC_DEFUN([LB_LINUX_CROSS], [AC_MSG_CHECKING([for cross compilation])
 CROSS_VARS=
 case $target_vendor in
 	# The K1OM architecture is an extension of the x86 architecture.
@@ -1007,11 +1007,11 @@ case $target_vendor in
 esac
 AC_SUBST(CROSS_VARS)
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:329: -1- AC_DEFUN([LB_LINUX_MAKE_OUTPUT], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:329: -1- AC_DEFUN([LB_LINUX_MAKE_OUTPUT], [
 MAKE=${MAKE:-make}
 $MAKE -s M=$PWD -C $LINUX_OBJ $1
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:340: -1- AC_DEFUN([LB_LINUX_COMPILE_IFELSE], [m4_ifvaln([$1], [AC_LANG_CONFTEST([$1])])dnl
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:340: -1- AC_DEFUN([LB_LINUX_COMPILE_IFELSE], [m4_ifvaln([$1], [AC_LANG_CONFTEST([$1])])dnl
 MAKE=${MAKE:-make}
 rm -f build/conftest.o build/conftest.mod.c build/conftest.ko build/output.log
 AS_IF([AC_TRY_COMMAND(cp conftest.c build && env $CROSS_VARS $MAKE -d [$2] ${LD:+"LD=$CROSS_COMPILE$LD"} CC="$CROSS_COMPILE$CC" -f $PWD/build/Makefile MLNX_LINUX_CONFIG=$LINUX_CONFIG LINUXINCLUDE="-include generated/autoconf.h $XEN_INCLUDES $EXTRA_MLNX_INCLUDE -I$LINUX/arch/$SRCARCH/include -Iarch/$SRCARCH/include/generated -Iinclude -I$LINUX/arch/$SRCARCH/include/uapi -Iarch/$SRCARCH/include/generated/uapi -I$LINUX/include -I$LINUX/include/uapi -Iinclude/generated/uapi  -I$LINUX/arch/$SRCARCH/include -Iarch/$SRCARCH/include/generated -I$LINUX/arch/$SRCARCH/include -I$LINUX/arch/$SRCARCH/include/generated -I$LINUX_OBJ/include -I$LINUX/include -I$LINUX_OBJ/include2 $CONFIG_INCLUDE_FLAG" -o tmp_include_depends -o scripts -o include/config/MARKER -C $LINUX_OBJ EXTRA_CFLAGS="-Werror-implicit-function-declaration -Wno-unused-variable -Wno-uninitialized $EXTRA_KCFLAGS" $CROSS_VARS M=$PWD/build >/dev/null 2>build/output.log; [[[ $? -ne 0 ]]] && cat build/output.log 1>&2 && false || config/warning_filter.sh build/output.log) >/dev/null && AC_TRY_COMMAND([$3])],
@@ -1020,7 +1020,7 @@ AS_IF([AC_TRY_COMMAND(cp conftest.c build && env $CROSS_VARS $MAKE -d [$2] ${LD:
 m4_ifvaln([$5],[$5])dnl])
 rm -f build/conftest.o build/conftest.mod.c build/conftest.mod.o build/conftest.ko m4_ifval([$1], [build/conftest.c conftest.c])[]dnl
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:356: -1- AC_DEFUN([LB_LINUX_ARCH], [AC_MSG_CHECKING([Linux kernel architecture])
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:356: -1- AC_DEFUN([LB_LINUX_ARCH], [AC_MSG_CHECKING([Linux kernel architecture])
           AS_IF([rm -f $PWD/build/arch
                  make -s --no-print-directory echoarch -f $PWD/build/Makefile \
                      MLNX_LINUX_CONFIG=$LINUX_CONFIG -C $LINUX $CROSS_VARS  \
@@ -1028,12 +1028,12 @@ m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_
                 [AC_MSG_RESULT([$LINUX_ARCH])],
                 [AC_MSG_ERROR([Could not determine the kernel architecture.])])
           rm -f build/arch])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:371: -1- AC_DEFUN([LB_LINUX_TRY_COMPILE], [LB_LINUX_COMPILE_IFELSE(
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:371: -1- AC_DEFUN([LB_LINUX_TRY_COMPILE], [LB_LINUX_COMPILE_IFELSE(
 	[AC_LANG_SOURCE([LB_LANG_PROGRAM([[$1]], [[$2]])])],
 	[modules],
 	[test -s build/conftest.o],
 	[$3], [$4])])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:383: -1- AC_DEFUN([LB_LINUX_CONFIG], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:383: -1- AC_DEFUN([LB_LINUX_CONFIG], [
 	AC_MSG_CHECKING([if Linux was built with CONFIG_$1])
 	LB_LINUX_TRY_COMPILE([
 		#include <generated/autoconf.h>
@@ -1049,7 +1049,7 @@ m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_
 		$3
 	])
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:405: -1- AC_DEFUN([LB_LINUX_CONFIG_IM], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:405: -1- AC_DEFUN([LB_LINUX_CONFIG_IM], [
 	AC_MSG_CHECKING([if Linux was built with CONFIG_$1 in or as module])
 	LB_LINUX_TRY_COMPILE([
 		#include <generated/autoconf.h>
@@ -1065,12 +1065,12 @@ m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_
 		$3
 	])
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:427: -1- AC_DEFUN([LB_LINUX_TRY_MAKE], [LB_LINUX_COMPILE_IFELSE(
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:427: -1- AC_DEFUN([LB_LINUX_TRY_MAKE], [LB_LINUX_COMPILE_IFELSE(
 		[AC_LANG_SOURCE([LB_LANG_PROGRAM([[$1]], [[$2]])])],
 		[$3], [$4], [$5], [$6]
 	)
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:437: -1- AC_DEFUN([LB_CONFIG_COMPAT_RDMA], [AC_MSG_CHECKING([whether to use Compat RDMA])
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:437: -1- AC_DEFUN([LB_CONFIG_COMPAT_RDMA], [AC_MSG_CHECKING([whether to use Compat RDMA])
 # set default
 AC_ARG_WITH([o2ib],
 	AC_HELP_STRING([--with-o2ib=path],
@@ -1115,7 +1115,7 @@ else
 	fi
 fi
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:490: -1- AC_DEFUN([LB_CONFIG_OFED_BACKPORTS], [AC_MSG_CHECKING([whether to use any OFED backport headers])
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:490: -1- AC_DEFUN([LB_CONFIG_OFED_BACKPORTS], [AC_MSG_CHECKING([whether to use any OFED backport headers])
 if test $ENABLEO2IB -eq 0; then
 	AC_MSG_RESULT([no])
 else
@@ -1145,7 +1145,7 @@ else
 	fi
 fi
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:525: -1- AC_DEFUN([LC_MODULE_LOADING], [AC_MSG_CHECKING([if kernel module loading is possible])
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:525: -1- AC_DEFUN([LC_MODULE_LOADING], [AC_MSG_CHECKING([if kernel module loading is possible])
 LB_LINUX_TRY_MAKE([
 	#include <linux/kmod.h>
 ],[
@@ -1169,7 +1169,7 @@ LB_LINUX_TRY_MAKE([
 	AC_MSG_WARN([])
 ])
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:556: -1- AC_DEFUN([LB_PROG_LINUX], [LB_LINUX_PATH
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:556: -1- AC_DEFUN([LB_PROG_LINUX], [LB_LINUX_PATH
 LB_LINUX_ARCH
 LB_LINUX_SYMVERFILE
 
@@ -1194,7 +1194,7 @@ LB_CONFIG_COMPAT_RDMA
 # the LN_PROG_LINUX checks are done
 LB_CONFIG_OFED_BACKPORTS
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:593: -1- AC_DEFUN([LB_CHECK_SYMBOL_EXPORT], [AC_MSG_CHECKING([if Linux was built with symbol $1 exported])
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:593: -1- AC_DEFUN([LB_CHECK_SYMBOL_EXPORT], [AC_MSG_CHECKING([if Linux was built with symbol $1 exported])
 grep -q -E '[[[:space:]]]$1[[[:space:]]]' $LINUX_OBJ/$SYMVERFILE 2>/dev/null
 rc=$?
 if test $rc -ne 0; then
@@ -1219,7 +1219,7 @@ else
 	$3
 fi
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:640: -1- AC_DEFUN([LB_USES_DPKG], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:640: -1- AC_DEFUN([LB_USES_DPKG], [
 AC_MSG_CHECKING([if this distro uses dpkg])
 case `lsb_release -i -s 2>/dev/null` in
         Ubuntu | Debian)
@@ -1232,7 +1232,7 @@ case `lsb_release -i -s 2>/dev/null` in
                 ;;
 esac
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:660: -1- AC_DEFUN([LB_PROG_CC], [AC_PROG_RANLIB
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:660: -1- AC_DEFUN([LB_PROG_CC], [AC_PROG_RANLIB
 AC_CHECK_TOOL(LD, ld, [no])
 AC_CHECK_TOOL(OBJDUMP, objdump, [no])
 AC_CHECK_TOOL(STRIP, strip, [no])
@@ -1251,7 +1251,7 @@ if test $target_cpu == "powerpc64"; then
 	CC="$CC -m64"
 fi
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:683: -1- AC_DEFUN([LB_CONDITIONALS], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:683: -1- AC_DEFUN([LB_CONDITIONALS], [
 AM_CONDITIONAL(ARCH_x86, test x$target_cpu = "xx86_64" -o x$target_cpu = "xi686")
 
 AC_OUTPUT
@@ -1266,7 +1266,7 @@ EXTRA_KCFLAGS: $EXTRA_KCFLAGS
 Type 'make' to build kernel modules.
 _ACEOF
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:703: -1- AC_DEFUN([SET_BUILD_ARCH], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:703: -1- AC_DEFUN([SET_BUILD_ARCH], [
 AC_MSG_CHECKING([for build ARCH])
 SRCARCH=${ARCH:-$(uname -m)}
 SRCARCH=$(echo $SRCARCH | sed -e s/i.86/x86/ \
@@ -1285,7 +1285,7 @@ fi
 
 AC_MSG_RESULT([ARCH=$ARCH, SRCARCH=$SRCARCH])
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:729: -1- AC_DEFUN([LB_LINUX_CONFIG_VALUE], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:729: -1- AC_DEFUN([LB_LINUX_CONFIG_VALUE], [
 	AC_MSG_CHECKING([get value of CONFIG_$1])
 	if (grep -q "^#define CONFIG_$1 " $LINUX_OBJ/include/generated/autoconf.h 2>/dev/null); then
 		res=$(grep "^#define CONFIG_$1 " $LINUX_OBJ/include/generated/autoconf.h 2>/dev/null | cut -d' ' -f'3')
@@ -1296,7 +1296,7 @@ m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_
 		$3
 	fi
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/parallel-build.m4:9: -1- AC_DEFUN([MLNX_PARALLEL_INIT_ONCE], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/parallel-build.m4:9: -1- AC_DEFUN([MLNX_PARALLEL_INIT_ONCE], [
 if [[ "X${RAN_MLNX_PARALLEL_INIT_ONCE}" != "X1" ]]; then
 	MAX_JOBS=${NJOBS:-1}
 	RAN_MLNX_PARALLEL_INIT_ONCE=1
@@ -1306,11 +1306,11 @@ if [[ "X${RAN_MLNX_PARALLEL_INIT_ONCE}" != "X1" ]]; then
 	declare -i RUNNING_JOBS=0
 fi
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/parallel-build.m4:71: -1- AC_DEFUN([MLNX_AC_LANG_SOURCE], [_AC_LANG_DISPATCH([$0], _AC_LANG, $@)])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/parallel-build.m4:78: -1- AC_DEFUN([MLNX_AC_LANG_CONFTEST], [cat >$tmpbuild/conftest.$ac_ext <<_ACEOF
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/parallel-build.m4:71: -1- AC_DEFUN([MLNX_AC_LANG_SOURCE], [_AC_LANG_DISPATCH([$0], _AC_LANG, $@)])
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/parallel-build.m4:78: -1- AC_DEFUN([MLNX_AC_LANG_CONFTEST], [cat >$tmpbuild/conftest.$ac_ext <<_ACEOF
 $1
 _ACEOF])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/parallel-build.m4:97: -1- AC_DEFUN([MLNX_LB_LINUX_COMPILE_IFELSE], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/parallel-build.m4:97: -1- AC_DEFUN([MLNX_LB_LINUX_COMPILE_IFELSE], [
 {
 MAKE=${MAKE:-make}
 tmpbuild=$(/bin/mktemp -d $PWD/build/build_XXXXX)
@@ -1323,12 +1323,12 @@ m4_ifvaln([$5],[$5])dnl])
 /bin/rm -rf $tmpbuild
 }
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/parallel-build.m4:117: -1- AC_DEFUN([MLNX_LB_LINUX_TRY_COMPILE], [MLNX_LB_LINUX_COMPILE_IFELSE(
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/parallel-build.m4:117: -1- AC_DEFUN([MLNX_LB_LINUX_TRY_COMPILE], [MLNX_LB_LINUX_COMPILE_IFELSE(
 	[MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[$1]], [[$2]])])],
 	[modules],
 	[test -s $tmpbuild/conftest.o],
 	[$3], [$4])])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/parallel-build.m4:129: -1- AC_DEFUN([MLNX_BG_LB_LINUX_TRY_COMPILE], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/parallel-build.m4:129: -1- AC_DEFUN([MLNX_BG_LB_LINUX_TRY_COMPILE], [
 # init stuff
 MLNX_PARALLEL_INIT_ONCE
 
@@ -1352,7 +1352,7 @@ MLNX_LB_LINUX_TRY_COMPILE([$1], [$2], [$3], [$4])
 }&
 fi
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:5: -1- AC_DEFUN([BP_CHECK_RHTABLE], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:5: -1- AC_DEFUN([BP_CHECK_RHTABLE], [
 	AC_MSG_CHECKING([if file include/linux/rhashtable-types.h exists])
 	MLNX_BG_LB_LINUX_TRY_COMPILE([
 		#include <linux/rhashtable-types.h>
@@ -1449,7 +1449,7 @@ m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_
 		])
 	])
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:105: -1- AC_DEFUN([LINUX_CONFIG_COMPAT], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:105: -1- AC_DEFUN([LINUX_CONFIG_COMPAT], [
 	AC_MSG_CHECKING([if have hmm_pfn_to_map_order])
 	MLNX_BG_LB_LINUX_TRY_COMPILE([
 	#include <linux/hmm.h>
@@ -2029,6 +2029,21 @@ m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_
 		AC_MSG_RESULT(yes)
 		MLNX_AC_DEFINE(HAVE_NDO_GET_DEVLINK_PORT, 1,
 			  [ndo_get_devlink_port is defined])
+	],[
+		AC_MSG_RESULT(no)
+	])
+
+	AC_MSG_CHECKING([if devlink_fmsg_u8_pair_put returns int])
+	MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <net/devlink.h>
+	],[
+		int err = devlink_fmsg_u8_pair_put(NULL, "test", 0);
+
+		return 0;
+	],[
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_INT_DEVLINK_FMSG_U8_PAIR, 1,
+			  [devlink_fmsg_u8_pair_put returns int])
 	],[
 		AC_MSG_RESULT(no)
 	])
@@ -3275,8 +3290,8 @@ m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_
 
 		err = devlink_health_report(r, NULL, NULL);
 
-		err = devlink_fmsg_arr_pair_nest_start(fmsg, "name");
-		err = devlink_fmsg_arr_pair_nest_end(fmsg);
+		devlink_fmsg_arr_pair_nest_start(fmsg, "name");
+		devlink_fmsg_arr_pair_nest_end(fmsg);
 
 		return 0;
 	],[
@@ -3317,9 +3332,33 @@ m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_
 		int value;
 
 		err =  devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
 	],[
 		AC_MSG_RESULT(yes)
-		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32, 1,
+		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_INT, 1,
+			  [devlink_fmsg_binary_pair_put exists])
+	],[
+		AC_MSG_RESULT(no)
+	])
+
+	AC_MSG_CHECKING([if devlink has devlink_fmsg_binary_pair_put])
+	MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <net/devlink.h>
+
+		/* Only interested in function with arg u32 and not u16 */
+		/* See upstream commit e2cde864a1d3e3626bfc8fa088fbc82b04ce66ed */
+		void devlink_fmsg_binary_pair_put(struct devlink_fmsg *fmsg, const char *name, const void *value, u32 value_len);
+	],[
+		struct devlink_fmsg *fmsg;
+		int value;
+
+		devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
+	],[
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_VOID, 1,
 			  [devlink_fmsg_binary_pair_put exists])
 	],[
 		AC_MSG_RESULT(no)
@@ -9988,6 +10027,21 @@ m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_
        		 AC_MSG_RESULT(no)
 	 ])
 
+	AC_MSG_CHECKING([if filter.h has xdp_do_flush_map])
+	MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <linux/filter.h>
+	],[
+		xdp_do_flush_map();
+
+		return 0;
+	],[
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_XDP_DO_FLUSH_MAP, 1,
+			  [filter.h has xdp_do_flush_map])
+	],[
+		AC_MSG_RESULT(no)
+	])
+
 
 	AC_MSG_CHECKING([if filter.h has bpf_warn_invalid_xdp_action get 3 params])
 	MLNX_BG_LB_LINUX_TRY_COMPILE([
@@ -14477,6 +14531,25 @@ m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_
 		AC_MSG_RESULT(no)
 	])
 
+	AC_MSG_CHECKING([if linux/overflow.h has size_add size_mul size_sub])
+	MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <linux/overflow.h>
+	],[
+		size_t a = 5;
+		size_t b = 6;
+
+		if ( size_add(a,b) && size_mul(a,b) && size_sub(a,b) )
+			return 0;
+
+		return 0;
+	],[
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_SIZE_MUL_SUB_ADD, 1,
+			  [linux/overflow.h has size_add size_mul size_sub])
+	],[
+		AC_MSG_RESULT(no)
+	])
+
 	AC_MSG_CHECKING([if linux/rtnetlink.h has net_rwsem])
 	MLNX_BG_LB_LINUX_TRY_COMPILE([
 		#include <linux/rtnetlink.h>
@@ -16213,6 +16286,45 @@ m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_
 	],[
 		AC_MSG_RESULT(no)
 	])
+
+	AC_MSG_CHECKING([if struct svc_serv has sv_cb_list])
+	MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <linux/sunrpc/svc.h>
+	],[
+		struct svc_serv serv;
+		struct lwq      list;
+
+		serv.sv_cb_list = list;
+
+		return 0;
+	],[
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LWQ, 1,
+			[struct svc_serv has sv_cb_list])
+	],[
+		MLNX_BG_LB_LINUX_TRY_COMPILE([
+			#include <linux/sunrpc/svc.h>
+		],[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		],[
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		],[
+			AC_MSG_RESULT(no)
+		])
+	])
+
+	LB_CHECK_SYMBOL_EXPORT([svc_pool_wake_idle_thread],
+		[net/sunrpc/svc.c],
+		[AC_DEFINE(HAVE_SVC_POOL_WAKE_IDLE_THREAD, 1,
+			[svc_pool_wake_idle_thread is exported by the kernel])],
+	[])
 
 	AC_MSG_CHECKING([if *send_request has 'struct rpc_rqst *req' as a param])
 	MLNX_BG_LB_LINUX_TRY_COMPILE([
@@ -18852,19 +18964,6 @@ m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_
 		AC_MSG_RESULT(no)
 	])
 
-	AC_MSG_CHECKING([if linux/nvme-auth.h exists])
-	MLNX_BG_LB_LINUX_TRY_COMPILE([
-		#include <linux/nvme-auth.h>
-	],[
-		return 0;
-	],[
-		AC_MSG_RESULT(yes)
-		MLNX_AC_DEFINE(HAVE_NVME_AUTH_H, 1,
-			[nvme-auth.h is defined])
-	],[
-		AC_MSG_RESULT(no)
-	])
-
 	AC_MSG_CHECKING([if linux/t10-pi.h has ext_pi_ref_tag])
 	MLNX_BG_LB_LINUX_TRY_COMPILE([
 		#include <linux/t10-pi.h>
@@ -19667,8 +19766,38 @@ m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_
 	],[
 		AC_MSG_RESULT(no)
 	])
+
+	AC_MSG_CHECKING([if struct io_uring_cmd has cookie])
+	MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <linux/io_uring.h>
+	],[
+		struct io_uring_cmd x = {
+			.cookie = NULL,
+		};
+		return 0;
+	],[
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_IO_URING_CMD_COOKIE, 1,
+				[struct io_uring_cmd has cookie])
+	],[
+		AC_MSG_RESULT(no)
+	])
+
+	AC_MSG_CHECKING([if nvme_auth_transform_key returns u8])
+	MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <linux/nvme-auth.h>
+	],[
+		u8 *x = nvme_auth_transform_key(NULL, NULL);
+		return 0;
+	],[
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_NVME_AUTH_TRANSFORM_KEY_U8, 1,
+				[nvme_auth_transform_key returns u8])
+	],[
+		AC_MSG_RESULT(no)
+	])
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:18330: -1- AC_DEFUN([COMPAT_CONFIG_HEADERS], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:18459: -1- AC_DEFUN([COMPAT_CONFIG_HEADERS], [
 #
 #	Wait for remaining build tests running in background
 #
@@ -19685,7 +19814,7 @@ m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_
 	EXTRA_KCFLAGS="-include $PWD/config.h $EXTRA_KCFLAGS"
 	AC_SUBST(EXTRA_KCFLAGS)
 ])
-m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:18348: -1- AC_DEFUN([MLNX_PROG_LINUX], [
+m4trace:/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:18477: -1- AC_DEFUN([MLNX_PROG_LINUX], [
 
 LB_LINUX_PATH
 LB_LINUX_SYMVERFILE
@@ -19922,8 +20051,8 @@ m4trace:configure.ac:33: -1- MLNX_PROG_LINUX
 m4trace:configure.ac:33: -1- LB_LINUX_PATH
 m4trace:configure.ac:33: -2- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is obsolete.
 You should run autoupdate.], [../../lib/autoconf/general.m4:207: AC_HELP_STRING is expanded from...
-/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:140: LB_LINUX_PATH is expanded from...
-/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:18348: MLNX_PROG_LINUX is expanded from...
+/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:140: LB_LINUX_PATH is expanded from...
+/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:18477: MLNX_PROG_LINUX is expanded from...
 configure.ac:33: the top level])
 m4trace:configure.ac:33: -1- LB_ARG_CANON_PATH([linux], [LINUX])
 m4trace:configure.ac:33: -1- __LB_ARG_CANON_PATH([linux], [linux], [LINUX])
@@ -19932,8 +20061,8 @@ m4trace:configure.ac:33: -1- m4_pattern_allow([^LINUX$])
 m4trace:configure.ac:33: -1- LB_CHECK_FILE([$LINUX], [], [AC_MSG_ERROR([Kernel source $LINUX could not be found.])])
 m4trace:configure.ac:33: -2- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is obsolete.
 You should run autoupdate.], [../../lib/autoconf/general.m4:207: AC_HELP_STRING is expanded from...
-/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:140: LB_LINUX_PATH is expanded from...
-/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:18348: MLNX_PROG_LINUX is expanded from...
+/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:140: LB_LINUX_PATH is expanded from...
+/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:18477: MLNX_PROG_LINUX is expanded from...
 configure.ac:33: the top level])
 m4trace:configure.ac:33: -1- LB_ARG_CANON_PATH([linux-obj], [LINUX_OBJ])
 m4trace:configure.ac:33: -1- __LB_ARG_CANON_PATH([linux-obj], [linux_obj], [LINUX_OBJ])
@@ -19942,8 +20071,8 @@ m4trace:configure.ac:33: -1- m4_pattern_allow([^LINUX_OBJ$])
 m4trace:configure.ac:33: -1- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is obsolete.
 You should run autoupdate.], [../../lib/autoconf/general.m4:207: AC_HELP_STRING is expanded from...
 ../../lib/autoconf/general.m4:1492: AC_ARG_WITH is expanded from...
-/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:140: LB_LINUX_PATH is expanded from...
-/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:18348: MLNX_PROG_LINUX is expanded from...
+/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:140: LB_LINUX_PATH is expanded from...
+/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:18477: MLNX_PROG_LINUX is expanded from...
 configure.ac:33: the top level])
 m4trace:configure.ac:33: -1- LB_ARG_CANON_PATH([linux-config], [LINUX_CONFIG])
 m4trace:configure.ac:33: -1- __LB_ARG_CANON_PATH([linux-config], [linux_config], [LINUX_CONFIG])
@@ -19954,8 +20083,8 @@ m4trace:configure.ac:33: -1- LB_CHECK_FILE([/boot/kernel.h], [KERNEL_SOURCE_HEAD
 m4trace:configure.ac:33: -1- LB_CHECK_FILE([/var/adm/running-kernel.h], [KERNEL_SOURCE_HEADER='/var/adm/running-kernel.h'])
 m4trace:configure.ac:33: -2- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is obsolete.
 You should run autoupdate.], [../../lib/autoconf/general.m4:207: AC_HELP_STRING is expanded from...
-/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:140: LB_LINUX_PATH is expanded from...
-/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:18348: MLNX_PROG_LINUX is expanded from...
+/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:140: LB_LINUX_PATH is expanded from...
+/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:18477: MLNX_PROG_LINUX is expanded from...
 configure.ac:33: the top level])
 m4trace:configure.ac:33: -1- LB_ARG_CANON_PATH([kernel-source-header], [KERNEL_SOURCE_HEADER])
 m4trace:configure.ac:33: -1- __LB_ARG_CANON_PATH([kernel-source-header], [kernel_source_header], [KERNEL_SOURCE_HEADER])
@@ -20026,9 +20155,9 @@ m4trace:configure.ac:33: -1- m4_pattern_allow([^modulefsdir$])
 m4trace:configure.ac:33: -1- m4_pattern_allow([^modulenetdir$])
 m4trace:configure.ac:33: -2- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is obsolete.
 You should run autoupdate.], [../../lib/autoconf/general.m4:207: AC_HELP_STRING is expanded from...
-/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:45: LB_LINUX_RELEASE is expanded from...
-/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:140: LB_LINUX_PATH is expanded from...
-/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_15862_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:18348: MLNX_PROG_LINUX is expanded from...
+/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:45: LB_LINUX_RELEASE is expanded from...
+/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/build-linux.m4:140: LB_LINUX_PATH is expanded from...
+/scrap/jenkins_master_workspace/workspace/MLNX_OFED/Releases/jobs/Build_OFED_internal/tmp_build_dir/builder_9284_daemon/mlnx-ofa_kernel_build/mlnx-ofa_kernel/compat/config/rdma.m4:18477: MLNX_PROG_LINUX is expanded from...
 configure.ac:33: the top level])
 m4trace:configure.ac:33: -1- m4_pattern_allow([^RELEASE$])
 m4trace:configure.ac:33: -1- LB_LINUX_TRY_COMPILE([
@@ -23898,6 +24027,102 @@ m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_NDO_GET_DEVLINK_PORT$])
 m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
 		#include <net/devlink.h>
 	], [
+		int err = devlink_fmsg_u8_pair_put(NULL, "test", 0);
+
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_INT_DEVLINK_FMSG_U8_PAIR, 1,
+			  [devlink_fmsg_u8_pair_put returns int])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_PARALLEL_INIT_ONCE
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+		#include <net/devlink.h>
+	], [
+		int err = devlink_fmsg_u8_pair_put(NULL, "test", 0);
+
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_INT_DEVLINK_FMSG_U8_PAIR, 1,
+			  [devlink_fmsg_u8_pair_put returns int])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <net/devlink.h>
+	]], [[
+		int err = devlink_fmsg_u8_pair_put(NULL, "test", 0);
+
+		return 0;
+	]])])], [modules], [test -s $tmpbuild/conftest.o], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_INT_DEVLINK_FMSG_U8_PAIR, 1,
+			  [devlink_fmsg_u8_pair_put returns int])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <net/devlink.h>
+	]], [[
+		int err = devlink_fmsg_u8_pair_put(NULL, "test", 0);
+
+		return 0;
+	]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <net/devlink.h>
+	]], [[
+		int err = devlink_fmsg_u8_pair_put(NULL, "test", 0);
+
+		return 0;
+	]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_INT_DEVLINK_FMSG_U8_PAIR$])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+		#include <net/devlink.h>
+	], [
+		int err = devlink_fmsg_u8_pair_put(NULL, "test", 0);
+
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_INT_DEVLINK_FMSG_U8_PAIR, 1,
+			  [devlink_fmsg_u8_pair_put returns int])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <net/devlink.h>
+	]], [[
+		int err = devlink_fmsg_u8_pair_put(NULL, "test", 0);
+
+		return 0;
+	]])])], [modules], [test -s $tmpbuild/conftest.o], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_INT_DEVLINK_FMSG_U8_PAIR, 1,
+			  [devlink_fmsg_u8_pair_put returns int])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <net/devlink.h>
+	]], [[
+		int err = devlink_fmsg_u8_pair_put(NULL, "test", 0);
+
+		return 0;
+	]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <net/devlink.h>
+	]], [[
+		int err = devlink_fmsg_u8_pair_put(NULL, "test", 0);
+
+		return 0;
+	]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_INT_DEVLINK_FMSG_U8_PAIR$])
+m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <net/devlink.h>
+	], [
 		struct devlink_port_ops dl_port_ops  = {
 			.port_fn_ipsec_crypto_get = NULL,
 		};
@@ -32079,8 +32304,8 @@ m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
 
 		err = devlink_health_report(r, NULL, NULL);
 
-		err = devlink_fmsg_arr_pair_nest_start(fmsg, "name");
-		err = devlink_fmsg_arr_pair_nest_end(fmsg);
+		devlink_fmsg_arr_pair_nest_start(fmsg, "name");
+		devlink_fmsg_arr_pair_nest_end(fmsg);
 
 		return 0;
 	], [
@@ -32104,8 +32329,8 @@ m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
 
 		err = devlink_health_report(r, NULL, NULL);
 
-		err = devlink_fmsg_arr_pair_nest_start(fmsg, "name");
-		err = devlink_fmsg_arr_pair_nest_end(fmsg);
+		devlink_fmsg_arr_pair_nest_start(fmsg, "name");
+		devlink_fmsg_arr_pair_nest_end(fmsg);
 
 		return 0;
 	], [
@@ -32128,8 +32353,8 @@ m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([
 
 		err = devlink_health_report(r, NULL, NULL);
 
-		err = devlink_fmsg_arr_pair_nest_start(fmsg, "name");
-		err = devlink_fmsg_arr_pair_nest_end(fmsg);
+		devlink_fmsg_arr_pair_nest_start(fmsg, "name");
+		devlink_fmsg_arr_pair_nest_end(fmsg);
 
 		return 0;
 	]])])], [modules], [test -s $tmpbuild/conftest.o], [
@@ -32152,8 +32377,8 @@ m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG
 
 		err = devlink_health_report(r, NULL, NULL);
 
-		err = devlink_fmsg_arr_pair_nest_start(fmsg, "name");
-		err = devlink_fmsg_arr_pair_nest_end(fmsg);
+		devlink_fmsg_arr_pair_nest_start(fmsg, "name");
+		devlink_fmsg_arr_pair_nest_end(fmsg);
 
 		return 0;
 	]])])])
@@ -32170,8 +32395,8 @@ m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
 
 		err = devlink_health_report(r, NULL, NULL);
 
-		err = devlink_fmsg_arr_pair_nest_start(fmsg, "name");
-		err = devlink_fmsg_arr_pair_nest_end(fmsg);
+		devlink_fmsg_arr_pair_nest_start(fmsg, "name");
+		devlink_fmsg_arr_pair_nest_end(fmsg);
 
 		return 0;
 	]])])
@@ -32189,8 +32414,8 @@ m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
 
 		err = devlink_health_report(r, NULL, NULL);
 
-		err = devlink_fmsg_arr_pair_nest_start(fmsg, "name");
-		err = devlink_fmsg_arr_pair_nest_end(fmsg);
+		devlink_fmsg_arr_pair_nest_start(fmsg, "name");
+		devlink_fmsg_arr_pair_nest_end(fmsg);
 
 		return 0;
 	], [
@@ -32213,8 +32438,8 @@ m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([
 
 		err = devlink_health_report(r, NULL, NULL);
 
-		err = devlink_fmsg_arr_pair_nest_start(fmsg, "name");
-		err = devlink_fmsg_arr_pair_nest_end(fmsg);
+		devlink_fmsg_arr_pair_nest_start(fmsg, "name");
+		devlink_fmsg_arr_pair_nest_end(fmsg);
 
 		return 0;
 	]])])], [modules], [test -s $tmpbuild/conftest.o], [
@@ -32237,8 +32462,8 @@ m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG
 
 		err = devlink_health_report(r, NULL, NULL);
 
-		err = devlink_fmsg_arr_pair_nest_start(fmsg, "name");
-		err = devlink_fmsg_arr_pair_nest_end(fmsg);
+		devlink_fmsg_arr_pair_nest_start(fmsg, "name");
+		devlink_fmsg_arr_pair_nest_end(fmsg);
 
 		return 0;
 	]])])])
@@ -32255,8 +32480,8 @@ m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
 
 		err = devlink_health_report(r, NULL, NULL);
 
-		err = devlink_fmsg_arr_pair_nest_start(fmsg, "name");
-		err = devlink_fmsg_arr_pair_nest_end(fmsg);
+		devlink_fmsg_arr_pair_nest_start(fmsg, "name");
+		devlink_fmsg_arr_pair_nest_end(fmsg);
 
 		return 0;
 	]])])
@@ -32387,9 +32612,11 @@ m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
 		int value;
 
 		err =  devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
 	], [
 		AC_MSG_RESULT(yes)
-		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32, 1,
+		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_INT, 1,
 			  [devlink_fmsg_binary_pair_put exists])
 	], [
 		AC_MSG_RESULT(no)
@@ -32407,9 +32634,11 @@ m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
 		int value;
 
 		err =  devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
 	], [
 		AC_MSG_RESULT(yes)
-		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32, 1,
+		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_INT, 1,
 			  [devlink_fmsg_binary_pair_put exists])
 	], [
 		AC_MSG_RESULT(no)
@@ -32426,9 +32655,11 @@ m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([
 		int value;
 
 		err =  devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
 	]])])], [modules], [test -s $tmpbuild/conftest.o], [
 		AC_MSG_RESULT(yes)
-		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32, 1,
+		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_INT, 1,
 			  [devlink_fmsg_binary_pair_put exists])
 	], [
 		AC_MSG_RESULT(no)
@@ -32445,6 +32676,8 @@ m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG
 		int value;
 
 		err =  devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
 	]])])])
 m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
 		#include <net/devlink.h>
@@ -32458,8 +32691,10 @@ m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
 		int value;
 
 		err =  devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
 	]])])
-m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32$])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_INT$])
 m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
 		#include <net/devlink.h>
 
@@ -32472,9 +32707,11 @@ m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
 		int value;
 
 		err =  devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
 	], [
 		AC_MSG_RESULT(yes)
-		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32, 1,
+		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_INT, 1,
 			  [devlink_fmsg_binary_pair_put exists])
 	], [
 		AC_MSG_RESULT(no)
@@ -32491,9 +32728,11 @@ m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([
 		int value;
 
 		err =  devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
 	]])])], [modules], [test -s $tmpbuild/conftest.o], [
 		AC_MSG_RESULT(yes)
-		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32, 1,
+		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_INT, 1,
 			  [devlink_fmsg_binary_pair_put exists])
 	], [
 		AC_MSG_RESULT(no)
@@ -32510,6 +32749,8 @@ m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG
 		int value;
 
 		err =  devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
 	]])])])
 m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
 		#include <net/devlink.h>
@@ -32523,8 +32764,169 @@ m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
 		int value;
 
 		err =  devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
 	]])])
-m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32$])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_INT$])
+m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <net/devlink.h>
+
+		/* Only interested in function with arg u32 and not u16 */
+		/* See upstream commit e2cde864a1d3e3626bfc8fa088fbc82b04ce66ed */
+		void devlink_fmsg_binary_pair_put(struct devlink_fmsg *fmsg, const char *name, const void *value, u32 value_len);
+	], [
+		struct devlink_fmsg *fmsg;
+		int value;
+
+		devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_VOID, 1,
+			  [devlink_fmsg_binary_pair_put exists])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_PARALLEL_INIT_ONCE
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+		#include <net/devlink.h>
+
+		/* Only interested in function with arg u32 and not u16 */
+		/* See upstream commit e2cde864a1d3e3626bfc8fa088fbc82b04ce66ed */
+		void devlink_fmsg_binary_pair_put(struct devlink_fmsg *fmsg, const char *name, const void *value, u32 value_len);
+	], [
+		struct devlink_fmsg *fmsg;
+		int value;
+
+		devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_VOID, 1,
+			  [devlink_fmsg_binary_pair_put exists])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <net/devlink.h>
+
+		/* Only interested in function with arg u32 and not u16 */
+		/* See upstream commit e2cde864a1d3e3626bfc8fa088fbc82b04ce66ed */
+		void devlink_fmsg_binary_pair_put(struct devlink_fmsg *fmsg, const char *name, const void *value, u32 value_len);
+	]], [[
+		struct devlink_fmsg *fmsg;
+		int value;
+
+		devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
+	]])])], [modules], [test -s $tmpbuild/conftest.o], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_VOID, 1,
+			  [devlink_fmsg_binary_pair_put exists])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <net/devlink.h>
+
+		/* Only interested in function with arg u32 and not u16 */
+		/* See upstream commit e2cde864a1d3e3626bfc8fa088fbc82b04ce66ed */
+		void devlink_fmsg_binary_pair_put(struct devlink_fmsg *fmsg, const char *name, const void *value, u32 value_len);
+	]], [[
+		struct devlink_fmsg *fmsg;
+		int value;
+
+		devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
+	]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <net/devlink.h>
+
+		/* Only interested in function with arg u32 and not u16 */
+		/* See upstream commit e2cde864a1d3e3626bfc8fa088fbc82b04ce66ed */
+		void devlink_fmsg_binary_pair_put(struct devlink_fmsg *fmsg, const char *name, const void *value, u32 value_len);
+	]], [[
+		struct devlink_fmsg *fmsg;
+		int value;
+
+		devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
+	]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_VOID$])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+		#include <net/devlink.h>
+
+		/* Only interested in function with arg u32 and not u16 */
+		/* See upstream commit e2cde864a1d3e3626bfc8fa088fbc82b04ce66ed */
+		void devlink_fmsg_binary_pair_put(struct devlink_fmsg *fmsg, const char *name, const void *value, u32 value_len);
+	], [
+		struct devlink_fmsg *fmsg;
+		int value;
+
+		devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_VOID, 1,
+			  [devlink_fmsg_binary_pair_put exists])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <net/devlink.h>
+
+		/* Only interested in function with arg u32 and not u16 */
+		/* See upstream commit e2cde864a1d3e3626bfc8fa088fbc82b04ce66ed */
+		void devlink_fmsg_binary_pair_put(struct devlink_fmsg *fmsg, const char *name, const void *value, u32 value_len);
+	]], [[
+		struct devlink_fmsg *fmsg;
+		int value;
+
+		devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
+	]])])], [modules], [test -s $tmpbuild/conftest.o], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_VOID, 1,
+			  [devlink_fmsg_binary_pair_put exists])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <net/devlink.h>
+
+		/* Only interested in function with arg u32 and not u16 */
+		/* See upstream commit e2cde864a1d3e3626bfc8fa088fbc82b04ce66ed */
+		void devlink_fmsg_binary_pair_put(struct devlink_fmsg *fmsg, const char *name, const void *value, u32 value_len);
+	]], [[
+		struct devlink_fmsg *fmsg;
+		int value;
+
+		devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
+	]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <net/devlink.h>
+
+		/* Only interested in function with arg u32 and not u16 */
+		/* See upstream commit e2cde864a1d3e3626bfc8fa088fbc82b04ce66ed */
+		void devlink_fmsg_binary_pair_put(struct devlink_fmsg *fmsg, const char *name, const void *value, u32 value_len);
+	]], [[
+		struct devlink_fmsg *fmsg;
+		int value;
+
+		devlink_fmsg_binary_pair_put(fmsg, "name", &value, 2);
+
+		return 0;
+	]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_VOID$])
 m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
 		#include <net/devlink.h>
 	], [
@@ -79338,6 +79740,102 @@ m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_XDP_UMEM_FLAGS$])
 m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
 		#include <linux/filter.h>
 	], [
+		xdp_do_flush_map();
+
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_XDP_DO_FLUSH_MAP, 1,
+			  [filter.h has xdp_do_flush_map])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_PARALLEL_INIT_ONCE
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+		#include <linux/filter.h>
+	], [
+		xdp_do_flush_map();
+
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_XDP_DO_FLUSH_MAP, 1,
+			  [filter.h has xdp_do_flush_map])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/filter.h>
+	]], [[
+		xdp_do_flush_map();
+
+		return 0;
+	]])])], [modules], [test -s $tmpbuild/conftest.o], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_XDP_DO_FLUSH_MAP, 1,
+			  [filter.h has xdp_do_flush_map])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/filter.h>
+	]], [[
+		xdp_do_flush_map();
+
+		return 0;
+	]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/filter.h>
+	]], [[
+		xdp_do_flush_map();
+
+		return 0;
+	]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_XDP_DO_FLUSH_MAP$])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+		#include <linux/filter.h>
+	], [
+		xdp_do_flush_map();
+
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_XDP_DO_FLUSH_MAP, 1,
+			  [filter.h has xdp_do_flush_map])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/filter.h>
+	]], [[
+		xdp_do_flush_map();
+
+		return 0;
+	]])])], [modules], [test -s $tmpbuild/conftest.o], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_XDP_DO_FLUSH_MAP, 1,
+			  [filter.h has xdp_do_flush_map])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/filter.h>
+	]], [[
+		xdp_do_flush_map();
+
+		return 0;
+	]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/filter.h>
+	]], [[
+		xdp_do_flush_map();
+
+		return 0;
+	]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_XDP_DO_FLUSH_MAP$])
+m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <linux/filter.h>
+	], [
 		bpf_warn_invalid_xdp_action(NULL, NULL, 0);
 
 		return 0;
@@ -109191,6 +109689,138 @@ m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
 	]])])
 m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_LINUX_OVERFLOW_H$])
 m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <linux/overflow.h>
+	], [
+		size_t a = 5;
+		size_t b = 6;
+
+		if ( size_add(a,b) && size_mul(a,b) && size_sub(a,b) )
+			return 0;
+
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_SIZE_MUL_SUB_ADD, 1,
+			  [linux/overflow.h has size_add size_mul size_sub])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_PARALLEL_INIT_ONCE
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+		#include <linux/overflow.h>
+	], [
+		size_t a = 5;
+		size_t b = 6;
+
+		if ( size_add(a,b) && size_mul(a,b) && size_sub(a,b) )
+			return 0;
+
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_SIZE_MUL_SUB_ADD, 1,
+			  [linux/overflow.h has size_add size_mul size_sub])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/overflow.h>
+	]], [[
+		size_t a = 5;
+		size_t b = 6;
+
+		if ( size_add(a,b) && size_mul(a,b) && size_sub(a,b) )
+			return 0;
+
+		return 0;
+	]])])], [modules], [test -s $tmpbuild/conftest.o], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_SIZE_MUL_SUB_ADD, 1,
+			  [linux/overflow.h has size_add size_mul size_sub])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/overflow.h>
+	]], [[
+		size_t a = 5;
+		size_t b = 6;
+
+		if ( size_add(a,b) && size_mul(a,b) && size_sub(a,b) )
+			return 0;
+
+		return 0;
+	]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/overflow.h>
+	]], [[
+		size_t a = 5;
+		size_t b = 6;
+
+		if ( size_add(a,b) && size_mul(a,b) && size_sub(a,b) )
+			return 0;
+
+		return 0;
+	]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_SIZE_MUL_SUB_ADD$])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+		#include <linux/overflow.h>
+	], [
+		size_t a = 5;
+		size_t b = 6;
+
+		if ( size_add(a,b) && size_mul(a,b) && size_sub(a,b) )
+			return 0;
+
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_SIZE_MUL_SUB_ADD, 1,
+			  [linux/overflow.h has size_add size_mul size_sub])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/overflow.h>
+	]], [[
+		size_t a = 5;
+		size_t b = 6;
+
+		if ( size_add(a,b) && size_mul(a,b) && size_sub(a,b) )
+			return 0;
+
+		return 0;
+	]])])], [modules], [test -s $tmpbuild/conftest.o], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_SIZE_MUL_SUB_ADD, 1,
+			  [linux/overflow.h has size_add size_mul size_sub])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/overflow.h>
+	]], [[
+		size_t a = 5;
+		size_t b = 6;
+
+		if ( size_add(a,b) && size_mul(a,b) && size_sub(a,b) )
+			return 0;
+
+		return 0;
+	]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/overflow.h>
+	]], [[
+		size_t a = 5;
+		size_t b = 6;
+
+		if ( size_add(a,b) && size_mul(a,b) && size_sub(a,b) )
+			return 0;
+
+		return 0;
+	]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_SIZE_MUL_SUB_ADD$])
+m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
 		#include <linux/rtnetlink.h>
 	], [
 		down_read(&net_rwsem);
@@ -120339,6 +120969,454 @@ m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
 		return 0;
 	]])])
 m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_SVC_RQST_RQ_XPRT_HLEN$])
+m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <linux/sunrpc/svc.h>
+	], [
+		struct svc_serv serv;
+		struct lwq      list;
+
+		serv.sv_cb_list = list;
+
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LWQ, 1,
+			[struct svc_serv has sv_cb_list])
+	], [
+		MLNX_BG_LB_LINUX_TRY_COMPILE([
+			#include <linux/sunrpc/svc.h>
+		],[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		],[
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		],[
+			AC_MSG_RESULT(no)
+		])
+	])
+m4trace:configure.ac:33: -1- MLNX_PARALLEL_INIT_ONCE
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+		#include <linux/sunrpc/svc.h>
+	], [
+		struct svc_serv serv;
+		struct lwq      list;
+
+		serv.sv_cb_list = list;
+
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LWQ, 1,
+			[struct svc_serv has sv_cb_list])
+	], [
+		MLNX_BG_LB_LINUX_TRY_COMPILE([
+			#include <linux/sunrpc/svc.h>
+		],[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		],[
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		],[
+			AC_MSG_RESULT(no)
+		])
+	])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/sunrpc/svc.h>
+	]], [[
+		struct svc_serv serv;
+		struct lwq      list;
+
+		serv.sv_cb_list = list;
+
+		return 0;
+	]])])], [modules], [test -s $tmpbuild/conftest.o], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LWQ, 1,
+			[struct svc_serv has sv_cb_list])
+	], [
+		MLNX_BG_LB_LINUX_TRY_COMPILE([
+			#include <linux/sunrpc/svc.h>
+		],[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		],[
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		],[
+			AC_MSG_RESULT(no)
+		])
+	])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/sunrpc/svc.h>
+	]], [[
+		struct svc_serv serv;
+		struct lwq      list;
+
+		serv.sv_cb_list = list;
+
+		return 0;
+	]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/sunrpc/svc.h>
+	]], [[
+		struct svc_serv serv;
+		struct lwq      list;
+
+		serv.sv_cb_list = list;
+
+		return 0;
+	]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_SVC_SERV_SV_CB_LIST_LWQ$])
+m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
+			#include <linux/sunrpc/svc.h>
+		], [
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		], [
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		], [
+			AC_MSG_RESULT(no)
+		])
+m4trace:configure.ac:33: -1- MLNX_PARALLEL_INIT_ONCE
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+			#include <linux/sunrpc/svc.h>
+		], [
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		], [
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		], [
+			AC_MSG_RESULT(no)
+		])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+			#include <linux/sunrpc/svc.h>
+		]], [[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		]])])], [modules], [test -s $tmpbuild/conftest.o], [
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		], [
+			AC_MSG_RESULT(no)
+		])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+			#include <linux/sunrpc/svc.h>
+		]], [[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+			#include <linux/sunrpc/svc.h>
+		]], [[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD$])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+			#include <linux/sunrpc/svc.h>
+		], [
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		], [
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		], [
+			AC_MSG_RESULT(no)
+		])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+			#include <linux/sunrpc/svc.h>
+		]], [[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		]])])], [modules], [test -s $tmpbuild/conftest.o], [
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		], [
+			AC_MSG_RESULT(no)
+		])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+			#include <linux/sunrpc/svc.h>
+		]], [[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+			#include <linux/sunrpc/svc.h>
+		]], [[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD$])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+		#include <linux/sunrpc/svc.h>
+	], [
+		struct svc_serv serv;
+		struct lwq      list;
+
+		serv.sv_cb_list = list;
+
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LWQ, 1,
+			[struct svc_serv has sv_cb_list])
+	], [
+		MLNX_BG_LB_LINUX_TRY_COMPILE([
+			#include <linux/sunrpc/svc.h>
+		],[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		],[
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		],[
+			AC_MSG_RESULT(no)
+		])
+	])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/sunrpc/svc.h>
+	]], [[
+		struct svc_serv serv;
+		struct lwq      list;
+
+		serv.sv_cb_list = list;
+
+		return 0;
+	]])])], [modules], [test -s $tmpbuild/conftest.o], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LWQ, 1,
+			[struct svc_serv has sv_cb_list])
+	], [
+		MLNX_BG_LB_LINUX_TRY_COMPILE([
+			#include <linux/sunrpc/svc.h>
+		],[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		],[
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		],[
+			AC_MSG_RESULT(no)
+		])
+	])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/sunrpc/svc.h>
+	]], [[
+		struct svc_serv serv;
+		struct lwq      list;
+
+		serv.sv_cb_list = list;
+
+		return 0;
+	]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/sunrpc/svc.h>
+	]], [[
+		struct svc_serv serv;
+		struct lwq      list;
+
+		serv.sv_cb_list = list;
+
+		return 0;
+	]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_SVC_SERV_SV_CB_LIST_LWQ$])
+m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
+			#include <linux/sunrpc/svc.h>
+		], [
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		], [
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		], [
+			AC_MSG_RESULT(no)
+		])
+m4trace:configure.ac:33: -1- MLNX_PARALLEL_INIT_ONCE
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+			#include <linux/sunrpc/svc.h>
+		], [
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		], [
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		], [
+			AC_MSG_RESULT(no)
+		])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+			#include <linux/sunrpc/svc.h>
+		]], [[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		]])])], [modules], [test -s $tmpbuild/conftest.o], [
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		], [
+			AC_MSG_RESULT(no)
+		])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+			#include <linux/sunrpc/svc.h>
+		]], [[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+			#include <linux/sunrpc/svc.h>
+		]], [[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD$])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+			#include <linux/sunrpc/svc.h>
+		], [
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		], [
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		], [
+			AC_MSG_RESULT(no)
+		])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+			#include <linux/sunrpc/svc.h>
+		]], [[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		]])])], [modules], [test -s $tmpbuild/conftest.o], [
+			AC_MSG_RESULT(yes)
+			MLNX_AC_DEFINE(HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD, 1,
+				[struct svc_serv has sv_cb_list])
+		], [
+			AC_MSG_RESULT(no)
+		])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+			#include <linux/sunrpc/svc.h>
+		]], [[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+			#include <linux/sunrpc/svc.h>
+		]], [[
+			struct svc_serv serv;
+			struct list_head list;
+
+			serv.sv_cb_list = list;
+
+			return 0;
+		]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD$])
+m4trace:configure.ac:33: -1- LB_CHECK_SYMBOL_EXPORT([svc_pool_wake_idle_thread], [net/sunrpc/svc.c], [AC_DEFINE(HAVE_SVC_POOL_WAKE_IDLE_THREAD, 1,
+			[svc_pool_wake_idle_thread is exported by the kernel])], [])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_SVC_POOL_WAKE_IDLE_THREAD$])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_SVC_POOL_WAKE_IDLE_THREAD$])
 m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
 		#include <linux/sunrpc/xprt.h>
 
@@ -137223,84 +138301,6 @@ m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
 	]])])
 m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_NVME_IOCTL_IO64_CMD_VEC$])
 m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
-		#include <linux/nvme-auth.h>
-	], [
-		return 0;
-	], [
-		AC_MSG_RESULT(yes)
-		MLNX_AC_DEFINE(HAVE_NVME_AUTH_H, 1,
-			[nvme-auth.h is defined])
-	], [
-		AC_MSG_RESULT(no)
-	])
-m4trace:configure.ac:33: -1- MLNX_PARALLEL_INIT_ONCE
-m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
-		#include <linux/nvme-auth.h>
-	], [
-		return 0;
-	], [
-		AC_MSG_RESULT(yes)
-		MLNX_AC_DEFINE(HAVE_NVME_AUTH_H, 1,
-			[nvme-auth.h is defined])
-	], [
-		AC_MSG_RESULT(no)
-	])
-m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
-		#include <linux/nvme-auth.h>
-	]], [[
-		return 0;
-	]])])], [modules], [test -s $tmpbuild/conftest.o], [
-		AC_MSG_RESULT(yes)
-		MLNX_AC_DEFINE(HAVE_NVME_AUTH_H, 1,
-			[nvme-auth.h is defined])
-	], [
-		AC_MSG_RESULT(no)
-	])
-m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
-		#include <linux/nvme-auth.h>
-	]], [[
-		return 0;
-	]])])])
-m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
-		#include <linux/nvme-auth.h>
-	]], [[
-		return 0;
-	]])])
-m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_NVME_AUTH_H$])
-m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
-		#include <linux/nvme-auth.h>
-	], [
-		return 0;
-	], [
-		AC_MSG_RESULT(yes)
-		MLNX_AC_DEFINE(HAVE_NVME_AUTH_H, 1,
-			[nvme-auth.h is defined])
-	], [
-		AC_MSG_RESULT(no)
-	])
-m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
-		#include <linux/nvme-auth.h>
-	]], [[
-		return 0;
-	]])])], [modules], [test -s $tmpbuild/conftest.o], [
-		AC_MSG_RESULT(yes)
-		MLNX_AC_DEFINE(HAVE_NVME_AUTH_H, 1,
-			[nvme-auth.h is defined])
-	], [
-		AC_MSG_RESULT(no)
-	])
-m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
-		#include <linux/nvme-auth.h>
-	]], [[
-		return 0;
-	]])])])
-m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
-		#include <linux/nvme-auth.h>
-	]], [[
-		return 0;
-	]])])
-m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_NVME_AUTH_H$])
-m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
 		#include <linux/t10-pi.h>
 	], [
 		ext_pi_ref_tag(NULL);
@@ -142451,6 +143451,198 @@ m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
 		return 0;
 	]])])
 m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING$])
+m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <linux/io_uring.h>
+	], [
+		struct io_uring_cmd x = {
+			.cookie = NULL,
+		};
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_IO_URING_CMD_COOKIE, 1,
+				[struct io_uring_cmd has cookie])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_PARALLEL_INIT_ONCE
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+		#include <linux/io_uring.h>
+	], [
+		struct io_uring_cmd x = {
+			.cookie = NULL,
+		};
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_IO_URING_CMD_COOKIE, 1,
+				[struct io_uring_cmd has cookie])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/io_uring.h>
+	]], [[
+		struct io_uring_cmd x = {
+			.cookie = NULL,
+		};
+		return 0;
+	]])])], [modules], [test -s $tmpbuild/conftest.o], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_IO_URING_CMD_COOKIE, 1,
+				[struct io_uring_cmd has cookie])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/io_uring.h>
+	]], [[
+		struct io_uring_cmd x = {
+			.cookie = NULL,
+		};
+		return 0;
+	]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/io_uring.h>
+	]], [[
+		struct io_uring_cmd x = {
+			.cookie = NULL,
+		};
+		return 0;
+	]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_IO_URING_CMD_COOKIE$])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+		#include <linux/io_uring.h>
+	], [
+		struct io_uring_cmd x = {
+			.cookie = NULL,
+		};
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_IO_URING_CMD_COOKIE, 1,
+				[struct io_uring_cmd has cookie])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/io_uring.h>
+	]], [[
+		struct io_uring_cmd x = {
+			.cookie = NULL,
+		};
+		return 0;
+	]])])], [modules], [test -s $tmpbuild/conftest.o], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_IO_URING_CMD_COOKIE, 1,
+				[struct io_uring_cmd has cookie])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/io_uring.h>
+	]], [[
+		struct io_uring_cmd x = {
+			.cookie = NULL,
+		};
+		return 0;
+	]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/io_uring.h>
+	]], [[
+		struct io_uring_cmd x = {
+			.cookie = NULL,
+		};
+		return 0;
+	]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_IO_URING_CMD_COOKIE$])
+m4trace:configure.ac:33: -1- MLNX_BG_LB_LINUX_TRY_COMPILE([
+		#include <linux/nvme-auth.h>
+	], [
+		u8 *x = nvme_auth_transform_key(NULL, NULL);
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_NVME_AUTH_TRANSFORM_KEY_U8, 1,
+				[nvme_auth_transform_key returns u8])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_PARALLEL_INIT_ONCE
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+		#include <linux/nvme-auth.h>
+	], [
+		u8 *x = nvme_auth_transform_key(NULL, NULL);
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_NVME_AUTH_TRANSFORM_KEY_U8, 1,
+				[nvme_auth_transform_key returns u8])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/nvme-auth.h>
+	]], [[
+		u8 *x = nvme_auth_transform_key(NULL, NULL);
+		return 0;
+	]])])], [modules], [test -s $tmpbuild/conftest.o], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_NVME_AUTH_TRANSFORM_KEY_U8, 1,
+				[nvme_auth_transform_key returns u8])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/nvme-auth.h>
+	]], [[
+		u8 *x = nvme_auth_transform_key(NULL, NULL);
+		return 0;
+	]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/nvme-auth.h>
+	]], [[
+		u8 *x = nvme_auth_transform_key(NULL, NULL);
+		return 0;
+	]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_NVME_AUTH_TRANSFORM_KEY_U8$])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_TRY_COMPILE([
+		#include <linux/nvme-auth.h>
+	], [
+		u8 *x = nvme_auth_transform_key(NULL, NULL);
+		return 0;
+	], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_NVME_AUTH_TRANSFORM_KEY_U8, 1,
+				[nvme_auth_transform_key returns u8])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_LB_LINUX_COMPILE_IFELSE([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/nvme-auth.h>
+	]], [[
+		u8 *x = nvme_auth_transform_key(NULL, NULL);
+		return 0;
+	]])])], [modules], [test -s $tmpbuild/conftest.o], [
+		AC_MSG_RESULT(yes)
+		MLNX_AC_DEFINE(HAVE_NVME_AUTH_TRANSFORM_KEY_U8, 1,
+				[nvme_auth_transform_key returns u8])
+	], [
+		AC_MSG_RESULT(no)
+	])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_CONFTEST([MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/nvme-auth.h>
+	]], [[
+		u8 *x = nvme_auth_transform_key(NULL, NULL);
+		return 0;
+	]])])])
+m4trace:configure.ac:33: -1- MLNX_AC_LANG_SOURCE([LB_LANG_PROGRAM([[
+		#include <linux/nvme-auth.h>
+	]], [[
+		u8 *x = nvme_auth_transform_key(NULL, NULL);
+		return 0;
+	]])])
+m4trace:configure.ac:33: -1- m4_pattern_allow([^HAVE_NVME_AUTH_TRANSFORM_KEY_U8$])
 m4trace:configure.ac:33: -1- COMPAT_CONFIG_HEADERS
 m4trace:configure.ac:33: -1- m4_pattern_allow([^EXTRA_KCFLAGS$])
 m4trace:configure.ac:34: -1- LB_CONDITIONALS

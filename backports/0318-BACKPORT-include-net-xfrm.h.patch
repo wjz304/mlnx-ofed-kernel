@@ -8,7 +8,7 @@ Change-Id: Ica788f86610912300d6cc89ee5ed437e7cd83181
 
 --- a/include/net/xfrm.h
 +++ b/include/net/xfrm.h
-@@ -9,4 +9,20 @@
+@@ -17,4 +17,20 @@
  #define XFRM_ESP_NO_TRAILER     64
  #endif
  

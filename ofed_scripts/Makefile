@@ -33,6 +33,7 @@ obj-$(CONFIG_SUNRPC_XPRT_RDMA_DUMMY)  += net/sunrpc/xprtrdma/
 obj-$(CONFIG_SUNRPC_XPRT_RDMA_CLIENT)  += net/sunrpc/xprtrdma/
 obj-$(CONFIG_SUNRPC_XPRT_RDMA_SERVER)  += net/sunrpc/xprtrdma/
 obj-$(CONFIG_NET_9P_RDMA) += net/9p/
+obj-$(CONFIG_BLK_DEV_RNBD) += drivers/block/rnbd/
 obj-$(CONFIG_SCSI_SRP_ATTRS)    += drivers/scsi/
 obj-$(CONFIG_NVME_CORE)         += drivers/nvme/host/
 obj-$(CONFIG_NVME_HOST_WITHOUT_FC)      += drivers/nvme/host/

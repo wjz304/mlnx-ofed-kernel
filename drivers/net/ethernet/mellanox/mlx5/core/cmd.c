@@ -1152,7 +1152,7 @@ static void wait_func_handle_exec_timeout(struct mlx5_core_dev *dev,
 		       mlx5_command_str(ent->op), ent->op);
 
 	ent->ret = -ETIMEDOUT;
-	mlx5_cmd_comp_handler(dev, 1ULL << ent->idx, true);
+	mlx5_cmd_comp_handler(dev, 1ULL << ent->idx, MLX5_CMD_COMP_TYPE_FORCED);
 }
 
 static int wait_func(struct mlx5_core_dev *dev, struct mlx5_cmd_work_ent *ent)

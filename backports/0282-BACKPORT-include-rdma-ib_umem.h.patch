@@ -72,10 +72,10 @@ Change-Id: I6ddefdf8526ec86c31a31027ef8d770fc4ee650f
 +#else
 +	__rdma_block_iter_start(biter, umem->sg_head.sgl, umem->nmap, pgsz);
 +#endif
+ 	biter->__sg_advance = ib_umem_offset(umem) & ~(pgsz - 1);
+ 	biter->__sg_numblocks = ib_umem_num_dma_blocks(umem, pgsz);
  }
- 
- /**
-@@ -104,7 +128,11 @@ static inline void __rdma_umem_block_ite
+@@ -111,7 +135,11 @@ static inline bool __rdma_umem_block_ite
  
  #ifdef CONFIG_INFINIBAND_USER_MEM
  
@@ -87,7 +87,7 @@ Change-Id: I6ddefdf8526ec86c31a31027ef8d770fc4ee650f
  			    size_t size, int access);
  void ib_umem_release(struct ib_umem *umem);
  int ib_umem_copy_from(void *dst, struct ib_umem *umem, size_t offset,
-@@ -135,7 +163,11 @@ static inline unsigned long ib_umem_find
+@@ -142,7 +170,11 @@ static inline unsigned long ib_umem_find
  						    unsigned long pgsz_bitmap,
  						    u64 pgoff_bitmask)
  {
@@ -99,7 +99,7 @@ Change-Id: I6ddefdf8526ec86c31a31027ef8d770fc4ee650f
  	dma_addr_t dma_addr;
  
  	dma_addr = sg_dma_address(sg) + (umem->address & ~PAGE_MASK);
-@@ -154,7 +186,11 @@ struct ib_umem_dmabuf *ib_umem_dmabuf_ge
+@@ -161,7 +193,11 @@ struct ib_umem_dmabuf *ib_umem_dmabuf_ge
  int ib_umem_dmabuf_map_pages(struct ib_umem_dmabuf *umem_dmabuf);
  void ib_umem_dmabuf_unmap_pages(struct ib_umem_dmabuf *umem_dmabuf);
  void ib_umem_dmabuf_release(struct ib_umem_dmabuf *umem_dmabuf);
@@ -111,7 +111,7 @@ Change-Id: I6ddefdf8526ec86c31a31027ef8d770fc4ee650f
  				 size_t size, int access,
  				 unsigned long peer_mem_flags);
  void ib_umem_activate_invalidation_notifier(struct ib_umem *umem,
-@@ -166,7 +202,11 @@ void ib_umem_stop_invalidation_notifier(
+@@ -173,7 +209,11 @@ void ib_umem_stop_invalidation_notifier(
  
  #include <linux/err.h>
  
@@ -123,7 +123,7 @@ Change-Id: I6ddefdf8526ec86c31a31027ef8d770fc4ee650f
  					  unsigned long addr, size_t size,
  					  int access)
  {
-@@ -210,10 +250,14 @@ static inline int ib_umem_dmabuf_map_pag
+@@ -217,10 +257,14 @@ static inline int ib_umem_dmabuf_map_pag
  }
  static inline void ib_umem_dmabuf_unmap_pages(struct ib_umem_dmabuf *umem_dmabuf) { }
  static inline void ib_umem_dmabuf_release(struct ib_umem_dmabuf *umem_dmabuf) { }

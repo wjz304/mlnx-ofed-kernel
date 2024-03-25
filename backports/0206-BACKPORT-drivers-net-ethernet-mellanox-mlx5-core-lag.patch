@@ -66,7 +66,7 @@ Change-Id: I2b282b7aa9dfd602a37096db5c3ea51238178690
  		for (; i < nhs; i++) {
 -			fib_dev = fib_info_nh(fi, i)->fib_nh_dev;
 -			if (fib_dev == current_dev) {
-+#ifdef HAVE_FIB_INFO_NH //TODO VALENTINE - Review!
++#ifdef HAVE_FIB_INFO_NH
 +			_fib_dev = fib_info_nh(fi, i)->fib_nh_dev;
 +#else
 +#ifdef HAVE_FIB_NH_DEV
@@ -84,7 +84,7 @@ Change-Id: I2b282b7aa9dfd602a37096db5c3ea51238178690
  	for (; i < nhs; i++) {
 -		fib_dev = fib_info_nh(fi, i)->fib_nh_dev;
 -		ldev_idx = mlx5_lag_dev_get_netdev_idx(ldev, fib_dev);
-+#ifdef HAVE_FIB_INFO_NH //TODO VALENTINE - Review!
++#ifdef HAVE_FIB_INFO_NH
 +		_fib_dev = fib_info_nh(fi, i)->fib_nh_dev;
 +#else
 +#ifdef HAVE_FIB_NH_DEV

@@ -224,7 +224,7 @@ Change-Id: I72dcfe6ab56e3b15a35e0802d96bf78b89ead488
  
  	u32                          index;
  
-@@ -4086,7 +4186,11 @@ static inline bool ib_dma_pci_p2p_dma_su
+@@ -4087,7 +4187,11 @@ static inline bool ib_dma_pci_p2p_dma_su
  	if (ib_uses_virt_dma(dev))
  		return false;
  
@@ -236,7 +236,7 @@ Change-Id: I72dcfe6ab56e3b15a35e0802d96bf78b89ead488
  }
  
  /**
-@@ -4108,6 +4212,10 @@ struct ib_mr *ib_get_dma_mr(struct ib_pd
+@@ -4109,6 +4213,10 @@ struct ib_mr *ib_get_dma_mr(struct ib_pd
   */
  static inline int ib_dma_mapping_error(struct ib_device *dev, u64 dma_addr)
  {
@@ -247,7 +247,7 @@ Change-Id: I72dcfe6ab56e3b15a35e0802d96bf78b89ead488
  	if (ib_uses_virt_dma(dev))
  		return 0;
  	return dma_mapping_error(dev->dma_device, dma_addr);
-@@ -4124,6 +4232,10 @@ static inline u64 ib_dma_map_single(stru
+@@ -4125,6 +4233,10 @@ static inline u64 ib_dma_map_single(stru
  				    void *cpu_addr, size_t size,
  				    enum dma_data_direction direction)
  {
@@ -258,7 +258,7 @@ Change-Id: I72dcfe6ab56e3b15a35e0802d96bf78b89ead488
  	if (ib_uses_virt_dma(dev))
  		return (uintptr_t)cpu_addr;
  	return dma_map_single(dev->dma_device, cpu_addr, size, direction);
-@@ -4140,6 +4252,11 @@ static inline void ib_dma_unmap_single(s
+@@ -4141,6 +4253,11 @@ static inline void ib_dma_unmap_single(s
  				       u64 addr, size_t size,
  				       enum dma_data_direction direction)
  {
@@ -270,7 +270,7 @@ Change-Id: I72dcfe6ab56e3b15a35e0802d96bf78b89ead488
  	if (!ib_uses_virt_dma(dev))
  		dma_unmap_single(dev->dma_device, addr, size, direction);
  }
-@@ -4158,6 +4275,10 @@ static inline u64 ib_dma_map_page(struct
+@@ -4159,6 +4276,10 @@ static inline u64 ib_dma_map_page(struct
  				  size_t size,
  					 enum dma_data_direction direction)
  {
@@ -281,7 +281,7 @@ Change-Id: I72dcfe6ab56e3b15a35e0802d96bf78b89ead488
  	if (ib_uses_virt_dma(dev))
  		return (uintptr_t)(page_address(page) + offset);
  	return dma_map_page(dev->dma_device, page, offset, size, direction);
-@@ -4174,6 +4295,11 @@ static inline void ib_dma_unmap_page(str
+@@ -4175,6 +4296,11 @@ static inline void ib_dma_unmap_page(str
  				     u64 addr, size_t size,
  				     enum dma_data_direction direction)
  {
@@ -293,7 +293,7 @@ Change-Id: I72dcfe6ab56e3b15a35e0802d96bf78b89ead488
  	if (!ib_uses_virt_dma(dev))
  		dma_unmap_page(dev->dma_device, addr, size, direction);
  }
-@@ -4182,8 +4308,17 @@ int ib_dma_virt_map_sg(struct ib_device
+@@ -4183,8 +4309,17 @@ int ib_dma_virt_map_sg(struct ib_device
  static inline int ib_dma_map_sg_attrs(struct ib_device *dev,
  				      struct scatterlist *sg, int nents,
  				      enum dma_data_direction direction,
@@ -311,7 +311,7 @@ Change-Id: I72dcfe6ab56e3b15a35e0802d96bf78b89ead488
  	if (ib_uses_virt_dma(dev))
  		return ib_dma_virt_map_sg(dev, sg, nents);
  	return dma_map_sg_attrs(dev->dma_device, sg, nents, direction,
-@@ -4193,8 +4328,18 @@ static inline int ib_dma_map_sg_attrs(st
+@@ -4194,8 +4329,18 @@ static inline int ib_dma_map_sg_attrs(st
  static inline void ib_dma_unmap_sg_attrs(struct ib_device *dev,
  					 struct scatterlist *sg, int nents,
  					 enum dma_data_direction direction,
@@ -330,7 +330,7 @@ Change-Id: I72dcfe6ab56e3b15a35e0802d96bf78b89ead488
  	if (!ib_uses_virt_dma(dev))
  		dma_unmap_sg_attrs(dev->dma_device, sg, nents, direction,
  				   dma_attrs);
-@@ -4207,6 +4352,7 @@ static inline void ib_dma_unmap_sg_attrs
+@@ -4208,6 +4353,7 @@ static inline void ib_dma_unmap_sg_attrs
   * @direction: The direction of the DMA
   * @attrs: Optional DMA attributes for the map operation
   */
@@ -338,7 +338,7 @@ Change-Id: I72dcfe6ab56e3b15a35e0802d96bf78b89ead488
  static inline int ib_dma_map_sgtable_attrs(struct ib_device *dev,
  					   struct sg_table *sgt,
  					   enum dma_data_direction direction,
-@@ -4232,6 +4378,7 @@ static inline void ib_dma_unmap_sgtable_
+@@ -4233,6 +4379,7 @@ static inline void ib_dma_unmap_sgtable_
  	if (!ib_uses_virt_dma(dev))
  		dma_unmap_sgtable(dev->dma_device, sgt, direction, dma_attrs);
  }
@@ -346,7 +346,7 @@ Change-Id: I72dcfe6ab56e3b15a35e0802d96bf78b89ead488
  
  /**
   * ib_dma_map_sg - Map a scatter/gather list to DMA addresses
-@@ -4244,6 +4391,10 @@ static inline int ib_dma_map_sg(struct i
+@@ -4245,6 +4392,10 @@ static inline int ib_dma_map_sg(struct i
  				struct scatterlist *sg, int nents,
  				enum dma_data_direction direction)
  {
@@ -357,7 +357,7 @@ Change-Id: I72dcfe6ab56e3b15a35e0802d96bf78b89ead488
  	return ib_dma_map_sg_attrs(dev, sg, nents, direction, 0);
  }
  
-@@ -4258,6 +4409,11 @@ static inline void ib_dma_unmap_sg(struc
+@@ -4259,6 +4410,11 @@ static inline void ib_dma_unmap_sg(struc
  				   struct scatterlist *sg, int nents,
  				   enum dma_data_direction direction)
  {
@@ -369,7 +369,7 @@ Change-Id: I72dcfe6ab56e3b15a35e0802d96bf78b89ead488
  	ib_dma_unmap_sg_attrs(dev, sg, nents, direction, 0);
  }
  
-@@ -4286,6 +4442,11 @@ static inline void ib_dma_sync_single_fo
+@@ -4287,6 +4443,11 @@ static inline void ib_dma_sync_single_fo
  					      size_t size,
  					      enum dma_data_direction dir)
  {
@@ -381,7 +381,7 @@ Change-Id: I72dcfe6ab56e3b15a35e0802d96bf78b89ead488
  	if (!ib_uses_virt_dma(dev))
  		dma_sync_single_for_cpu(dev->dma_device, addr, size, dir);
  }
-@@ -4302,6 +4463,11 @@ static inline void ib_dma_sync_single_fo
+@@ -4303,6 +4464,11 @@ static inline void ib_dma_sync_single_fo
  						 size_t size,
  						 enum dma_data_direction dir)
  {
@@ -393,7 +393,7 @@ Change-Id: I72dcfe6ab56e3b15a35e0802d96bf78b89ead488
  	if (!ib_uses_virt_dma(dev))
  		dma_sync_single_for_device(dev->dma_device, addr, size, dir);
  }
-@@ -4395,6 +4561,45 @@ struct ib_xrcd *ib_alloc_xrcd_user(struc
+@@ -4396,6 +4562,45 @@ struct ib_xrcd *ib_alloc_xrcd_user(struc
  				   struct inode *inode, struct ib_udata *udata);
  int ib_dealloc_xrcd_user(struct ib_xrcd *xrcd, struct ib_udata *udata);
  
@@ -439,7 +439,7 @@ Change-Id: I72dcfe6ab56e3b15a35e0802d96bf78b89ead488
  static inline int ib_check_mr_access(struct ib_device *ib_dev,
  				     unsigned int flags)
  {
-@@ -4768,6 +4973,11 @@ int rdma_init_netdev(struct ib_device *d
+@@ -4769,6 +4974,11 @@ int rdma_init_netdev(struct ib_device *d
  		     void (*setup)(struct net_device *),
  		     struct net_device *netdev);
  

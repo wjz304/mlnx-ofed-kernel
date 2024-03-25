@@ -34,7 +34,7 @@ Change-Id: Ibfcc74945c146fd22236672047f42ed7d3154fce
  
  #include "nvme.h"
  #include "fabrics.h"
-+#ifdef HAVE_NVME_AUTH_H
++#ifdef HAVE_NVME_AUTH_TRANSFORM_KEY_U8
  #include <linux/nvme-auth.h>
 +#endif
  
@@ -1860,7 +1860,7 @@ Change-Id: Ibfcc74945c146fd22236672047f42ed7d3154fce
 +#ifdef HAVE_FILE_OPERATIONS_URING_CMD
  	.uring_cmd	= nvme_ns_chr_uring_cmd,
 +#endif
-+#ifdef HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL
++#if defined(HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL) && defined(HAVE_IO_URING_CMD_COOKIE)
  	.uring_cmd_iopoll = nvme_ns_chr_uring_cmd_iopoll,
 +#endif
  };

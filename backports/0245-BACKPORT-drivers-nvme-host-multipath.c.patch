@@ -237,7 +237,7 @@ Change-Id: I8ce65a5690d29c5c91d9f2cf9d75a44067ba6c13
 +#ifdef HAVE_FILE_OPERATIONS_URING_CMD
  	.uring_cmd	= nvme_ns_head_chr_uring_cmd,
 +#endif
-+#ifdef HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL
++#if defined(HAVE_FILE_OPERATIONS_URING_CMD_IOPOLL) && defined(HAVE_IO_URING_CMD_COOKIE)
  	.uring_cmd_iopoll = nvme_ns_head_chr_uring_cmd_iopoll,
 +#endif
  };

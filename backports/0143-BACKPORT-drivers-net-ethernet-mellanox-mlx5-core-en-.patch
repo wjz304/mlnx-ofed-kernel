@@ -3,8 +3,8 @@ Subject: [PATCH] BACKPORT: drivers/net/ethernet/mellanox/mlx5/core/en/xdp.c
 
 Change-Id: I4d909bb550c8a94cd257d2fd2bfb2930048e5ada
 ---
- .../net/ethernet/mellanox/mlx5/core/en/xdp.c  | 379 +++++++++++++++++-
- 1 file changed, 357 insertions(+), 22 deletions(-)
+ .../net/ethernet/mellanox/mlx5/core/en/xdp.c  | 383 +++++++++++++++++-
+ 1 file changed, 361 insertions(+), 22 deletions(-)
 
 --- a/drivers/net/ethernet/mellanox/mlx5/core/en/xdp.c
 +++ b/drivers/net/ethernet/mellanox/mlx5/core/en/xdp.c
@@ -514,7 +514,7 @@ Change-Id: I4d909bb550c8a94cd257d2fd2bfb2930048e5ada
  
  	while (sq->cc != sq->pc) {
  		struct mlx5e_xdp_wqe_info *wi;
-@@ -700,16 +929,57 @@ void mlx5e_free_xdpsq_descs(struct mlx5e
+@@ -700,16 +929,61 @@ void mlx5e_free_xdpsq_descs(struct mlx5e
  
  		sq->cc += wi->num_wqebbs;
  
@@ -555,7 +555,11 @@ Change-Id: I4d909bb550c8a94cd257d2fd2bfb2930048e5ada
 +
 +	mlx5e_xmit_xdp_doorbell(xdpsq);
 +	if (test_bit(MLX5E_RQ_FLAG_XDP_REDIRECT, rq->flags)) {
++#ifndef HAVE_XDP_DO_FLUSH_MAP
++		xdp_do_flush();
++#else
 +		xdp_do_flush_map();
++#endif
 +		__clear_bit(MLX5E_RQ_FLAG_XDP_REDIRECT, rq->flags);
 +	}
 +}
@@ -573,7 +577,7 @@ Change-Id: I4d909bb550c8a94cd257d2fd2bfb2930048e5ada
  int mlx5e_xdp_xmit(struct net_device *dev, int n, struct xdp_frame **frames,
  		   u32 flags)
  {
-@@ -771,25 +1041,90 @@ int mlx5e_xdp_xmit(struct net_device *de
+@@ -771,25 +1045,90 @@ int mlx5e_xdp_xmit(struct net_device *de
  	return nxmit;
  }
  

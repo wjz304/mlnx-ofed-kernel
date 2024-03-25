@@ -604,7 +604,10 @@
 #undef HAVE_DEVLINK_FMSG_BINARY_PAIR_NEST_START
 
 /* devlink_fmsg_binary_pair_put exists */
-#undef HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32
+#undef HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_INT
+
+/* devlink_fmsg_binary_pair_put exists */
+#undef HAVE_DEVLINK_FMSG_BINARY_PAIR_PUT_ARG_U32_RETURN_VOID
 
 /* devlink_fmsg_binary_put exists */
 #undef HAVE_DEVLINK_FMSG_BINARY_PUT
@@ -1429,6 +1432,9 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* devlink_fmsg_u8_pair_put returns int */
+#undef HAVE_INT_DEVLINK_FMSG_U8_PAIR
+
 /* int_pow defined */
 #undef HAVE_INT_POW
 
@@ -1452,6 +1458,9 @@
 
 /* io_uring_cmd exists */
 #undef HAVE_IO_URING_CMD
+
+/* struct io_uring_cmd has cookie */
+#undef HAVE_IO_URING_CMD_COOKIE
 
 /* io_uring_cmd_done has 4 params */
 #undef HAVE_IO_URING_CMD_DONE_4_PARAMS
@@ -2197,8 +2206,8 @@
 /* current_link_speed/width not exposed */
 #undef HAVE_NO_LINKSTA_SYSFS
 
-/* nvme-auth.h is defined */
-#undef HAVE_NVME_AUTH_H
+/* nvme_auth_transform_key returns u8 */
+#undef HAVE_NVME_AUTH_TRANSFORM_KEY_U8
 
 /* NVME_IOCTL_IO64_CMD_VEC is defined */
 #undef HAVE_NVME_IOCTL_IO64_CMD_VEC
@@ -2726,6 +2735,9 @@
 /* show_class_attr_string get const */
 #undef HAVE_SHOW_CLASS_ATTR_STRING_GET_CONST
 
+/* linux/overflow.h has size_add size_mul size_sub */
+#undef HAVE_SIZE_MUL_SUB_ADD
+
 /* skb_dst_update_pmtu is defined */
 #undef HAVE_SKB_DST_UPDATE_PMTU
 
@@ -2889,6 +2901,9 @@
 /* svc_fill_write_vector getting 4 params */
 #undef HAVE_SVC_FILL_WRITE_VECTOR_4_PARAMS
 
+/* svc_pool_wake_idle_thread is exported by the kernel */
+#undef HAVE_SVC_POOL_WAKE_IDLE_THREAD
+
 /* struct svc_rdma_pcl exists */
 #undef HAVE_SVC_RDMA_PCL
 
@@ -2900,6 +2915,12 @@
 
 /* struct svc_rqst has rq_xprt_hlen */
 #undef HAVE_SVC_RQST_RQ_XPRT_HLEN
+
+/* struct svc_serv has sv_cb_list */
+#undef HAVE_SVC_SERV_SV_CB_LIST_LIST_HEAD
+
+/* struct svc_serv has sv_cb_list */
+#undef HAVE_SVC_SERV_SV_CB_LIST_LWQ
 
 /* 'struct svc_xprt_ops *xcl_ops' field is const inside 'struct
    svc_xprt_class' */
@@ -3337,6 +3358,9 @@
 /* net/xdp.h has convert_to_xdp_frame workaround for
    5.4.17-2011.1.2.el8uek.x86_64 */
 #undef HAVE_XDP_CONVERT_TO_XDP_FRAME_IN_UEK_KABI
+
+/* filter.h has xdp_do_flush_map */
+#undef HAVE_XDP_DO_FLUSH_MAP
 
 /* net/xdp.h struct xdp_frame_bulk exists */
 #undef HAVE_XDP_FRAME_BULK

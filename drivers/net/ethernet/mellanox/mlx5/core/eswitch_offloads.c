@@ -294,10 +294,9 @@ static void esw_put_dest_tables_loop(struct mlx5_eswitch *esw, struct mlx5_flow_
 	for (i = from; i < to; i++)
 		if (esw_attr->dests[i].flags & MLX5_ESW_DEST_CHAIN_WITH_SRC_PORT_CHANGE)
 			mlx5_chains_put_table(chains, 0, 1, 0);
-		else if (mlx5_esw_indir_table_needed(esw, attr, esw_attr->dests[i].rep->vport,
+		else if (mlx5_esw_indir_table_needed(esw, attr, esw_attr->dests[i].vport,
 						     esw_attr->dests[i].mdev))
-			mlx5_esw_indir_table_put(esw, esw_attr->dests[i].rep->vport,
-						 false);
+			mlx5_esw_indir_table_put(esw, esw_attr->dests[i].vport, false);
 }
 
 static bool
@@ -365,8 +364,8 @@ esw_is_indir_table(struct mlx5_eswitch *esw, struct mlx5_flow_attr *attr)
 	 * this criteria.
 	 */
 	for (i = esw_attr->split_count; i < esw_attr->out_count; i++) {
-		if (esw_attr->dests[i].rep &&
-		    mlx5_esw_indir_table_needed(esw, attr, esw_attr->dests[i].rep->vport,
+		if (esw_attr->dests[i].vport_valid &&
+		    mlx5_esw_indir_table_needed(esw, attr, esw_attr->dests[i].vport,
 						esw_attr->dests[i].mdev)) {
 			result = true;
 		} else {
@@ -397,7 +396,7 @@ esw_setup_indir_table(struct mlx5_flow_destination *dest,
 		dest[*i].type = MLX5_FLOW_DESTINATION_TYPE_FLOW_TABLE;
 
 		dest[*i].ft = mlx5_esw_indir_table_get(esw, attr,
-						       esw_attr->dests[j].rep->vport, false);
+						       esw_attr->dests[j].vport, false);
 		if (IS_ERR(dest[*i].ft)) {
 			err = PTR_ERR(dest[*i].ft);
 			goto err_indir_tbl_get;
@@ -441,11 +440,11 @@ static bool esw_setup_uplink_fwd_ipsec_needed(struct mlx5_eswitch *esw,
 					      int attr_idx)
 {
 	if (esw->offloads.ft_ipsec_tx_pol &&
-	    esw_attr->dests[attr_idx].rep &&
-	    esw_attr->dests[attr_idx].rep->vport == MLX5_VPORT_UPLINK &&
+	    esw_attr->dests[attr_idx].vport_valid &&
+	    esw_attr->dests[attr_idx].vport == MLX5_VPORT_UPLINK &&
 	    /* To be aligned with software, encryption is needed only for tunnel device */
 	    (esw_attr->dests[attr_idx].flags & MLX5_ESW_DEST_ENCAP_VALID) &&
-	    esw_attr->dests[attr_idx].rep != esw_attr->in_rep &&
+	    esw_attr->dests[attr_idx].vport != esw_attr->in_rep->vport &&
 	    esw_same_vhca_id(esw_attr->dests[attr_idx].mdev, esw->dev))
 		return true;
 
@@ -478,7 +477,7 @@ esw_setup_dest_fwd_vport(struct mlx5_flow_destination *dest, struct mlx5_flow_ac
 			 int attr_idx, int dest_idx, bool pkt_reformat)
 {
 	dest[dest_idx].type = MLX5_FLOW_DESTINATION_TYPE_VPORT;
-	dest[dest_idx].vport.num = esw_attr->dests[attr_idx].rep->vport;
+	dest[dest_idx].vport.num = esw_attr->dests[attr_idx].vport;
 	if (MLX5_CAP_ESW(esw->dev, merged_eswitch)) {
 		dest[dest_idx].vport.vhca_id =
 			MLX5_CAP_GEN(esw_attr->dests[attr_idx].mdev, vhca_id);
@@ -1155,9 +1154,9 @@ static int esw_add_fdb_peer_miss_rules(struct mlx5_eswitch *esw,
 	struct mlx5_flow_handle *flow;
 	struct mlx5_flow_spec *spec;
 	struct mlx5_vport *vport;
+	int err, pfindex;
 	unsigned long i;
 	void *misc;
-	int err;
 
 	if (!MLX5_VPORT_MANAGER(esw->dev) && !mlx5_core_is_ecpf_esw_manager(esw->dev))
 		return 0;
@@ -1236,7 +1235,15 @@ static int esw_add_fdb_peer_miss_rules(struct mlx5_eswitch *esw,
 			flows[vport->index] = flow;
 		}
 	}
-	esw->fdb_table.offloads.peer_miss_rules[mlx5_get_dev_index(peer_dev)] = flows;
+
+	pfindex = mlx5_get_dev_index(peer_dev);
+	if (pfindex >= MLX5_MAX_PORTS) {
+		esw_warn(esw->dev, "Peer dev index(%d) is over the max num defined(%d)\n",
+			 pfindex, MLX5_MAX_PORTS);
+		err = -EINVAL;
+		goto add_ec_vf_flow_err;
+	}
+	esw->fdb_table.offloads.peer_miss_rules[pfindex] = flows;
 
 	kvfree(spec);
 	return 0;
@@ -3769,14 +3776,18 @@ static int esw_inline_mode_to_devlink(u8 mlx5_mode, u8 *mode)
 
 static bool esw_offloads_devlink_ns_eq_netdev_ns(struct devlink *devlink)
 {
+	struct mlx5_core_dev *dev = devlink_priv(devlink);
 	struct net *devl_net, *netdev_net;
-	struct mlx5_eswitch *esw;
+	bool ret = false;
 
-	esw = mlx5_devlink_eswitch_get(devlink);
-	netdev_net = dev_net(esw->dev->mlx5e_res.uplink_netdev);
-	devl_net = devlink_net(devlink);
-
-	return net_eq(devl_net, netdev_net);
+	mutex_lock(&dev->mlx5e_res.uplink_netdev_lock);
+	if (dev->mlx5e_res.uplink_netdev) {
+		netdev_net = dev_net(dev->mlx5e_res.uplink_netdev);
+		devl_net = devlink_net(devlink);
+		ret = net_eq(devl_net, netdev_net);
+	}
+	mutex_unlock(&dev->mlx5e_res.uplink_netdev_lock);
+	return ret;
 }
 
 int mlx5_eswitch_block_mode(struct mlx5_core_dev *dev)
@@ -4261,7 +4272,15 @@ int mlx5_devlink_eswitch_steering_mode_get(struct devlink *devlink,
 					   enum devlink_eswitch_steering_mode *mode)
 {
 	struct mlx5_core_dev *dev = devlink_priv(devlink);
-	*mode = dev->priv.steering->mode;
+	enum mlx5_flow_steering_mode fs_mode;
+
+	fs_mode = dev->priv.steering->mode;
+	if (fs_mode == MLX5_FLOW_STEERING_MODE_DMFS)
+		*mode = DEVLINK_ESWITCH_STEERING_MODE_DMFS;
+	else if (fs_mode == MLX5_FLOW_STEERING_MODE_SMFS)
+		*mode = DEVLINK_ESWITCH_STEERING_MODE_SMFS;
+	else
+		return -EINVAL;
 	return 0;
 }
 

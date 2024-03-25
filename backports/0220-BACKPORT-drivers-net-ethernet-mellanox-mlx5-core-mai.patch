@@ -32,7 +32,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  MODULE_ALIAS("auxiliary:mlx5_core.eth");
  MODULE_ALIAS("auxiliary:mlx5_core.eth-rep");
  
-@@ -706,13 +715,18 @@ set:
+@@ -705,13 +714,18 @@ set:
  	return err;
  }
  
@@ -51,7 +51,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  					      DEVLINK_PARAM_GENERIC_ID_MAX_MACS,
  					      &val);
  	if (!err)
-@@ -720,14 +734,20 @@ static int max_uc_list_get_devlink_param
+@@ -719,14 +733,20 @@ static int max_uc_list_get_devlink_param
  	mlx5_core_dbg(dev, "Failed to get param. err = %d\n", err);
  	return err;
  }
@@ -72,7 +72,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  					      DEVLINK_PARAM_GENERIC_ID_ENABLE_ROCE,
  					      &val);
  
-@@ -736,6 +756,9 @@ bool mlx5_is_roce_on(struct mlx5_core_de
+@@ -735,6 +755,9 @@ bool mlx5_is_roce_on(struct mlx5_core_de
  
  	mlx5_core_dbg(dev, "Failed to get param. err = %d\n", err);
  	return MLX5_CAP_GEN(dev, roce);
@@ -82,7 +82,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  }
  EXPORT_SYMBOL(mlx5_is_roce_on);
  
-@@ -768,7 +791,9 @@ static int handle_hca_cap(struct mlx5_co
+@@ -767,7 +790,9 @@ static int handle_hca_cap(struct mlx5_co
  {
  	struct mlx5_profile *prof = &dev->profile;
  	void *set_hca_cap;
@@ -92,7 +92,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  	int err;
  
  	err = mlx5_core_get_caps(dev, MLX5_CAP_GENERAL);
-@@ -843,18 +868,24 @@ static int handle_hca_cap(struct mlx5_co
+@@ -842,18 +867,24 @@ static int handle_hca_cap(struct mlx5_co
  
  	mlx5_vhca_state_cap_handle(dev, set_hca_cap);
  
@@ -117,7 +117,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  
  	return set_caps(dev, set_ctx, MLX5_SET_HCA_CAP_OP_MOD_GENERAL_DEVICE);
  }
-@@ -875,8 +906,12 @@ static int handle_hca_cap(struct mlx5_co
+@@ -874,8 +905,12 @@ static int handle_hca_cap(struct mlx5_co
   */
  static bool is_roce_fw_disabled(struct mlx5_core_dev *dev)
  {
@@ -130,7 +130,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  }
  
  static int handle_hca_cap_roce(struct mlx5_core_dev *dev, void *set_ctx)
-@@ -1096,6 +1131,9 @@ static ssize_t mlx5_roce_enable_show_ena
+@@ -1095,6 +1130,9 @@ static ssize_t mlx5_roce_enable_show_ena
  	struct mlx5_core_dev *dev = pci_get_drvdata(pdev);
  	int ret;
  
@@ -140,7 +140,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  	mutex_lock(&dev->roce.state_lock);
  	ret = dev->roce.enabled;
  	mutex_unlock(&dev->roce.state_lock);
-@@ -1109,11 +1147,15 @@ static ssize_t mlx5_roce_enable_set_enab
+@@ -1108,11 +1146,15 @@ static ssize_t mlx5_roce_enable_set_enab
  {
  	struct pci_dev *pdev = container_of(device, struct pci_dev, dev);
  	struct mlx5_core_dev *dev = pci_get_drvdata(pdev);
@@ -158,7 +158,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  	ret = kstrtobool(buf, &val);
  	if (ret)
  		return -EINVAL;
-@@ -1121,15 +1163,26 @@ static ssize_t mlx5_roce_enable_set_enab
+@@ -1120,15 +1162,26 @@ static ssize_t mlx5_roce_enable_set_enab
  	if (val && !MLX5_CAP_GEN(dev, roce))
  		return -EOPNOTSUPP;
  
@@ -190,7 +190,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  }
  
  static DEVICE_ATTR(roce_enable, 0644, mlx5_roce_enable_show_enabled,
-@@ -1574,7 +1627,7 @@ static int mlx5_function_teardown(struct
+@@ -1573,7 +1626,7 @@ static int mlx5_function_teardown(struct
  
  static int mlx5_load(struct mlx5_core_dev *dev)
  {
@@ -199,7 +199,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  
  	dev->priv.uar = mlx5_get_uars_page(dev);
  	if (IS_ERR(dev->priv.uar)) {
-@@ -1661,15 +1714,19 @@ static int mlx5_load(struct mlx5_core_de
+@@ -1660,15 +1713,19 @@ static int mlx5_load(struct mlx5_core_de
  
  	mlx5_sf_dev_table_create(dev);
  
@@ -219,7 +219,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  err_sriov:
  	mlx5_lag_remove_mdev(dev);
  	unregister_pcie_dev_attr_group(dev->pdev);
-@@ -1700,7 +1757,9 @@ err_irq_table:
+@@ -1699,7 +1756,9 @@ err_irq_table:
  
  static void mlx5_unload(struct mlx5_core_dev *dev)
  {
@@ -229,7 +229,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  	mlx5_sf_dev_table_destroy(dev);
  	mlx5_eswitch_disable(dev->priv.eswitch);
  	mlx5_sriov_detach(dev);
-@@ -1723,9 +1782,15 @@ static void mlx5_unload(struct mlx5_core
+@@ -1722,9 +1781,15 @@ static void mlx5_unload(struct mlx5_core
  	mlx5_put_uars_page(dev, dev->priv.uar);
  }
  
@@ -245,7 +245,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  	int err = 0;
  
  	mutex_lock(&dev->intf_state_mutex);
-@@ -1745,12 +1810,23 @@ int mlx5_init_one_devl_locked(struct mlx
+@@ -1744,12 +1809,23 @@ int mlx5_init_one_devl_locked(struct mlx
  	/* In case of light_probe, mlx5_devlink is already registered.
  	 * Hence, don't register devlink again.
  	 */
@@ -269,7 +269,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  	err = mlx5_load(dev);
  	if (err)
  		goto err_load;
-@@ -1772,7 +1848,9 @@ err_register:
+@@ -1771,7 +1847,9 @@ err_register:
  	clear_bit(MLX5_INTERFACE_STATE_UP, &dev->intf_state);
  	mlx5_unload(dev);
  err_load:
@@ -279,7 +279,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  		mlx5_devlink_params_unregister(priv_to_devlink(dev));
  err_devlink_params_reg:
  	mlx5_cleanup_once(dev);
-@@ -1784,6 +1862,7 @@ err_function:
+@@ -1783,6 +1861,7 @@ err_function:
  	return err;
  }
  
@@ -287,7 +287,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  int mlx5_init_one(struct mlx5_core_dev *dev)
  {
  	struct devlink *devlink = priv_to_devlink(dev);
-@@ -1794,6 +1873,7 @@ int mlx5_init_one(struct mlx5_core_dev *
+@@ -1793,6 +1872,7 @@ int mlx5_init_one(struct mlx5_core_dev *
  	devl_unlock(devlink);
  	return err;
  }
@@ -295,7 +295,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  
  static int mlx5_try_fast_unload(struct mlx5_core_dev *dev)
  {
-@@ -1851,9 +1931,11 @@ succeed:
+@@ -1850,9 +1930,11 @@ succeed:
  
  void mlx5_uninit_one(struct mlx5_core_dev *dev)
  {
@@ -307,7 +307,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  
  	mlx5_unregister_device(dev);
  	if (!mlx5_core_is_sf(dev) && mlx5_try_fast_unload(dev))
-@@ -1877,15 +1959,23 @@ void mlx5_uninit_one(struct mlx5_core_de
+@@ -1876,15 +1958,23 @@ void mlx5_uninit_one(struct mlx5_core_de
  	mlx5_function_teardown(dev, true);
  out:
  	mutex_unlock(&dev->intf_state_mutex);
@@ -331,7 +331,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  	mutex_lock(&dev->intf_state_mutex);
  	if (test_bit(MLX5_INTERFACE_STATE_UP, &dev->intf_state)) {
  		mlx5_core_warn(dev, "interface is up, NOP\n");
-@@ -1933,6 +2023,7 @@ out:
+@@ -1932,6 +2022,7 @@ out:
  	return err;
  }
  
@@ -339,7 +339,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  int mlx5_load_one(struct mlx5_core_dev *dev, bool recovery)
  {
  	struct devlink *devlink = priv_to_devlink(dev);
-@@ -1943,10 +2034,17 @@ int mlx5_load_one(struct mlx5_core_dev *
+@@ -1942,10 +2033,17 @@ int mlx5_load_one(struct mlx5_core_dev *
  	devl_unlock(devlink);
  	return ret;
  }
@@ -357,7 +357,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  	mutex_lock(&dev->intf_state_mutex);
  
  	mlx5_detach_device(dev, suspend);
-@@ -1964,6 +2062,7 @@ out:
+@@ -1963,6 +2061,7 @@ out:
  	mutex_unlock(&dev->intf_state_mutex);
  }
  
@@ -365,7 +365,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  void mlx5_unload_one(struct mlx5_core_dev *dev, bool suspend)
  {
  	struct devlink *devlink = priv_to_devlink(dev);
-@@ -1972,7 +2071,9 @@ void mlx5_unload_one(struct mlx5_core_de
+@@ -1971,7 +2070,9 @@ void mlx5_unload_one(struct mlx5_core_de
  	mlx5_unload_one_devl_locked(dev, suspend);
  	devl_unlock(devlink);
  }
@@ -375,7 +375,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  /* In case of light probe, we don't need a full query of hca_caps, but only the bellow caps.
   * A full query of hca_caps will be done when the device will reload.
   */
-@@ -2009,7 +2110,9 @@ static int mlx5_query_hca_caps_light(str
+@@ -2011,7 +2112,9 @@ static int mlx5_query_hca_caps_light(str
  
  int mlx5_init_one_light(struct mlx5_core_dev *dev)
  {
@@ -385,7 +385,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  	int err;
  
  	dev->state = MLX5_DEVICE_STATE_UP;
-@@ -2025,9 +2128,17 @@ int mlx5_init_one_light(struct mlx5_core
+@@ -2027,9 +2130,17 @@ int mlx5_init_one_light(struct mlx5_core
  		goto query_hca_caps_err;
  	}
  
@@ -404,7 +404,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  	if (err) {
  		mlx5_core_warn(dev, "mlx5_devlink_param_reg err = %d\n", err);
  		goto query_hca_caps_err;
-@@ -2044,11 +2155,15 @@ out:
+@@ -2046,11 +2157,15 @@ out:
  
  void mlx5_uninit_one_light(struct mlx5_core_dev *dev)
  {
@@ -420,7 +420,7 @@ Change-Id: I638714ff4c04c4667206e3bd3d9fad956c685d17
  	if (dev->state != MLX5_DEVICE_STATE_UP)
  		return;
  	mlx5_function_disable(dev, true);
-@@ -2066,6 +2181,7 @@ void mlx5_unload_one_light(struct mlx5_c
+@@ -2068,6 +2183,7 @@ void mlx5_unload_one_light(struct mlx5_c
  	mlx5_function_disable(dev, false);
  	dev->state = MLX5_DEVICE_STATE_INTERNAL_ERROR;
  }

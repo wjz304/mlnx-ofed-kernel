@@ -194,7 +194,7 @@ Change-Id: I481a95d0fda7e91f3c68c980ae96bb10e01cf757
  		atomic64_inc(&priv->ipsec->sw_stats.ipsec_tx_drop_bundle);
  		goto drop;
  	}
-@@ -318,15 +412,22 @@ void mlx5e_ipsec_offload_handle_rx_skb(s
+@@ -312,15 +406,22 @@ void mlx5e_ipsec_offload_handle_rx_skb(s
  	struct mlx5e_ipsec *ipsec = priv->ipsec;
  	struct mlx5e_ipsec_sa_entry *sa_entry;
  	struct xfrm_offload *xo;
@@ -217,7 +217,7 @@ Change-Id: I481a95d0fda7e91f3c68c980ae96bb10e01cf757
  		atomic64_inc(&ipsec->sw_stats.ipsec_rx_drop_sp_alloc);
  		return;
  	}
-@@ -341,8 +442,13 @@ void mlx5e_ipsec_offload_handle_rx_skb(s
+@@ -335,8 +436,13 @@ void mlx5e_ipsec_offload_handle_rx_skb(s
  	xfrm_state_hold(sa_entry->x);
  	rcu_read_unlock();
  

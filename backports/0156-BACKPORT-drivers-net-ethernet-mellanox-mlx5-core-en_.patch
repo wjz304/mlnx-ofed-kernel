@@ -9,7 +9,7 @@ Change-Id: I1007f33fb6d3b4ea3ce4fe0c51a5fbf90996d74f
 
 --- a/drivers/net/ethernet/mellanox/mlx5/core/en_accel/ipsec_rxtx.h
 +++ b/drivers/net/ethernet/mellanox/mlx5/core/en_accel/ipsec_rxtx.h
-@@ -50,6 +50,9 @@ struct mlx5e_accel_tx_ipsec_state {
+@@ -49,6 +49,9 @@ struct mlx5e_accel_tx_ipsec_state {
  	struct xfrm_state *x;
  	u32 tailen;
  	u32 plen;
@@ -19,7 +19,7 @@ Change-Id: I1007f33fb6d3b4ea3ce4fe0c51a5fbf90996d74f
  };
  
  #ifdef CONFIG_MLX5_EN_IPSEC
-@@ -85,6 +88,9 @@ static inline bool mlx5e_ipsec_eseg_meta
+@@ -84,6 +87,9 @@ static inline bool mlx5e_ipsec_eseg_meta
  }
  
  void mlx5e_ipsec_tx_build_eseg(struct mlx5e_priv *priv, struct sk_buff *skb,
@@ -29,7 +29,7 @@ Change-Id: I1007f33fb6d3b4ea3ce4fe0c51a5fbf90996d74f
  			       struct mlx5_wqe_eth_seg *eseg);
  
  static inline netdev_features_t
-@@ -92,6 +98,12 @@ mlx5e_ipsec_feature_check(struct sk_buff
+@@ -91,6 +97,12 @@ mlx5e_ipsec_feature_check(struct sk_buff
  {
  	struct xfrm_offload *xo = xfrm_offload(skb);
  	struct sec_path *sp = skb_sec_path(skb);
@@ -42,7 +42,7 @@ Change-Id: I1007f33fb6d3b4ea3ce4fe0c51a5fbf90996d74f
  
  	if (sp && sp->len && xo) {
  		struct xfrm_state *x = sp->xvec[0];
-@@ -99,7 +111,7 @@ mlx5e_ipsec_feature_check(struct sk_buff
+@@ -98,7 +110,7 @@ mlx5e_ipsec_feature_check(struct sk_buff
  		if (!x || !x->xso.offload_handle)
  			goto out_disable;
  
@@ -51,7 +51,7 @@ Change-Id: I1007f33fb6d3b4ea3ce4fe0c51a5fbf90996d74f
  			/* Cannot support tunnel packet over IPsec tunnel mode
  			 * because we cannot offload three IP header csum
  			 */
-@@ -107,8 +119,8 @@ mlx5e_ipsec_feature_check(struct sk_buff
+@@ -106,8 +118,8 @@ mlx5e_ipsec_feature_check(struct sk_buff
  				goto out_disable;
  
  			/* Only support UDP or TCP L4 checksum */
@@ -62,7 +62,7 @@ Change-Id: I1007f33fb6d3b4ea3ce4fe0c51a5fbf90996d74f
  				goto out_disable;
  		}
  
-@@ -123,15 +135,28 @@ out_disable:
+@@ -122,15 +134,28 @@ out_disable:
  
  static inline bool
  mlx5e_ipsec_txwqe_build_eseg_csum(struct mlx5e_txqsq *sq, struct sk_buff *skb,

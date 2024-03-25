@@ -35,6 +35,7 @@ struct mlx5_fw_reset {
 enum {
 	MLX5_FW_RST_STATE_IDLE = 0,
 	MLX5_FW_RST_STATE_TOGGLE_REQ = 4,
+	MLX5_FW_RST_STATE_DROP_MODE = 5,
 };
 
 enum {
@@ -640,7 +641,7 @@ static int mlx5_pci_link_toggle_pf(struct mlx5_core_dev *dev)
 	err = pcie_capability_set_word(bridge, PCI_EXP_LNKCTL, PCI_EXP_LNKCTL_LD);
 	if (err)
 		return pcibios_err_to_errno(err);
-	msleep(2500);
+	msleep(500);
 	err = pcie_capability_clear_word(bridge, PCI_EXP_LNKCTL, PCI_EXP_LNKCTL_LD);
 	if (err)
 		return err;
@@ -692,11 +693,39 @@ static int mlx5_pci_link_toggle_pf(struct mlx5_core_dev *dev)
 	}
 
 restore:
-	list_for_each_entry(sdev, &bridge_bus->devices, bus_list) {
-		pci_cfg_access_unlock(sdev);
-		pci_restore_state(sdev);
-	}
+	timeout = jiffies + msecs_to_jiffies(mlx5_tout_ms(dev, PCI_TOGGLE));
 
+	list_for_each_entry(sdev, &bridge_bus->devices, bus_list) {
+		u64 reg64, reg64_comp;
+		int retry_ctr = 0;
+
+		pci_cfg_access_unlock(sdev);
+		reg64_comp = ((u64)sdev->saved_config_space[5] << 32) |
+			      ((u64)sdev->saved_config_space[4] & 0xfff00000);
+		do {
+			msleep(10);
+			sdev->state_saved = true;
+			pci_restore_state(sdev);
+			err = pci_read_config_dword(sdev, 0x14, &reg32);
+			if (err)
+				return pcibios_err_to_errno(err);
+			reg64 = (u64)reg32 << 32;
+			err = pci_read_config_dword(sdev, 0x10, &reg32);
+			if (err)
+				return pcibios_err_to_errno(err);
+			reg64 |= (u64)reg32 & 0xfff00000;
+			retry_ctr++;
+		} while ((reg64_comp != reg64) && !time_after(jiffies, timeout));
+		if (1 != retry_ctr)
+			mlx5_core_warn(dev, "devfn=0x%.8x restore had to retry %d times\n",
+				       sdev->devfn, retry_ctr);
+		if (reg64_comp != reg64) {
+			mlx5_core_err(dev, "devfn=0x%.8x BAR not set after %llu ms\n",
+				      sdev->devfn, mlx5_tout_ms(dev, PCI_TOGGLE));
+			err = -ETIMEDOUT;
+			break;
+		}
+	}
 	return err;
 }
 
@@ -744,6 +773,7 @@ static void mlx5_sync_reset_unload_event(struct work_struct *work)
 	struct mlx5_fw_reset *fw_reset;
 	struct mlx5_core_dev *dev;
 	unsigned long timeout;
+	int poll_freq = 20;
 	bool reset_action;
 	u8 rst_state;
 	int err;
@@ -780,7 +810,12 @@ static void mlx5_sync_reset_unload_event(struct work_struct *work)
 			reset_action = true;
 			break;
 		}
-		msleep(20);
+		if (rst_state == MLX5_FW_RST_STATE_DROP_MODE) {
+			mlx5_core_info(dev, "Sync Reset Drop mode ack\n");
+			mlx5_set_fw_rst_ack(dev);
+			poll_freq = 1000;
+		}
+		msleep(poll_freq);
 	} while (!time_after(jiffies, timeout));
 
 	if (!reset_action) {
