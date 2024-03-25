@@ -1,0 +1,19 @@
+From: Valentine Fatiev <valentinef@nvidia.com>
+Subject: [PATCH] BACKPORT: drivers/net/ethernet/mellanox/mlx5/core/devlink.h
+
+Change-Id: I083b6c87044200783c562543c38c4d8019a56c97
+---
+ drivers/net/ethernet/mellanox/mlx5/core/devlink.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/drivers/net/ethernet/mellanox/mlx5/core/devlink.h
++++ b/drivers/net/ethernet/mellanox/mlx5/core/devlink.h
+@@ -9,7 +9,7 @@
+ 
+ struct mlx5_core_dev;
+ 
+-struct devlink *mlx5_devlink_alloc(void);
++struct devlink *mlx5_devlink_alloc(struct device *dev);
+ void mlx5_devlink_free(struct devlink *devlink);
+ int mlx5_devlink_register(struct devlink *devlink, struct device *dev);
+ void mlx5_devlink_unregister(struct devlink *devlink);
