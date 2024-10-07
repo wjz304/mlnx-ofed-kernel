@@ -1741,13 +1741,15 @@ send_vport_meta_err:
 	return err;
 }
 
+#define MLX5_MAX_PEER_MISS_RULES (2048 + 2) /* max 2048 vf + pf + ecpf) */
+
 static int
 esw_create_peer_esw_miss_group(struct mlx5_eswitch *esw,
 			       struct mlx5_flow_table *fdb,
 			       u32 *flow_group_in,
 			       int *ix)
 {
-	int max_peer_ports = (esw->total_vports - 1) * (MLX5_MAX_PORTS - 1);
+	int max_peer_ports = MLX5_MAX_PEER_MISS_RULES * (MLX5_MAX_PORTS - 1);
 	int inlen = MLX5_ST_SZ_BYTES(create_flow_group_in);
 	struct mlx5_flow_group *g;
 	void *match_criteria;
@@ -1993,7 +1995,8 @@ static int esw_create_offloads_fdb_tables(struct mlx5_eswitch *esw)
 	 */
 
 	table_size = MLX5_MAX_PORTS * (esw->total_vports * MAX_SQ_NVPORTS + MAX_PF_SQ) +
-		     esw->total_vports * MLX5_MAX_PORTS + MLX5_ESW_MISS_FLOWS;
+		     esw->total_vports + MLX5_MAX_PEER_MISS_RULES * (MLX5_MAX_PORTS - 1) +
+		     MLX5_ESW_MISS_FLOWS;
 
 	/* create the slow path fdb with encap set, so further table instances
 	 * can be created at run time while VFs are probed if the FW allows that.
