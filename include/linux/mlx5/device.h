@@ -375,6 +375,8 @@ enum mlx5_event {
 enum mlx5_driver_event {
 	MLX5_DRIVER_EVENT_TYPE_TRAP = 0,
 	MLX5_DRIVER_EVENT_UPLINK_NETDEV,
+	MLX5_DRIVER_EVENT_MACSEC_SA_ADDED,
+	MLX5_DRIVER_EVENT_MACSEC_SA_DELETED,
 };
 
 enum {
@@ -657,6 +659,7 @@ struct mlx5_eqe_page_req {
 	__be32		rsvd1[5];
 };
 
+#define MEMORY_SCHEME_PAGE_FAULT_GRANULARITY 4096
 struct mlx5_eqe_page_fault {
 	union {
 		struct {
@@ -680,12 +683,14 @@ struct mlx5_eqe_page_fault {
 		} __packed rdma;
 		struct {
 			u8      flags;
-			u8      reserved1[5];
+			u8      reserved1;
+			__be16  post_demand_fault_pages;
+			__be16  pre_demand_fault_pages;
 			__be16  token47_32;
 			__be32  token31_0;
-			__be32  byte_count;
+			__be32  demand_fault_pages; /* [31:12] fault pages [11:0] reserved */
 			__be32  mkey;
-			__be64  va;
+			__be64  fault_va;
 		} __packed memory;
 	} __packed;
 } __packed;
@@ -1361,6 +1366,9 @@ enum mlx5_qcam_feature_groups {
 #define MLX5_CAP_ESW_FT_FIELD_SUPPORT_2(mdev, cap) \
 	MLX5_CAP_ESW_FLOWTABLE(mdev, ft_field_support_2_esw_fdb.cap)
 
+#define MLX5_CAP_NIC_RX_FT_FIELD_SUPPORT_2(mdev, cap) \
+		MLX5_CAP_FLOWTABLE(mdev, ft_field_support_2_nic_receive.cap)
+
 #define MLX5_CAP_ESW(mdev, cap) \
 	MLX5_GET(e_switch_cap, \
 		 mdev->caps.hca[MLX5_CAP_ESWITCH]->cur, cap)
@@ -1383,6 +1391,9 @@ enum mlx5_qcam_feature_groups {
 
 #define MLX5_CAP_FLOWTABLE_PORT_SELECTION(mdev, cap) \
 	MLX5_CAP_PORT_SELECTION(mdev, flow_table_properties_port_selection.cap)
+
+#define MLX5_CAP_PORT_SELECTION_FT_FIELD_SUPPORT_2(mdev, cap) \
+	MLX5_CAP_PORT_SELECTION(mdev, ft_field_support_2_port_selection.cap)
 
 #define MLX5_CAP_ODP(mdev, cap)\
 	MLX5_GET(odp_cap, mdev->caps.hca[MLX5_CAP_ODP]->cur, cap)

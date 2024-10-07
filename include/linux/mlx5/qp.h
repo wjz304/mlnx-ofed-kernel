@@ -123,10 +123,6 @@ enum {
 };
 
 enum {
-	MLX5_QP_RM_GO_BACK_N			= 0x1,
-};
-
-enum {
 	MLX5_NON_ZERO_RQ	= 0x0,
 	MLX5_SRQ_RQ		= 0x1,
 	MLX5_CRQ_RQ		= 0x2,
@@ -288,7 +284,10 @@ struct mlx5_wqe_eth_seg {
 	union {
 		struct {
 			__be16 sz;
-			u8     start[2];
+			union {
+				u8     start[2];
+				DECLARE_FLEX_ARRAY(u8, data);
+			};
 		} inline_hdr;
 		struct {
 			__be16 type;

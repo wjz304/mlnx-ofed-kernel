@@ -35,8 +35,8 @@
 #include <linux/errno.h>
 
 #define DRV_NAME	"usnic_verbs"
-#define DRV_VERSION	"24.01-0.3.3"
-#define DRV_RELDATE	"01 Feb 2024"
+#define DRV_VERSION	"24.04-0.6.5"
+#define DRV_RELDATE	"27 Apr 2024"
 
 MODULE_AUTHOR("Alaa Hleihel");
 MODULE_DESCRIPTION("usnic_verbs dummy kernel module");

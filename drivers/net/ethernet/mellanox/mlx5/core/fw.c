@@ -215,17 +215,14 @@ int mlx5_query_hca_caps(struct mlx5_core_dev *dev)
 			return err;
 	}
 
-	if (MLX5_CAP_GEN(dev, debug))
-		mlx5_core_get_caps_mode(dev, MLX5_CAP_DEBUG, HCA_CAP_OPMOD_GET_CUR);
-
 	if (MLX5_CAP_GEN(dev, debug)) {
-		err = mlx5_core_get_caps(dev, MLX5_CAP_DEBUG);
+		err = mlx5_core_get_caps_mode(dev, MLX5_CAP_DEBUG, HCA_CAP_OPMOD_GET_CUR);
 		if (err)
 			return err;
 	}
 
 	if (MLX5_CAP_GEN(dev, nvmf_target_offload)) {
-		err = mlx5_core_get_caps(dev, MLX5_CAP_NVMF);
+		err = mlx5_core_get_caps_mode(dev, MLX5_CAP_NVMF, HCA_CAP_OPMOD_GET_CUR);
 		if (err)
 			return err;
 	}

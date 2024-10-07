@@ -61,6 +61,10 @@ enum raw_qp_set_mask_map {
 	MLX5_RAW_QP_RATE_LIMIT			= 1UL << 1,
 };
 
+enum {
+	MLX5_QP_RM_GO_BACK_N			= 0x1,
+};
+
 struct mlx5_modify_raw_qp_param {
 	u16 operation;
 
@@ -2679,9 +2683,8 @@ static int create_kernel_qp(struct mlx5_ib_dev *dev, struct ib_pd *pd,
 		MLX5_SET(qpc, qpc, ulp_stateless_offload_mode, 1);
 
 	if (qp->flags & IB_QP_CREATE_INTEGRITY_EN &&
-	    MLX5_CAP_GEN(mdev, go_back_n)) {
+	    MLX5_CAP_GEN(mdev, go_back_n))
 		MLX5_SET(qpc, qpc, retry_mode, MLX5_QP_RM_GO_BACK_N);
-	}
 
 	err = mlx5_qpc_create_qp(dev, &base->mqp, in, inlen, out);
 	kvfree(in);
@@ -3012,9 +3015,9 @@ static void process_vendor_flag(struct mlx5_ib_dev *dev, int *flags, int flag,
 	case MLX5_QP_FLAG_SCATTER_CQE:
 	case MLX5_QP_FLAG_ALLOW_SCATTER_CQE:
 		/*
-			 * We don't return error if these flags were provided,
-			 * and mlx5 doesn't have right capability.
-			 */
+		 * We don't return error if these flags were provided,
+		 * and mlx5 doesn't have right capability.
+		 */
 		*flags &= ~(MLX5_QP_FLAG_SCATTER_CQE |
 			    MLX5_QP_FLAG_ALLOW_SCATTER_CQE);
 		return;
@@ -4867,16 +4870,6 @@ static int validate_rd_atomic(struct mlx5_ib_dev *dev, struct ib_qp_attr *attr,
 	return true;
 }
 
-static int ignored_ts_check(enum ib_qp_type qp_type)
-{
-	if (qp_type == MLX5_IB_QPT_REG_UMR ||
-	    qp_type == MLX5_IB_QPT_SW_CNAK ||
-	    qp_type == MLX5_IB_QPT_DCI)
-		return 1;
-
-	return 0;
-}
-
 static void mlx5_ib_qp_set_tclass(struct mlx5_ib_dev *dev,
 				  struct mlx5_ib_qp *qp,
 				  struct ib_qp_attr *attr,
@@ -4911,6 +4904,16 @@ static void mlx5_ib_qp_set_tclass(struct mlx5_ib_dev *dev,
 	mutex_unlock(&qp->mutex);
 	mutex_unlock(&tcd->lock);
 
+}
+
+static int ignored_ts_check(enum ib_qp_type qp_type)
+{
+	if (qp_type == MLX5_IB_QPT_REG_UMR ||
+	    qp_type == MLX5_IB_QPT_SW_CNAK ||
+	    qp_type == MLX5_IB_QPT_DCI)
+		return 1;
+
+	return 0;
 }
 
 int mlx5_ib_modify_qp(struct ib_qp *ibqp, struct ib_qp_attr *attr,
@@ -5901,8 +5904,7 @@ int mlx5_ib_modify_wq(struct ib_wq *wq, struct ib_wq_attr *wq_attr,
 		if (wq_attr->flags_mask & IB_WQ_FLAGS_CVLAN_STRIPPING) {
 			if (!(MLX5_CAP_GEN(dev->mdev, eth_net_offloads) &&
 			      MLX5_CAP_ETH(dev->mdev, vlan_cap))) {
-				mlx5_ib_dbg(dev, "VLAN offloads are not "
-					    "supported\n");
+				mlx5_ib_dbg(dev, "VLAN offloads are not supported\n");
 				err = -EOPNOTSUPP;
 				goto out;
 			}

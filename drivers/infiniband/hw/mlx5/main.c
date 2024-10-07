@@ -618,7 +618,7 @@ static int mlx5_ib_add_gid(const struct ib_gid_attr *attr,
 {
 	int ret;
 
-	ret = add_gid_macsec_operations(attr);
+	ret = mlx5r_add_gid_macsec_operations(attr);
 	if (ret)
 		return ret;
 
@@ -633,10 +633,11 @@ static int mlx5_ib_del_gid(const struct ib_gid_attr *attr,
 
 	ret = set_roce_addr(to_mdev(attr->device), attr->port_num,
 			    attr->index, NULL, attr);
-	if (!ret)
-		del_gid_macsec_operations(attr);
+	if (ret)
+		return ret;
 
-	return ret;
+	mlx5r_del_gid_macsec_operations(attr);
+	return 0;
 }
 
 __be16 mlx5_get_roce_udp_sport_min(const struct mlx5_ib_dev *dev,
@@ -891,8 +892,7 @@ static int mlx5_ib_query_device(struct ib_device *ibdev,
 		props->max_mw = 1 << MLX5_CAP_GEN(mdev, log_max_mkey);
 		/* We support 'Gappy' memory registration too */
 #ifdef CONFIG_GPU_DIRECT_STORAGE
-		if (MLX5_CAP_GEN(mdev, ats) ==
-		    MLX5_CAP_GEN(mdev, relaxed_ordering_read_pci_enabled))
+		if (MLX5_CAP_GEN(mdev, ats) == MLX5_CAP_GEN(mdev, relaxed_ordering_read_pci_enabled))
 			props->kernel_cap_flags |= IBK_SG_GAPS_REG;
 #else
 		props->kernel_cap_flags |= IBK_SG_GAPS_REG;
@@ -2133,7 +2133,7 @@ static inline char *mmap_cmd2str(enum mlx5_ib_mmap_cmd cmd)
 	case MLX5_IB_MMAP_DEVICE_MEM:
 		return "Device Memory";
 	default:
-		return NULL;
+		return "Unknown";
 	}
 }
 
@@ -3709,7 +3709,7 @@ static void mlx5_ib_stage_init_cleanup(struct mlx5_ib_dev *dev)
 	mutex_destroy(&dev->cap_mask_mutex);
 	WARN_ON(!xa_empty(&dev->sig_mrs));
 	WARN_ON(!bitmap_empty(dev->dm.memic_alloc_pages, MLX5_MAX_MEMIC_PAGES));
-	macsec_dealloc_gids(dev);
+	mlx5r_macsec_dealloc_gids(dev);
 }
 
 static int mlx5_ib_stage_init_init(struct mlx5_ib_dev *dev)
@@ -3735,7 +3735,7 @@ static int mlx5_ib_stage_init_init(struct mlx5_ib_dev *dev)
 	if (err)
 		return err;
 
-	err = macsec_alloc_gids(dev);
+	err = mlx5r_macsec_init_gids_and_devlist(dev);
 	if (err)
 		return err;
 
@@ -3754,7 +3754,7 @@ static int mlx5_ib_stage_init_init(struct mlx5_ib_dev *dev)
 	if (mlx5_use_mad_ifc(dev))
 		get_ext_port_caps(dev);
 
-	dev->ib_dev.num_comp_vectors    = mlx5_comp_vectors_count(mdev);
+	dev->ib_dev.num_comp_vectors    = mlx5_comp_vectors_max(mdev);
 	if (mlx5_lag_is_active(dev->mdev))
 		dev->ib_dev.dev_immutable.bond_device = true;
 
@@ -3769,7 +3769,7 @@ static int mlx5_ib_stage_init_init(struct mlx5_ib_dev *dev)
 	dev->dm.dev = mdev;
 	return 0;
 err:
-	macsec_dealloc_gids(dev);
+	mlx5r_macsec_dealloc_gids(dev);
 err_mp:
 	mlx5_ib_cleanup_multiport_master(dev);
 	return err;
@@ -4213,15 +4213,19 @@ static int mlx5_ib_stage_dev_notifier_init(struct mlx5_ib_dev *dev)
 {
 	dev->mdev_events.notifier_call = mlx5_ib_event;
 	mlx5_notifier_register(dev->mdev, &dev->mdev_events);
+
+	mlx5r_macsec_event_register(dev);
+
 	return 0;
 }
 
 static void mlx5_ib_stage_dev_notifier_cleanup(struct mlx5_ib_dev *dev)
 {
+	mlx5r_macsec_event_unregister(dev);
 	mlx5_notifier_unregister(dev->mdev, &dev->mdev_events);
 }
 
-int mlx5_ib_stage_ttl_sysfs_init(struct mlx5_ib_dev *dev)
+static int mlx5_ib_stage_ttl_sysfs_init(struct mlx5_ib_dev *dev)
 {
 	int err;
 	err = init_ttl_sysfs(dev);
@@ -4233,7 +4237,7 @@ int mlx5_ib_stage_ttl_sysfs_init(struct mlx5_ib_dev *dev)
 	return 0;
 }
 
-void mlx5_ib_stage_ttl_sysfs_cleanup(struct mlx5_ib_dev *dev)
+static void mlx5_ib_stage_ttl_sysfs_cleanup(struct mlx5_ib_dev *dev)
 {
 	cleanup_ttl_sysfs(dev);
 }
@@ -4255,7 +4259,7 @@ void __mlx5_ib_remove(struct mlx5_ib_dev *dev,
 	ib_dealloc_device(&dev->ib_dev);
 }
 
-int mlx5_ib_stage_tc_sysfs_init(struct mlx5_ib_dev *dev)
+static int mlx5_ib_stage_tc_sysfs_init(struct mlx5_ib_dev *dev)
 {
 	int err;
 	err = init_tc_sysfs(dev);
@@ -4267,7 +4271,7 @@ int mlx5_ib_stage_tc_sysfs_init(struct mlx5_ib_dev *dev)
 	return 0;
 }
 
-void mlx5_ib_stage_tc_sysfs_cleanup(struct mlx5_ib_dev *dev)
+static void mlx5_ib_stage_tc_sysfs_cleanup(struct mlx5_ib_dev *dev)
 {
 	cleanup_tc_sysfs(dev);
 }
