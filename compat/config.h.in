@@ -12,11 +12,17 @@
 /* mm.h has assert_fault_locked */
 #undef HAVE_ASSERT_FAULT_LOCKED
 
+/* __assign_str has one param */
+#undef HAVE_ASSIGN_STR_1_PARAM
+
 /* atomic_fetch_add_unless is defined */
 #undef HAVE_ATOMIC_FETCH_ADD_UNLESS
 
 /* atomic_pinned_vm is defined */
 #undef HAVE_ATOMIC_PINNED_VM
+
+/* __auto_type exists */
+#undef HAVE_AUTO_TYPE
 
 /* linux/blkdev.h has bdev_discard_granularity */
 #undef HAVE_BDEV_DISCARD_GRANULARITY
@@ -123,6 +129,9 @@
 /* linux/blkdev.h has req_bvec */
 #undef HAVE_BLKDEV_REQ_BVEC
 
+/* linux/blkdev.h has blkdev_zone_mgmt with 5 params */
+#undef HAVE_BLKDEV_ZONE_MGMT_5_PARAMS
+
 /* genhd.h has blk_alloc_disk */
 #undef HAVE_BLK_ALLOC_DISK_1_PARAM
 
@@ -164,6 +173,9 @@
 
 /* linux/blk-integrity.h exists */
 #undef HAVE_BLK_INTEGRITY_H
+
+/* struct blk_integrity has pi_offset */
+#undef HAVE_BLK_INTEGRITY_PI_OFFSET
 
 /* blk_mark_disk_dead exist */
 #undef HAVE_BLK_MARK_DISK_DEAD
@@ -258,6 +270,9 @@
 /* blk_opf_t is defined */
 #undef HAVE_BLK_OPF_T
 
+/* linux/blkdev.h has blk_op_str */
+#undef HAVE_BLK_OP_STR
+
 /* blk_queue_make_request existing */
 #undef HAVE_BLK_QUEUE_MAKE_REQUEST
 
@@ -321,6 +336,9 @@
 /* cancel_work is exported by the kernel */
 #undef HAVE_CANCEL_WORK_EXPORTED
 
+/* __free anotation for kvfree could be used */
+#undef HAVE_CAN_USE_KVFREE_CLEANUP_NO_WRAPPER
+
 /* __cgroup_bpf_run_filter_sysctl have 7 parameters */
 #undef HAVE_CGROUP_BPF_RUN_FILTER_SYSCTL_7_PARAMETERS
 
@@ -330,11 +348,20 @@
 /* VXLAN_GBP_MASK is defined */
 #undef HAVE_CHECK_VXLAN_GBP_MASK
 
+/* access_ok has check_zeroed_user */
+#undef HAVE_CHECK_ZEROED_USER
+
 /* class_create get 1 param */
 #undef HAVE_CLASS_CREATE_GET_1_PARAM
 
 /* dev_uevent get const struct device */
 #undef HAVE_CLASS_DEV_UEVENT_CONST_DEV
+
+/* class_register get const */
+#undef HAVE_CLASS_REGISTER_GET_CONST
+
+/* include/linux/cleanup.h exists */
+#undef HAVE_CLEANUP_H
 
 /* compat_ptr_ioctl is exported by the kernel */
 #undef HAVE_COMPAT_PTR_IOCTL_EXPORTED
@@ -342,8 +369,17 @@
 /* linux/compat.h has compat_uptr_t */
 #undef HAVE_COMPAT_UPTR_T
 
+/* bus_type enty of struct device is const */
+#undef HAVE_CONST_BUS_TYPE_FOR_STRUCT_DEVICE
+
 /* const __read_once_size exist */
 #undef HAVE_CONST_READ_ONCE_SIZE
+
+/* include/linux/container_of.h exists */
+#undef HAVE_CONTAINER_OF_H
+
+/* kernel supports v6.10-rc1: convert __be16 tunnel flags to bitmaps */
+#undef HAVE_CONVERT_BE16_TUNNEL_FLAGS_TO_BITMAPS
 
 /* struct ctl_table have "child" field */
 #undef HAVE_CTL_TABLE_CHILD
@@ -444,6 +480,9 @@
 /* devlink_info_version_fixed_put exist */
 #undef HAVE_DEVLINK_INFO_VERSION_FIXED_PUT
 
+/* kernel supports v6.7 devlink instances relationships exposure */
+#undef HAVE_DEVLINK_INSTANCES_RELATIONSHIPS_EXPOSURE
+
 /* port_fn_ipsec_crypto_get is defined */
 #undef HAVE_DEVLINK_IPSEC_CRYPTO
 
@@ -473,6 +512,9 @@
 
 /* devlink.h devlink_param_register defined */
 #undef HAVE_DEVLINK_PARAM_REGISTER
+
+/* struct devlink_param set function pointer has extack parameter */
+#undef HAVE_DEVLINK_PARAM_SET_FUNCTION_POINTER_HAS_EXTACK
 
 /* devlink_port_attrs_set has 2 parameters */
 #undef HAVE_DEVLINK_PORT_ATRRS_SET_GET_2_PARAMS
@@ -533,6 +575,9 @@
 
 /* devlink_port_health_reporter_destroy is defined */
 #undef HAVE_DEVLINK_PORT_HEALTH_REPORTER_DESTROY
+
+/* struct devlink_port_ops has max_io_eqs */
+#undef HAVE_DEVLINK_PORT_MAX_IO_EQS
 
 /* devlink struct devlink_port_new_attrs exist */
 #undef HAVE_DEVLINK_PORT_NEW_ATTRS_STRUCT
@@ -692,9 +737,6 @@
 
 /* have struct dpll_pin_ops */
 #undef HAVE_DPLL_STRUCTS
-
-/* elfcorehdr_addr is exported by the kernel */
-#undef HAVE_ELFCOREHDR_ADDR_EXPORTED
 
 /* struct enum has member BIO_REMAPPED */
 #undef HAVE_ENUM_BIO_REMAPPED
@@ -942,6 +984,9 @@
 /* get_random_u32_inclusive defined */
 #undef HAVE_GET_RANDOM_U32_INCLUSIVE
 
+/* get_random_u8 defined */
+#undef HAVE_GET_RANDOM_U8
+
 /* ndo_get_ringparam get 4 parameters */
 #undef HAVE_GET_RINGPARAM_GET_4_PARAMS
 
@@ -1138,6 +1183,9 @@
 /* function kvfree_call_rcu is defined */
 #undef HAVE_KVFREE_CALL_RCU
 
+/* kvfree prototype is in slab.h */
+#undef HAVE_KVFREE_IN_SLAB_H
+
 /* linux/device/bus.h exists */
 #undef HAVE_LINUX_DEVICE_BUS_H
 
@@ -1321,9 +1369,6 @@
 /* struct netlink_callback has member extack */
 #undef HAVE_NETLINK_CALLBACK_EXTACK
 
-/* struct netns_frags has rhashtable */
-#undef HAVE_NETNS_FRAGS_RHASHTABLE
-
 /* netpoll_poll_dev is exported by the kernel */
 #undef HAVE_NETPOLL_POLL_DEV_EXPORTED
 
@@ -1399,6 +1444,9 @@
 /* struct page has dma_addr array member */
 #undef HAVE_PAGE_DMA_ADDR_ARRAY
 
+/* linux/gfp.h has page_frag_cache_drain */
+#undef HAVE_PAGE_FRAG_CACHE_DRAIN
+
 /* net/page_pool/helpers.h has page_pool_nid_changed */
 #undef HAVE_PAGE_POLL_NID_CHANGED_HELPERS
 
@@ -1417,6 +1465,9 @@
 /* net/page_pool.h page_pool_get_dma_addr defined */
 #undef HAVE_PAGE_POOL_GET_DMA_ADDR_OLD
 
+/* net/page_pool/types.h struct page_pool_params has netdev as member */
+#undef HAVE_PAGE_POOL_PARAMS_HAS_NETDEV
+
 /* net/page_pool.h struct page_pool_params has napi as member */
 #undef HAVE_PAGE_POOL_PARAMS_NAPI_OLD
 
@@ -1432,6 +1483,9 @@
 /* net/page_pool/types.h has page_pool_release_page */
 #undef HAVE_PAGE_POOL_RELEASE_PAGE_IN_TYPES_H
 
+/* include/linux/panic.h exists */
+#undef HAVE_PANIC_H
+
 /* linux/moduleparam.h has param_set_uint_minmax */
 #undef HAVE_PARAM_SET_UINT_MINMAX
 
@@ -1446,6 +1500,9 @@
 
 /* pci_dev has link_active_reporting */
 #undef HAVE_PCI_DEV_LINK_ACTIVE_REPORTING
+
+/* struct pci_driver has member driver_managed_dma */
+#undef HAVE_PCI_DRIVER_MANAGED_DMA
 
 /* linux/aer.h has pci_enable_pcie_error_reporting */
 #undef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
@@ -1537,6 +1594,9 @@
 /* put_user_pages_dirty_lock has 3 parameters */
 #undef HAVE_PUT_USER_PAGES_DIRTY_LOCK_3_PARAMS
 
+/* kernel supports queue and napi association */
+#undef HAVE_QUEUE_AND_NAPI_ASSOCIATION
+
 /* QUEUE_FLAG_DISCARD is defined */
 #undef HAVE_QUEUE_FLAG_DISCARD
 
@@ -1545,6 +1605,12 @@
 
 /* QUEUE_FLAG_STABLE_WRITES is defined */
 #undef HAVE_QUEUE_FLAG_STABLE_WRITES
+
+/* blkdev.h has queue_limits_commit_update */
+#undef HAVE_QUEUE_LIMITS_COMMIT_UPDATE
+
+/* linux/ratelimit_types.h exists */
+#undef HAVE_RATELIMIT_TYPES_H
 
 /* linux/security.h has register_blocking_lsm_notifier */
 #undef HAVE_REGISTER_BLOCKING_LSM_NOTIFIER
@@ -1561,6 +1627,9 @@
 /* mm.h has release_pages */
 #undef HAVE_RELEASE_PAGES_IN_MM_H
 
+/* v6.6 remove sentinel from ctl_table array is supported */
+#undef HAVE_REMOVE_SENTINEL_FROM_CTL_TABLE
+
 /* blkdev.h struct request has block_device */
 #undef HAVE_REQUEST_BDEV
 
@@ -1573,6 +1642,9 @@
 /* struct request_queue has backing_dev_info */
 #undef HAVE_REQUEST_QUEUE_BACKING_DEV_INFO
 
+/* if linux/blkdev.h struct request_queue has member disk */
+#undef HAVE_REQUEST_QUEUE_DISK
+
 /* linux/blk-mq.h has request_to_qc_t */
 #undef HAVE_REQUEST_TO_QC_T
 
@@ -1581,15 +1653,6 @@
 
 /* genhd.h has revalidate_disk_size */
 #undef HAVE_REVALIDATE_DISK_SIZE
-
-/* struct rhashtable has max_elems */
-#undef HAVE_RHASHTABLE_MAX_ELEMS
-
-/* file rhashtable-types exists */
-#undef HAVE_RHASHTABLE_TYPES
-
-/* struct rhltable is defined */
-#undef HAVE_RHLTABLE
 
 /* rpc_task_gfp_mask is exported by the kernel */
 #undef HAVE_RPC_TASK_GPF_MASK_EXPORTED
@@ -1615,6 +1678,9 @@
 /* net/rps.h exists */
 #undef HAVE_RPS_H
 
+/* RQF_MQ_INFLIGHT is defined */
+#undef HAVE_RQF_MQ_INFLIGHT
+
 /* if file rq_end_io_ret exists */
 #undef HAVE_RQ_END_IO_RET
 
@@ -1623,6 +1689,9 @@
 
 /* rt_uses_gateway is defined */
 #undef HAVE_RT_USES_GATEWAY
+
+/* macsec_ops has boolean field rx_uses_md_dst */
+#undef HAVE_RX_USES_MD_DST_IN_MACSEC_OPS
 
 /* scsi_block_targets is defined */
 #undef HAVE_SCSI_BLOCK_TARGETS
@@ -1717,6 +1786,9 @@
 /* linux/tcp.h has skb_tcp_all_headers */
 #undef HAVE_SKB_TCP_ALL_HEADERS
 
+/* kernel supports v6.10-rc1, skip calling no-op sync ops when possible */
+#undef HAVE_SKIP_CALLING_NOP_SYNC_OPS
+
 /* xmit_more is defined */
 #undef HAVE_SK_BUFF_XMIT_MORE
 
@@ -1772,6 +1844,9 @@
 /* struct rtnl_link_ops has netns_refund */
 #undef HAVE_STRUCT_LINK_OPS_IPOIB_LINK_OPS_HAS_NETNS_REFUND
 
+/* struct macsec_context has update_pn */
+#undef HAVE_STRUCT_MACSEC_CONTEXT_UPDATE_PN
+
 /* net/dst_metadata.h has struct macsec_info */
 #undef HAVE_STRUCT_MACSEC_INFO_METADATA
 
@@ -1787,23 +1862,20 @@
 /* struct switchdev_obj_port_vlan has vid */
 #undef HAVE_STRUCT_SWITCHDEV_OBJ_PORT_VLAN_VID
 
+/* struct vdpa_config_ops has .get_vq_desc_group and .compat_reset defined */
+#undef HAVE_STRUCT_VDPA_CONFIG_OPS_HAS_COMAPT_RESET_AND_VQ_DESC_GROUP
+
 /* submit_bio_noacct exist */
 #undef HAVE_SUBMIT_BIO_NOACCT
 
 /* supported_coalesce_params is defined */
 #undef HAVE_SUPPORTED_COALESCE_PARAM
 
+/* struct vfio_device_ops has iommufd support */
+#undef HAVE_SUPPORT_IOMMUFD_VFIO_PHYS_DEVICES
+
 /* struct svcxprt_rdma has 'sc_pending_recvs' field */
 #undef HAVE_SVCXPRT_RDMA_SC_PENDING_RECVS
-
-/* svc_fill_write_vector getting 2 params */
-#undef HAVE_SVC_FILL_WRITE_VECTOR_2_PARAMS
-
-/* svc_fill_write_vector getting 3 params */
-#undef HAVE_SVC_FILL_WRITE_VECTOR_3_PARAMS
-
-/* svc_fill_write_vector getting 4 params */
-#undef HAVE_SVC_FILL_WRITE_VECTOR_4_PARAMS
 
 /* svc_pool_wake_idle_thread is exported by the kernel */
 #undef HAVE_SVC_POOL_WAKE_IDLE_THREAD
@@ -2006,11 +2078,11 @@
 /* uapi/linux/nvme_ioctl.h has struct nvme_passthru_cmd64 */
 #undef HAVE_UAPI_LINUX_NVME_PASSTHRU_CMD64
 
-/* udp4_hwcsum is exported by the kernel */
-#undef HAVE_UDP4_HWCSUM
-
 /* udp_tunnel.h has struct udp_tunnel_nic_info is defined */
 #undef HAVE_UDP_TUNNEL_NIC_INFO
+
+/* udp_tunnel.h has enum UDP_TUNNEL_NIC_INFO_STATIC_IANA_VXLAN */
+#undef HAVE_UDP_TUNNEL_NIC_INFO_STATIC_IANA_VXLAN
 
 /* ib_umem_notifier_invalidate_range_start has parameter blockable */
 #undef HAVE_UMEM_NOTIFIER_PARAM_BLOCKABLE
@@ -2036,11 +2108,23 @@
 /* unregister_netdevice_notifier_net is defined */
 #undef HAVE_UNREGISTER_NETDEVICE_NOTIFIER_NET
 
+/* user_access_begin has 2 parameters */
+#undef HAVE_USER_ACCESS_BEGIN_2_PARAMS
+
+/* user_access_begin has 3 parameters */
+#undef HAVE_USER_ACCESS_BEGIN_3_PARAMS
+
 /* flow_cls_offload has use_act_stats */
 #undef HAVE_USE_ACT_STATS
 
-/* struct vdpa_config_ops has get_vq_dma_dev defined */
+/* struct vdpa_config_ops has get_backend_features */
+#undef HAVE_VDPA_CONFIG_OPS_GET_BACKEND_FEATURES
+
+/* struct vdpa_config_ops has get_backend_features */
 #undef HAVE_VDPA_CONFIG_OPS_GET_VQ_DMA_DEV
+
+/* struct vdpa_config_ops has resume */
+#undef HAVE_VDPA_CONFIG_OPS_HAS_RESUME
 
 /* sturct vdpa_dev_set_config has device_features */
 #undef HAVE_VDPA_SET_CONFIG_HAS_DEVICE_FEATURES
@@ -2087,6 +2171,9 @@
 /* struct xfrmdev_ops has member xdo_dev_state_update_curlft */
 #undef HAVE_XDO_DEV_STATE_UPDATE_CURLFT
 
+/* struct xfrmdev_ops has member xdo_dev_state_update_stats */
+#undef HAVE_XDO_DEV_STATE_UPDATE_STATS
+
 /* struct xfrmdev_ops has member xdo_dev_state_add get extack */
 #undef HAVE_XDO_XFRM_ADD_STATE_GET_EXTACK
 
@@ -2123,6 +2210,9 @@
 
 /* struct net_device has struct net_device has xdp_metadata_ops member */
 #undef HAVE_XDP_METADATA_OPS
+
+/* xdp_metadata_ops has xmo_rx_vlan_tag */
+#undef HAVE_XDP_METADATA_OPS_HAS_VLAN_TAG
 
 /* net/xdp.h has xdp_rxq_info_reg get 4 params */
 #undef HAVE_XDP_RXQ_INFO_REG_4_PARAMS
@@ -2240,6 +2330,9 @@
 
 /* xsk_buff_set_size is defined */
 #undef HAVE_XSK_BUFF_SET_SIZE
+
+/* struct xsk_tx_metadata_ops is defined */
+#undef HAVE_XSK_TX_METADATA_OPS
 
 /* xsk_umem_adjust_offset is defined */
 #undef HAVE_XSK_UMEM_ADJUST_OFFSET
